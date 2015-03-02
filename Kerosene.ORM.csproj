@@ -1,0 +1,182 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{04B419F6-02D8-411C-B5E7-0BE415B73328}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Kerosene.ORM</RootNamespace>
+    <AssemblyName>Kerosene.ORM</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <SccProjectName>SAK</SccProjectName>
+    <SccLocalPath>SAK</SccLocalPath>
+    <SccAuxPath>SAK</SccAuxPath>
+    <SccProvider>SAK</SccProvider>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Core" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Transactions" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Configuration\ORMConfiguration.cs" />
+    <Compile Include="Configuration\ConnectionStringEx.cs" />
+    <Compile Include="Core\Api.Factory\RecordBuilder.cs" />
+    <Compile Include="Core\Api.Factory\EngineFactory.cs" />
+    <Compile Include="Core\Api\ICommand.cs" />
+    <Compile Include="Core\Api\IDataLink.cs" />
+    <Compile Include="Core\Api\IDataEngine.cs" />
+    <Compile Include="Core\Api\ICoreCommandProvider.cs" />
+    <Compile Include="Core\Api\IParameter.cs" />
+    <Compile Include="Core\Api\IParameterCollection.cs" />
+    <Compile Include="Core\Api\IElementAlias.cs" />
+    <Compile Include="Core\Api\IElementAliasCollection.cs" />
+    <Compile Include="Core\Api\ISchema.cs" />
+    <Compile Include="Core\Api\ISchemaEntry.cs" />
+    <Compile Include="Core\Api\IElementAliasProvider.cs" />
+    <Compile Include="Core\Api\IScalarCommand.cs" />
+    <Compile Include="Core\Api\IScalarExecutor.cs" />
+    <Compile Include="Core\Api\IEnumerableExecutor.cs" />
+    <Compile Include="Core\Api\IEnumerableCommand.cs" />
+    <Compile Include="Core\Api\IRecord.cs" />
+    <Compile Include="Core\Api\ITableNameProvider.cs" />
+    <Compile Include="Core\Api\IParser.cs" />
+    <Compile Include="Core\Api\INestableTransaction.cs" />
+    <Compile Include="Core\Api\IRawCommand.cs" />
+    <Compile Include="Core\Api\IInsertCommand.cs" />
+    <Compile Include="Core\Api\IDeleteCommand.cs" />
+    <Compile Include="Core\Api\IUpdateCommand.cs" />
+    <Compile Include="Core\Api\IQueryCommand.cs" />
+    <Compile Include="Core\Concrete.Engines\DataEngine.cs" />
+    <Compile Include="Core\Concrete.Engines\SqlServerEngine.cs" />
+    <Compile Include="Core\Concrete.Engines\OracleEngine.cs" />
+    <Compile Include="Core\Concrete.Engines\OleDbEngine.cs" />
+    <Compile Include="Core\Concrete.Engines\OdbcEngine.cs" />
+    <Compile Include="Core\Concrete\CommandEnumSca.cs" />
+    <Compile Include="Core\Concrete\CommandEnum.cs" />
+    <Compile Include="Core\Concrete\SchemaEntry.cs" />
+    <Compile Include="Core\Concrete\Command.cs" />
+    <Compile Include="Core\Concrete\DataLink.cs" />
+    <Compile Include="Core\Concrete\DeleteCommand.cs" />
+    <Compile Include="Core\Concrete\ElementAlias.cs" />
+    <Compile Include="Core\Concrete\ElementAliasCollection.cs" />
+    <Compile Include="Core\Concrete\InsertCommand.cs" />
+    <Compile Include="Core\Concrete\NestableTransaction.cs" />
+    <Compile Include="Core\Concrete\Parameter.cs" />
+    <Compile Include="Core\Concrete\ParameterCollection.cs" />
+    <Compile Include="Core\Concrete\Parser.cs" />
+    <Compile Include="Core\Concrete\QueryCommand.cs" />
+    <Compile Include="Core\Concrete\RawCommand.cs" />
+    <Compile Include="Core\Concrete\Record.cs" />
+    <Compile Include="Core\Concrete\Schema.cs" />
+    <Compile Include="Core\Concrete\EnumerableExecutor.cs" />
+    <Compile Include="Core\Concrete\UpdateCommand.cs" />
+    <Compile Include="Core\Concrete\ScalarExecutor.cs" />
+    <Compile Include="Direct\Api.Factory\LinkFactory.cs" />
+    <Compile Include="Direct\Api.Factory\EngineFactory.cs" />
+    <Compile Include="Direct\Api\IDataEngine.cs" />
+    <Compile Include="Direct\Api\IDataLink.cs" />
+    <Compile Include="Direct\Api\INestableTransaction.cs" />
+    <Compile Include="Direct\Api\IEnumerableExecutor.cs" />
+    <Compile Include="Direct\Api\IScalarExecutor.cs" />
+    <Compile Include="Direct\Concrete.Engines\SqlServerEngine.cs" />
+    <Compile Include="Direct\Concrete.Engines\OracleEngine.cs" />
+    <Compile Include="Direct\Concrete.Engines\OleDbEngine.cs" />
+    <Compile Include="Direct\Concrete.Engines\OdbcEngine.cs" />
+    <Compile Include="Direct\Concrete\DataLink.cs" />
+    <Compile Include="Direct\Concrete\NestableTransaction.cs" />
+    <Compile Include="Direct\Concrete\EnumerableExecutor.cs" />
+    <Compile Include="Direct\Concrete\ScalarExecutor.cs" />
+    <Compile Include="Direct\Concrete\SurrogateDirect.cs" />
+    <Compile Include="Maps\Api.Factory\EntityFactory.cs" />
+    <Compile Include="Maps\Api.Factory\RepositoryFactory.cs" />
+    <Compile Include="Maps\Api\IDataDelete.cs" />
+    <Compile Include="Maps\Api\IDataInsert.cs" />
+    <Compile Include="Maps\Api\IDataUpdate.cs" />
+    <Compile Include="Maps\Api\IMetaCommand.cs" />
+    <Compile Include="Maps\Api\IMetaOperation.cs" />
+    <Compile Include="Maps\Api\IDataMap.cs" />
+    <Compile Include="Maps\Api\IDataRepository.cs" />
+    <Compile Include="Maps\Api\IDataQuery.cs" />
+    <Compile Include="Maps\Api\IDataQueryEnumerator.cs" />
+    <Compile Include="Maps\Api\IMetaEntity.cs" />
+    <Compile Include="Maps\Api\IMapColumn.cs" />
+    <Compile Include="Maps\Api\IMapColumnCollection.cs" />
+    <Compile Include="Maps\Api\IMapMember.cs" />
+    <Compile Include="Maps\Api\IMapMemberCollection.cs" />
+    <Compile Include="Maps\Api\IMapMemberColumn.cs" />
+    <Compile Include="Maps\Api\IMapMemberColumnCollection.cs" />
+    <Compile Include="Maps\Api\IMapVersionColumn.cs" />
+    <Compile Include="Maps\Concrete\MetaEntity.cs" />
+    <Compile Include="Maps\Concrete\DataMap.cs" />
+    <Compile Include="Maps\Concrete\DataRepository.cs" />
+    <Compile Include="Maps\Concrete\MetaCommand.cs" />
+    <Compile Include="Maps\Concrete\MetaOperation.cs" />
+    <Compile Include="Maps\Concrete\DataDelete.cs" />
+    <Compile Include="Maps\Concrete\DataInsert.cs" />
+    <Compile Include="Maps\Concrete\DataUpdate.cs" />
+    <Compile Include="Maps\Concrete\DataQuery.cs" />
+    <Compile Include="Maps\Concrete\DataQueryEnumerator.cs" />
+    <Compile Include="Maps\Concrete\MapColumn.cs" />
+    <Compile Include="Maps\Concrete\MapColumnCollection.cs" />
+    <Compile Include="Maps\Concrete\MapMember.cs" />
+    <Compile Include="Maps\Concrete\MapMemberCollection.cs" />
+    <Compile Include="Maps\Concrete\MapMemberColumn.cs" />
+    <Compile Include="Maps\Concrete\MapMemberColumnCollection.cs" />
+    <Compile Include="Maps\Concrete\MapVersionColumn.cs" />
+    <Compile Include="Maps\Concrete\UberHelper.Operations.cs" />
+    <Compile Include="Maps\Concrete\UberHelper.TableNames.cs" />
+    <Compile Include="Maps\Concrete\UberHelper.Defaults.cs" />
+    <Compile Include="Maps\Concrete\UberHelper.ListAlike.cs" />
+    <Compile Include="Maps\Concrete\UberHelper.Serials.cs" />
+    <Compile Include="Maps\Concrete\ProxyGenerator.cs" />
+    <Compile Include="Maps\Exceptions\DatabaseException.cs" />
+    <Compile Include="Maps\Exceptions\ChangedException.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Kerosene.Tools\Kerosene.Tools.csproj">
+      <Project>{31387215-0bbd-4afe-b29b-2a8ad94073b6}</Project>
+      <Name>Kerosene.Tools</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="License.txt" />
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <None Include="Configuration\App.config" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

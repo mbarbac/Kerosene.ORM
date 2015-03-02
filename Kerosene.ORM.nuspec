@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>$id$</id>
+    <version>7.0.1</version>
+    <title>$title$</title>
+    <authors>$author$</authors>
+    <owners>$author$</owners>
+    <licenseUrl>http://www.codeproject.com/info/cpol10.aspx</licenseUrl>
+    <projectUrl>http://www.codeproject.com</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>The seventh version of the configuration-less, dynamic and self-adaptive database-first oriented Kerosene ORM library, with real full support for POCO objects, natural SQL-like syntax from plain C#, and advanced maps and lazy properties.</description>
+    <releaseNotes>Streamlined architecture that provides enhanced control on the dependency properties, a 3x improvement in the performance of the core records mode, and a 4x improvement in the performance of the mapped records. Out of the box support for Sql Server, Oracle, Odbc and OleDb databases is also included.</releaseNotes>
+    <copyright>Copyright (c) Moises Barba Cebeira 2008-2015</copyright>
+    <tags>ORM Database Database-First Dynamic C# Kerosene SqlServer Oracle Odbc Oledb Entity ADO.NET</tags>
+  </metadata>
+</package>
