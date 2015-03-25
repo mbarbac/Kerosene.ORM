@@ -6,13 +6,12 @@ namespace Kerosene.ORM.Core.Concrete
 	using System.Collections;
 	using System.Collections.Generic;
 	using System.Linq;
-	using System.Runtime.Serialization;
 	using System.Text;
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents an object able to execute a scalar command and to return the interger
-	/// produced by that execution.
+	/// Represents an object able to execute a scalar command and to produce the integer
+	/// resulting from this execution.
 	/// </summary>
 	public abstract class ScalarExecutor : IScalarExecutor
 	{
@@ -59,9 +58,7 @@ namespace Kerosene.ORM.Core.Concrete
 		/// <param name="disposing">True if the object is being disposed, false otherwise.</param>
 		protected virtual void OnDispose(bool disposing)
 		{
-			if (disposing) { }
 			_Command = null;
-
 			_IsDisposed = true;
 		}
 

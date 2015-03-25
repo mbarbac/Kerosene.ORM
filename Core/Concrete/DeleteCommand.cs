@@ -6,12 +6,11 @@ namespace Kerosene.ORM.Core.Concrete
 	using System.Collections;
 	using System.Collections.Generic;
 	using System.Linq;
-	using System.Runtime.Serialization;
 	using System.Text;
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents a delete operation against the underlying database.
+	/// Represents a delete command.
 	/// </summary>
 	public class DeleteCommand : CommandEnumSca, IDeleteCommand
 	{
@@ -116,17 +115,15 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Defines the contents of the WHERE clause, or appends the new ones to any previous
+		/// Defines the contents of the WHERE clause or append the new ones to any previous
 		/// specification.
+		/// <para>By default if any previous contents exist the new ones are appended using an AND
+		/// operator. However, the virtual extension methods 'x => x.And(...)' and 'x => x.Or(...)'
+		/// can be used to specify what logical operator to use.</para>
 		/// </summary>
 		/// <param name="where">The dynamic lambda expression that resolves into the contents of
-		/// this clause.
-		/// <para>- By default, if any previous contents exist the new ones are appended using an
-		/// AND logical operator. However, the virtual extension methods 'x => x.And(...)' and
-		/// 'x => x.Or(...)' can be used to specify the concrete logical operator to use for
-		/// concatenation purposes.</para>
-		/// </param>
-		/// <returns>This instance to permit a fluent syntax chaining.</returns>
+		/// this clause.</param>
+		/// <returns>A self-reference to permit a fluent syntax chaining.</returns>
 		public IDeleteCommand Where(Func<dynamic, object> where)
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());

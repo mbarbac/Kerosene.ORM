@@ -6,14 +6,14 @@ namespace Kerosene.ORM.Maps
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents an update operation for its associated entity.
+	/// Represents an insert operation for its associated entity.
 	/// </summary>
 	public interface IDataUpdate : IMetaOperation { }
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents an update operation for its associated entity.
+	/// Represents an insert operation for its associated entity.
 	/// </summary>
-	public interface IDataUpdate<T> : IDataUpdate, IMetaOperation<T> where T : class { }
+	public interface IDataUpdate<T> : IMetaOperation<T>, IDataUpdate where T : class { }
 }
 // ======================================================== 

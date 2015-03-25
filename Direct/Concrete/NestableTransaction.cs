@@ -7,13 +7,13 @@ namespace Kerosene.ORM.Direct.Concrete
 	using System.Collections.Generic;
 	using System.Data;
 	using System.Linq;
-	using System.Runtime.Serialization;
 	using System.Text;
 	using System.Transactions;
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents an abstract nestable transaction for a direct connection scenario.
+	/// Represents an abstract nestable transaction, in a direct connection scenario, associated
+	/// with a given <see cref="IDataLink"/>.
 	/// </summary>
 	public class NestableTransaction : Core.Concrete.NestableTransaction, INestableTransaction
 	{
@@ -33,7 +33,7 @@ namespace Kerosene.ORM.Direct.Concrete
 			: base(link, mode) { }
 
 		/// <summary>
-		/// The link this transaction is associated with.
+		/// The database-alike service link this instance is associated with.
 		/// </summary>
 		public new IDataLink Link
 		{
@@ -104,6 +104,7 @@ namespace Kerosene.ORM.Direct.Concrete
 		/// <summary>
 		/// Commits the underlying transation if it is a first-level one, or decreases its
 		/// nesting level.
+		/// <para>If this transaction was not active this method has no effects.</para>
 		/// </summary>
 		public override void Commit()
 		{
@@ -137,6 +138,7 @@ namespace Kerosene.ORM.Direct.Concrete
 
 		/// <summary>
 		/// Inconditionally aborts this transaction redardless of its nesting level.
+		/// <para>If this transaction was not active this method has no effects.</para>
 		/// </summary>
 		public override void Abort()
 		{

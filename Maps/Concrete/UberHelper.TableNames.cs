@@ -1,10 +1,13 @@
 ﻿// ======================================================== UberHelper.TableNames.cs
 namespace Kerosene.ORM.Maps.Concrete
 {
-	using Kerosene.Tools;
 	using Kerosene.ORM.Core;
+	using Kerosene.Tools;
 	using System;
+	using System.Collections;
 	using System.Collections.Generic;
+	using System.Linq;
+	using System.Text;
 
 	// ==================================================== 
 	/// <summary>
@@ -20,10 +23,10 @@ namespace Kerosene.ORM.Maps.Concrete
 		{
 			List<string> list = new List<string>();
 
-			list.Add(source + "s"); // bath
+			list.Add(source + "s"); // english: bath / spanish: standard
 			list.Add(source + "S");
 
-			list.Add(source + "es"); // dish
+			list.Add(source + "es"); // english: dish / spanish: standard
 			list.Add(source + "ES");
 
 			if (source.EndsWith("y")) list.Add(source.Substring(0, source.Length - 1) + "ies"); // country
@@ -102,7 +105,7 @@ namespace Kerosene.ORM.Maps.Concrete
 			var names = new List<string>();
 			names.Add(source);
 			names.AddRange(TableNameCandidatesPlural(source));
-			
+
 			foreach (var name in names)
 			{
 				var found = false;

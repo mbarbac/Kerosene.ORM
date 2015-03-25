@@ -4,12 +4,10 @@ namespace Kerosene.ORM.Direct
 	using Kerosene.Tools;
 	using System;
 	using System.Data;
-	using System.Linq;
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents a direct connection against an underlying database, also acting as a factory
-	/// to create objects adapted to it.
+	/// Represents an abstract direct connection against an underlying database-alike service.
 	/// </summary>
 	public interface IDataLink : Core.IDataLink
 	{
@@ -20,30 +18,16 @@ namespace Kerosene.ORM.Direct
 		new IDataLink Clone();
 
 		/// <summary>
-		/// The engine this link is associated with, that maintains the main characteristics
-		/// of the underlying database engine.
+		/// The engine this link is associated with.
 		/// </summary>
 		new IDataEngine Engine { get; }
 
 		/// <summary>
-		/// The nestable transaction this link maintains.
+		/// The abstract nestable transaction this instance maintains. If the reference this
+		/// property maintains is null, or if it is is disposed, the getter generates a new
+		/// instance on demand. This property can return null if the link is disposed.
 		/// </summary>
 		new INestableTransaction Transaction { get; }
-
-		/// <summary>
-		/// Factory method invoked to create an enumerator to execute the given enumerable
-		/// command.
-		/// </summary>
-		/// <param name="command">The command to execute.</param>
-		/// <returns>An enumerator able to execute de command.</returns>
-		new IEnumerableExecutor CreateEnumerableExecutor(Core.IEnumerableCommand command);
-
-		/// <summary>
-		/// Factory method invoked to create an executor to execute the given scalar command.
-		/// </summary>
-		/// <param name="command">The command to execute.</param>
-		/// <returns>An executor able to execute de command.</returns>
-		new IScalarExecutor CreateScalarExecutor(Core.IScalarCommand command);
 
 		/// <summary>
 		/// Gets or sets the connection string this instance is currently using.
@@ -68,6 +52,21 @@ namespace Kerosene.ORM.Direct
 		/// The actual connection this instance is using, or null if it is not connected.
 		/// </summary>
 		IDbConnection DbConnection { get; }
+
+		/// <summary>
+		/// Factory method invoked to create an enumerator to execute the given enumerable
+		/// command.
+		/// </summary>
+		/// <param name="command">The command to execute.</param>
+		/// <returns>An enumerator able to execute de command.</returns>
+		new IEnumerableExecutor CreateEnumerableExecutor(Core.IEnumerableCommand command);
+
+		/// <summary>
+		/// Factory method invoked to create an executor to execute the given scalar command.
+		/// </summary>
+		/// <param name="command">The command to execute.</param>
+		/// <returns>An executor able to execute de command.</returns>
+		new IScalarExecutor CreateScalarExecutor(Core.IScalarCommand command);
 	}
 }
 // ======================================================== 

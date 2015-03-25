@@ -4,7 +4,6 @@ namespace Kerosene.ORM.Configuration
 	using Kerosene.Tools;
 	using System;
 	using System.Configuration;
-	using System.Linq;
 
 	// ==================================================== 
 	/// <summary>

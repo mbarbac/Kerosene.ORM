@@ -101,7 +101,7 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Returns a new instance that is a copy of the original one.
+		/// Returns a new instance that otherwise is a copy of the original one.
 		/// </summary>
 		/// <returns>A new instance.</returns>
 		public Parameter Clone()
@@ -136,10 +136,12 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Returns true if this object can be considered as equivalent to the target one given.
+		/// Returns true if the state of this object can be considered as equivalent to the target
+		/// one, based upon any arbitrary criteria implemented in this method.
 		/// </summary>
-		/// <param name="target">The target object this one will be tested for equivalence.</param>
-		/// <returns>True if this object can be considered as equivalent to the target one given.</returns>
+		/// <param name="target">The target instance this one will be tested for equivalence against.</param>
+		/// <returns>True if the state of this instance can be considered as equivalent to the
+		/// target one, or false otherwise.</returns>
 		public bool EquivalentTo(IParameter target)
 		{
 			return OnEquivalentTo(target);

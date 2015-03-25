@@ -6,13 +6,13 @@ namespace Kerosene.ORM.Direct.Concrete
 	using System.Collections;
 	using System.Collections.Generic;
 	using System.Linq;
-	using System.Runtime.Serialization;
 	using System.Text;
 
 	// ==================================================== 
 	/// <summary>
 	/// Represents an object able to execute an enumerable command, in a direct connection
-	/// scenario, and to produce the collection of records resulting from that execution.
+	/// scenario, and to produce the collection collection of records resulting from this
+	/// execution.
 	/// </summary>
 	public class EnumerableExecutor : Core.Concrete.EnumerableExecutor, IEnumerableExecutor
 	{

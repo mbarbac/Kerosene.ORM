@@ -6,13 +6,12 @@ namespace Kerosene.ORM.Core.Concrete
 	using System.Collections;
 	using System.Collections.Generic;
 	using System.Linq;
-	using System.Runtime.Serialization;
 	using System.Text;
 
 	// ==================================================== 
 	/// <summary>
 	/// Represents an object able to execute an enumerable command and to produce the collection
-	/// of records resulting from that execution.
+	/// collection of records resulting from this execution.
 	/// </summary>
 	public abstract class EnumerableExecutor : IEnumerableExecutor
 	{
@@ -98,6 +97,18 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
+		/// Returns a new enumerator for this instance.
+		/// <para>Hack to permit this instance to be enumerated in order to simplify its usage
+		/// and syntax.</para>
+		/// </summary>
+		/// <returns>A self-reference.</returns>
+		public IEnumerableExecutor GetEnumerator()
+		{
+			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
+			return this;
+		}
+
+		/// <summary>
 		/// The command this instance is associated with.
 		/// </summary>
 		public IEnumerableCommand Command
@@ -114,21 +125,9 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Returns a new enumerator for this instance.
-		/// <para>Hack to permit this instance to be enumerated in order to simplify its usage
-		/// and syntax.</para>
-		/// </summary>
-		/// <returns>A new enumerator.</returns>
-		public IEnumerableExecutor GetEnumerator()
-		{
-			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
-			return this;
-		}
-
-		/// <summary>
-		/// Gets the schema of the records to be produced by the execution of the associated
-		/// command. This property is null until the command has been executed, or when this
-		/// instance has been disposed.
+		/// Gets the schema of the records produced by the execution of the associated command.
+		/// This property is null until the command has been executed, or when this instance
+		/// has been disposed.
 		/// </summary>
 		public ISchema Schema
 		{
@@ -146,9 +145,9 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// If not null this property is the delegate to invoke to convert each record returned
-		/// by the database into whatever object the 'Current' property of this enumerator shall
-		/// be.
+		/// If not null this property is the delegate to invoke each iteration to convert the
+		/// record returned by the database into whatever instance the delegate returns, that
+		/// becomes the new value held by the 'Current' property of this instance.
 		/// </summary>
 		public Func<IRecord, object> Converter
 		{
@@ -158,6 +157,20 @@ namespace Kerosene.ORM.Core.Concrete
 				if (IsDisposed) throw new ObjectDisposedException(this.ToString());
 				_Converter = value;
 			}
+		}
+
+		/// <summary>
+		/// Convenience method to set the converter of this instance and returns a self-reference
+		/// to permit a fluent syntax chaining.
+		/// </summary>
+		/// <param name="converter">The converter to set, or null to clear it.</param>
+		/// <returns>A self-reference to permit a fluent syntax chaining.</returns>
+		public IEnumerableExecutor ConvertBy(Func<IRecord, object> converter)
+		{
+			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
+
+			Converter = converter;
+			return this;
 		}
 
 		/// <summary>
@@ -187,7 +200,7 @@ namespace Kerosene.ORM.Core.Concrete
 				if (_Command.Link.IsDisposed) throw new ObjectDisposedException(_Command.Link.ToString());
 
 				if (!Command.CanBeExecuted) throw new CannotExecuteException(
-					"Command '{0}' cannot be executed.".FormatWith(Command));
+					"State of command '{0}' is not ready for execution.".FormatWith(Command));
 
 				_Started = true;
 				_TakeOnGoing = false;
@@ -281,20 +294,6 @@ namespace Kerosene.ORM.Core.Concrete
 		protected abstract void OnReset();
 
 		/// <summary>
-		/// Sets the converter of this instance and returns a self-reference to permit a fluent
-		/// syntax chaining.
-		/// </summary>
-		/// <param name="converter">The converter to set, or null to clear it.</param>
-		/// <returns>A self-reference to permit a fluent syntax chaining.</returns>
-		public IEnumerableExecutor ConvertBy(Func<IRecord, object> converter)
-		{
-			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
-
-			Converter = converter;
-			return this;
-		}
-
-		/// <summary>
 		/// Executes the associated command and returns a list with the results.
 		/// </summary>
 		/// <returns>A list with the results of the execution.</returns>
@@ -346,9 +345,9 @@ namespace Kerosene.ORM.Core.Concrete
 		/// Executes the associated command and returns the last result produced from the
 		/// database, or null if it produced no results.
 		/// <para>
-		/// This method is provided as a fall-back mechanism as it retrieves all possible results
-		/// discarding them until the last one is found. Client applications may want to modify
-		/// the logic of the command to avoid using it.
+		/// - Note that the concrete implementation of this method may emulate this capability
+		/// by retrieving all possible records and discarding them until the last one is found.
+		/// Client applications may want to modify the logic of the command to avoid using it.
 		/// </para>
 		/// </summary>
 		/// <returns>The first result produced, or null.</returns>

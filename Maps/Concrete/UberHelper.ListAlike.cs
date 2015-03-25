@@ -1,9 +1,12 @@
 ﻿// ======================================================== UberHelper.ListAlike.cs
 namespace Kerosene.ORM.Maps.Concrete
 {
+	using Kerosene.Tools;
 	using System;
 	using System.Collections;
 	using System.Collections.Generic;
+	using System.Linq;
+	using System.Text;
 
 	// ==================================================== 
 	/// <summary>

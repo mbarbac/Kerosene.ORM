@@ -11,7 +11,7 @@ namespace Kerosene.ORM.Core.Concrete
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents the metadata that describes the collection of columns and tables obtained
+	/// Represents the schema that describes the metadata and structure of the records returned
 	/// from the execution of an enumerable command.
 	/// </summary>
 	[Serializable]
@@ -25,10 +25,7 @@ namespace Kerosene.ORM.Core.Concrete
 		/// <summary>
 		/// Initializes a new instance.
 		/// </summary>
-		/// <param name="caseSensitiveNames">Whether the table and column names of the members
-		/// of this collection are case sensitive or not.</param>
-		public Schema(
-			bool caseSensitiveNames = Core.Schema.DEFAULT_CASE_SENSITIVE_NAMES)
+		public Schema(bool caseSensitiveNames = Core.Schema.DEFAULT_CASE_SENSITIVE_NAMES)
 		{
 			_CaseSensitiveNames = caseSensitiveNames;
 
@@ -75,9 +72,7 @@ namespace Kerosene.ORM.Core.Concrete
 			{
 				if (_Members != null)
 				{
-					var list = new List<ISchemaEntry>(_Members);
-					foreach (var member in list) if (!member.IsDisposed) member.Dispose();
-					list.Clear(); list = null;
+					var list = _Members.ToArray(); foreach (var member in list) member.Dispose();
 				}
 
 				if (_Aliases != null && !_Aliases.IsDisposed) _Aliases.Dispose();
@@ -177,16 +172,17 @@ namespace Kerosene.ORM.Core.Concrete
 				"Cloned instance '{0}' is not a valid '{1}' one."
 				.FormatWith(cloned.Sketch(), typeof(Schema).EasyName()));
 
-			// CaseSensitiveNames: constructor
 			temp.Aliases.AddRange(_Aliases, cloneNotOrphans: true);
 			temp.AddRange(_Members, cloneNotOrphans: true);
 		}
 
 		/// <summary>
-		/// Returns true if this object can be considered as equivalent to the target one given.
+		/// Returns true if the state of this object can be considered as equivalent to the target
+		/// one, based upon any arbitrary criteria implemented in this method.
 		/// </summary>
-		/// <param name="target">The target object this one will be tested for equivalence.</param>
-		/// <returns>True if this object can be considered as equivalent to the target one given.</returns>
+		/// <param name="target">The target instance this one will be tested for equivalence against.</param>
+		/// <returns>True if the state of this instance can be considered as equivalent to the
+		/// target one, or false otherwise.</returns>
 		public bool EquivalentTo(ISchema target)
 		{
 			return OnEquivalentTo(target);
@@ -218,19 +214,19 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Whether the names of the members of this collection are case sensitive or not.
-		/// </summary>
-		public bool CaseSensitiveNames
-		{
-			get { return _CaseSensitiveNames; }
-		}
-
-		/// <summary>
 		/// The collection of aliases used in the context of this instance.
 		/// </summary>
 		public IElementAliasCollection Aliases
 		{
 			get { return _Aliases; }
+		}
+
+		/// <summary>
+		/// Whether the names of the members of this collection are case sensitive or not.
+		/// </summary>
+		public bool CaseSensitiveNames
+		{
+			get { return _CaseSensitiveNames; }
 		}
 
 		/// <summary>
@@ -535,7 +531,6 @@ namespace Kerosene.ORM.Core.Concrete
 				if (member == null) throw new ArgumentNullException(
 					"Member #{0} of range '{1}' cannot be null.".FormatWith(i, range.Sketch()));
 
-
 				if (member.Owner == null) Add(member);
 				else
 				{
@@ -580,9 +575,7 @@ namespace Kerosene.ORM.Core.Concrete
 
 			if (disposeMembers)
 			{
-				var members = new List<ISchemaEntry>(_Members);
-				foreach (var member in members) if (!member.IsDisposed) member.Dispose();
-				members.Clear(); members = null;
+				var list = _Members.ToArray(); foreach (var member in list) member.Dispose();
 			}
 
 			_Members.Clear();

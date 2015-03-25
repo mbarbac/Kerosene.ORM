@@ -1,8 +1,6 @@
 ﻿// ======================================================== ProxyGenerator.cs
 namespace Kerosene.ORM.Maps.Concrete
 {
-	using Kerosene.ORM.Core;
-	using Kerosene.ORM.Core.Concrete;
 	using Kerosene.Tools;
 	using System;
 	using System.Collections;
@@ -20,30 +18,21 @@ namespace Kerosene.ORM.Maps.Concrete
 	/// </summary>
 	public static partial class ProxyGenerator
 	{
-		const string PROXY_ASSEMBLY_NAME = "KeroseneRunTimeProxies";
-		const int MAX_PROXY_NAME_LENGTH = 512 - 1;
-		const string COMPLETEDFLAG_SUFFIX = "_Completed";
-		const string SOURCEBACK_SUFFIX = "_Source";
+		internal const string PROXY_ASSEMBLY_NAME = "KeroseneRunTimeProxies";
+		internal const int MAX_PROXY_NAME_LENGTH = 512 - 1;
+		internal const string COMPLETEDFLAG_SUFFIX = "_Completed";
+		internal const string SOURCEBACK_SUFFIX = "_Source";
 
-		static List<ProxyHolder> _Holders = new List<ProxyHolder>();
+		static ProxyHolderSet _Holders = new ProxyHolderSet();
 		static AssemblyBuilder _AssemblyBuilder = null;
 		static ModuleBuilder _ModuleBuilder = null;
 
 		/// <summary>
-		/// The list of proxy holders that have been generated.
+		/// The collection of proxy holders that have been generated.
 		/// </summary>
-		internal static List<ProxyHolder> Holders
+		internal static ProxyHolderSet Holders
 		{
 			get { return _Holders; }
-		}
-
-		/// <summary>
-		/// Executes the given action under a lock on the holders' list.
-		/// </summary>
-		/// <param name="action">The action to execute.</param>
-		internal static void WithHoldersLock(Action action)
-		{
-			lock (((ICollection)_Holders).SyncRoot) { action(); }
 		}
 
 		/// <summary>
@@ -126,16 +115,21 @@ namespace Kerosene.ORM.Maps.Concrete
 			var list = GetLazyProperties<T>(map);
 			var name = GetProxyTypeName<T>(list); if (name == null) return null;
 
-			ProxyHolder holder = null; lock (((ICollection)Holders).SyncRoot)
+			ProxyHolder holder = null; lock (Holders.SyncRoot)
 			{
 				// If the appropriate holder exists, just return it...
-				holder = Holders.Find(x => x.ExtendedType.Name == name);
+				holder = Holders.Where(x => x.ExtendedType.Name == name).FirstOrDefault();
 				if (holder != null) { list.Clear(); return holder; }
 
-				// Otherwise, create a new one...
+				// Otherwise, create a new one - we cannot yet add it as its type is not set yet...
 				holder = new ProxyHolder();
-				holder.LazyProperties.AddRange(list);
-				foreach (var lazy in holder.LazyProperties) lazy.Holder = holder;
+
+				// Capturing the lazy properties...
+				foreach (var lazy in list)
+				{
+					lazy.Holder = holder;
+					holder.LazyProperties.Add(lazy);
+				}
 
 				// Preparing the builders...
 				Type baseType = typeof(T);
@@ -259,7 +253,6 @@ namespace Kerosene.ORM.Maps.Concrete
 
 				// Generating the type...
 				holder.ExtendedType = proxyBuilder.CreateType();
-				Holders.Add(holder);
 
 				// Before releasing the lock let's cache some relevant information...
 				var type = holder.ExtendedType; foreach (var lazy in holder.LazyProperties)
@@ -274,6 +267,9 @@ namespace Kerosene.ORM.Maps.Concrete
 					lazy.SourceBackGetter = lazy.SourceBackProperty == null ? null : lazy.SourceBackProperty.GetGetMethod(nonPublic: true);
 					lazy.SourceBackSetter = lazy.SourceBackProperty == null ? null : lazy.SourceBackProperty.GetSetMethod(nonPublic: true);
 				}
+				 
+				// Now we can add the holder into the collection as we have set its type...
+				Holders.Add(holder);
 			}
 
 			return holder;
@@ -291,8 +287,8 @@ namespace Kerosene.ORM.Maps.Concrete
 		public static void OnProxySetter(object entity, object value, string name)
 		{
 			var type = entity.GetType();
-			var holder = Holders.Find(x => x.ExtendedType == type);
-			var lazy = holder.LazyProperties.Find(x => x.Name == name);
+			var holder = Holders.FindByExtended(type);
+			var lazy = holder.LazyProperties.FindByName(name);
 
 			lazy.LazyCompletedFlag.SetValue(entity, true); // Avoiding re-entrance...
 			lazy.SourceBackSetter.Invoke(entity, new[] { value });
@@ -306,8 +302,8 @@ namespace Kerosene.ORM.Maps.Concrete
 		public static object OnProxyGetter(object entity, string name)
 		{
 			var type = entity.GetType();
-			var holder = Holders.Find(x => x.ExtendedType == type);
-			var lazy = holder.LazyProperties.Find(x => x.Name == name);
+			var holder = Holders.FindByExtended(type);
+			var lazy = holder.LazyProperties.FindByName(name);
 
 			var value = lazy.SourceBackGetter.Invoke(entity, null);
 
@@ -317,9 +313,9 @@ namespace Kerosene.ORM.Maps.Concrete
 				var meta = MetaEntity.Locate(entity, create: false);
 				if (meta == null) break;
 				if (meta.Record == null) break;
-				if (meta.Map == null) break;
+				if (meta.UberMap == null) break;
 
-				var member = meta.Map.Members.FirstOrDefault<IUberMember>(x => x.Name == name);
+				var member = meta.UberMap.Members.FirstOrDefault<IUberMember>(x => x.Name == name);
 				if (member == null) break;
 				if (member.CompleteMember == null) break;
 
@@ -327,14 +323,19 @@ namespace Kerosene.ORM.Maps.Concrete
 				member.CompleteMember(meta.Record, entity);
 				value = lazy.SourceBackGetter.Invoke(entity, null);
 
-				if (member.DependencyMode == MemberDependencyMode.Child &&
+				if (UberHelper.TrackChildEntities && 
+					member.DependencyMode == MemberDependencyMode.Child &&
 					member.ElementInfo.ElementType.IsListAlike())
 				{
 					type = member.ElementInfo.ElementType.ListAlikeMemberType();
 					if (type != null && type.IsClass)
 					{
-						if (!meta.MemberChilds.ContainsKey(member.Name)) meta.MemberChilds.Add(member.Name, new List<object>());
-						var childs = meta.MemberChilds[member.Name]; childs.Clear();
+						if (!meta.TrackedChilds.ContainsKey(member.Name))
+							meta.TrackedChilds.Add(member.Name, new HashSet<object>());
+
+						var childs = meta.TrackedChilds[member.Name];
+						childs.Clear();
+						
 						var iter = member.ElementInfo.GetValue(entity) as IEnumerable;
 						foreach (var item in iter) childs.Add(item);
 					}
@@ -354,12 +355,22 @@ namespace Kerosene.ORM.Maps.Concrete
 	/// </summary>
 	public class ProxyHolder
 	{
-		List<LazyProperty> _LazyProperties = new List<LazyProperty>();
-
 		/// <summary>
 		/// Initializes a new empty instance.
 		/// </summary>
-		internal ProxyHolder() { }
+		internal ProxyHolder()
+		{
+			LazyProperties = new ProxyHolderLazySet();
+		}
+
+		/// <summary>
+		/// Clears all the resources held by this instance.
+		/// </summary>
+		internal void Dispose()
+		{
+			LazyProperties.Clear();
+			LazyProperties = null;
+		}
 
 		/// <summary>
 		/// Returns the string representation of this instance.
@@ -373,10 +384,10 @@ namespace Kerosene.ORM.Maps.Concrete
 
 			if (LazyProperties != null && LazyProperties.Count != 0)
 			{
-				sb.Append(" ["); bool first = true; foreach (var lazy in LazyProperties)
+				sb.Append(" ["); bool first = true; foreach (var item in LazyProperties)
 				{
 					if (first) first = false; else sb.Append(", ");
-					sb.Append(lazy);
+					sb.Append(item);
 				}
 				sb.Append("]");
 			}
@@ -393,10 +404,7 @@ namespace Kerosene.ORM.Maps.Concrete
 		/// <summary>
 		/// The collection of lazy properties for which this holder was created.
 		/// </summary>
-		internal List<LazyProperty> LazyProperties
-		{
-			get { return _LazyProperties; }
-		}
+		internal ProxyHolderLazySet LazyProperties { get; private set; }
 	}
 
 	// ==================================================== 
@@ -410,6 +418,17 @@ namespace Kerosene.ORM.Maps.Concrete
 		/// Initializes a new empty instance.
 		/// </summary>
 		internal LazyProperty() { }
+
+		/// <summary>
+		/// Clears all the resources held by this instance.
+		/// </summary>
+		internal void Dispose()
+		{
+			Holder = null;
+			OriginalProperty = null; OriginalGetter = null; OriginalSetter = null;
+			ExtendedProperty = null; ExtendedGetter = null; ExtendedSetter = null;
+			SourceBackProperty = null; SourceBackGetter = null; SourceBackSetter = null;
+		}
 
 		/// <summary>
 		/// The holder where this lazy property is defined.

@@ -4,14 +4,13 @@ namespace Kerosene.ORM.Core
 	using Kerosene.Tools;
 	using System;
 	using System.Collections.Generic;
-	using System.Linq;
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents an underlying database engine maintaining its main characteristics and acting
-	/// as a factory to create objects adapted to it.
+	/// Represents an underlying database engine. Maintains its main characteristics and acts
+	/// as a factory to create concrete objects adapted to it.
 	/// </summary>
-	public interface IDataEngine : IDisposableEx, ICloneable
+	public interface IDataEngine : ICloneable, IDisposableEx
 	{
 		/// <summary>
 		/// Returns a new instance that is a copy of the original one.
@@ -22,15 +21,16 @@ namespace Kerosene.ORM.Core
 		/// <summary>
 		/// Returns a new instance that is a copy of the original one.
 		/// </summary>
-		/// <param name="settings">A dictionary containing the names of the properties whose
-		/// values are to be changed with respect to the original instance, or null to not
-		/// modify any of those.</param>
+		/// <param name="settings">A dictionary containing the names and values of the properties
+		/// that has to be changed with respect to the original ones, or null if these changes
+		/// are not needed.
 		/// <returns>A new instance.</returns>
 		IDataEngine Clone(IDictionary<string, object> settings);
 
 		/// <summary>
 		/// The engine invariant name. The value of this property typically corresponds to the
-		/// ADO.NET provider invariant name, but this correspondence is not mandatory.
+		/// ADO.NET provider's invariant name, if such is used, but this correspondence is not
+		/// mandatory.
 		/// </summary>
 		/// <remarks>There might be several instances registered sharing the same invariant name.
 		/// In this case resolution can be forced using the min and max version arguments.</remarks>

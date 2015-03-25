@@ -14,6 +14,6 @@ namespace Kerosene.ORM.Maps
 	/// <summary>
 	/// Represents a delete operation for its associated entity.
 	/// </summary>
-	public interface IDataDelete<T> : IDataDelete, IMetaOperation<T> where T : class { }
+	public interface IDataDelete<T> : IMetaOperation<T>, IDataDelete where T : class { }
 }
 // ======================================================== 

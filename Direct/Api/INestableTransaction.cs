@@ -4,17 +4,17 @@ namespace Kerosene.ORM.Direct
 	using Kerosene.Tools;
 	using System;
 	using System.Data;
-	using System.Linq;
 	using System.Transactions;
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents an abstract nestable transaction for a direct connection scenario.
+	/// Represents an abstract nestable transaction, in a direct connection scenario, associated
+	/// with a given <see cref="IDataLink"/>.
 	/// </summary>
 	public interface INestableTransaction : Core.INestableTransaction
 	{
 		/// <summary>
-		/// The link this transaction is associated with.
+		/// The database-alike service link this instance is associated with.
 		/// </summary>
 		new IDataLink Link { get; }
 

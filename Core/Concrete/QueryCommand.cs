@@ -6,12 +6,11 @@ namespace Kerosene.ORM.Core.Concrete
 	using System.Collections;
 	using System.Collections.Generic;
 	using System.Linq;
-	using System.Runtime.Serialization;
 	using System.Text;
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents a query operation against the underlying database.
+	/// Represents a query command.
 	/// </summary>
 	public class QueryCommand : CommandEnum, IQueryCommand
 	{
@@ -173,7 +172,7 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Defines the contents of the SELECT clause, or appends the new ones to any previous
+		/// Defines the contents of the SELECT clause or append the new ones to any previous
 		/// specification.
 		/// </summary>
 		/// <param name="selects">The collection of lambda expressions that resolve into the
@@ -184,7 +183,7 @@ namespace Kerosene.ORM.Core.Concrete
 		/// <para>- A specification for all columns of a table using the 'x => x.Table.All()' syntax.</para>
 		/// <para>- Any expression that can be parsed into a valid SQL sentence for this clause.</para>
 		/// </param>
-		/// <returns>This instance to permit a fluent syntax chaining.</returns>
+		/// <returns>A self-reference to permit a fluent syntax chaining.</returns>
 		public IQueryCommand Select(params Func<dynamic, object>[] selects)
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
@@ -367,10 +366,10 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Adds a DISTINCT clause to the SELECT one.
+		/// Adds or removes a DISTINCT clause to the SELECT one of this command.
 		/// </summary>
-		/// <param name="distinct">Whether to activate or de-activate this clause.</param>
-		/// <returns>This instance to permit a fluent syntax chaining.</returns>
+		/// <param name="distinct">True to add this clause, false to remove it.</param>
+		/// <returns>A self-reference to permit a fluent syntax chaining.</returns>
 		public IQueryCommand Distinct(bool distinct = true)
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
@@ -380,11 +379,11 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Defines the contents of the TOP clause.
+		/// Defines the contents of the TOP clause. Any previous ones are removed.
 		/// </summary>
 		/// <param name="top">An integer with the value to set for the TOP clause. A value of cero
 		/// or negative merely removes this clause.</param>
-		/// <returns>This instance to permit a fluent syntax chaining.</returns>
+		/// <returns>A self-reference to permit a fluent syntax chaining.</returns>
 		public IQueryCommand Top(int top)
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
@@ -409,7 +408,7 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Defines the contents of the FROM clause, or appends the new ones to any previous
+		/// Defines the contents of the FROM clause or append the new ones to any previous
 		/// specification.
 		/// </summary>
 		/// <param name="froms">The collection of lambda expressions that resolve into the
@@ -419,7 +418,7 @@ namespace Kerosene.ORM.Core.Concrete
 		/// is optional.</para>
 		/// <para>- Any expression that can be parsed into a valid SQL sentence for this clause.</para>
 		/// </param>
-		/// <returns>This instance to permit a fluent syntax chaining.</returns>
+		/// <returns>A self-reference to permit a fluent syntax chaining.</returns>
 		public IQueryCommand From(params Func<dynamic, object>[] froms)
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
@@ -590,17 +589,15 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Defines the contents of the WHERE clause, or appends the new ones to any previous
+		/// Defines the contents of the WHERE clause or append the new ones to any previous
 		/// specification.
+		/// <para>By default if any previous contents exist the new ones are appended using an AND
+		/// operator. However, the virtual extension methods 'x => x.And(...)' and 'x => x.Or(...)'
+		/// can be used to specify what logical operator to use.</para>
 		/// </summary>
 		/// <param name="where">The dynamic lambda expression that resolves into the contents of
-		/// this clause.
-		/// <para>- By default, if any previous contents exist the new ones are appended using an
-		/// AND logical operator. However, the virtual extension methods 'x => x.And(...)' and
-		/// 'x => x.Or(...)' can be used to specify the concrete logical operator to use for
-		/// concatenation purposes.</para>
-		/// </param>
-		/// <returns>This instance to permit a fluent syntax chaining.</returns>
+		/// this clause.</param>
+		/// <returns>A self-reference to permit a fluent syntax chaining.</returns>
 		public IQueryCommand Where(Func<dynamic, object> where)
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
@@ -654,7 +651,7 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Defines the contents of the JOIN clause, or appends the new ones to any previous
+		/// Defines the contents of the JOIN clause or append the new ones to any previous
 		/// specification.
 		/// </summary>
 		/// <param name="join">The dynamic lambda expression that resolves into the contents of
@@ -666,9 +663,9 @@ namespace Kerosene.ORM.Core.Concrete
 		/// the alias part is optional.</para>
 		/// <para>- A dynamic specification containing a non-default join operation can be
 		/// specified using the 'x => x(jointype).Table...' syntax, where the orphan invocation
-		/// must be the first one in the chain.</para>
-		/// </param>
-		/// <returns>This instance to permit a fluent syntax chaining.</returns>
+		/// must be the first one in the chain, and whose parameter is a string containing the
+		/// join clause to use.</para>
+		/// <returns>A self-reference to permit a fluent syntax chaining.</returns>
 		public IQueryCommand Join(Func<dynamic, object> join)
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
@@ -773,14 +770,14 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Defines the contents of the GROUP BY clause, or appends the new ones to any previous
+		/// Defines the contents of the GROUP BY clause or append the new ones to any previous
 		/// specification.
 		/// </summary>
 		/// <param name="groupbys">The collection of dynamic lambda expressions that resolve into
 		/// the contents of this clause:
 		/// <para>- A string as in 'x => "Table.Column"', where the table part is optional.</para>
 		/// </param>
-		/// <returns>This instance to permit a fluent syntax chaining.</returns>
+		/// <returns>A self-reference to permit a fluent syntax chaining.</returns>
 		public IQueryCommand GroupBy(params Func<dynamic, object>[] groupbys)
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
@@ -816,17 +813,15 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Defines the contents of the HAVING clause of the GROUP BY one, or appends the new ones
-		/// to any previous specification.
+		/// Defines the contents of the HAVING clause that follows the GROUP BY one, or append the
+		/// new ones to any previous specification.
+		/// <para>By default if any previous contents exist the new ones are appended using an AND
+		/// operator. However, the virtual extension methods 'x => x.And(...)' and 'x => x.Or(...)'
+		/// can be used to specify what logical operator to use.</para>
 		/// </summary>
 		/// <param name="having">The dynamic lambda expression that resolves into the contents of
-		/// this clause.
-		/// <para>- By default, if any previous contents exist the new ones are appended using an
-		/// AND logical operator. However, the virtual extension methods 'x => x.And(...)' and
-		/// 'x => x.Or(...)' can be used to specify the concrete logical operator to use for
-		/// concatenation purposes.</para>
-		/// </param>
-		/// <returns>This instance to permit a fluent syntax chaining.</returns>
+		/// this clause.</param>
+		/// <returns>A self-reference to permit a fluent syntax chaining.</returns>
 		public IQueryCommand Having(Func<dynamic, object> having)
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
@@ -880,7 +875,7 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Defines the contents of the ORDER BY one, or appends the new ones to any previous
+		/// Defines the contents of the ORDER BY clause or append the new ones to any previous
 		/// specification.
 		/// </summary>
 		/// <param name="orderbys">The collection of dynamic lambda expressions that resolve into
@@ -891,7 +886,7 @@ namespace Kerosene.ORM.Core.Concrete
 		/// parts are optional. The order part can be any among the 'Asc()', 'Ascending()',
 		/// 'Desc()' or 'Descending()' ones.</para>
 		/// </param>
-		/// <returns>This instance to permit a fluent syntax chaining.</returns>
+		/// <returns>A self-reference to permit a fluent syntax chaining.</returns>
 		public IQueryCommand OrderBy(params Func<dynamic, object>[] orderbys)
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
@@ -947,11 +942,11 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Defines the contents of the SKIP clause.
+		/// Defines the contents of the SKIP clause. Any previous ones are removed.
 		/// </summary>
-		/// <param name="skip">An integer with the value to set for the SKIP clause. A value of
-		/// cero or negative merely removes this clause.</param>
-		/// <returns>This instance to permit a fluent syntax chaining.</returns>
+		/// <param name="skip">An integer with the value to set for the SKIP clause. A value of cero
+		/// or negative merely removes this clause.</param>
+		/// <returns>A self-reference to permit a fluent syntax chaining.</returns>
 		public IQueryCommand Skip(int skip)
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
@@ -966,11 +961,19 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Defines the contents of the TAKE clause.
+		/// Gets the current 'Skip' value.
 		/// </summary>
-		/// <param name="take">An integer with the value to set for the SKIP clause. A value of
-		/// cero or negative value merely removes this clause.</param>
-		/// <returns>This instance to permit a fluent syntax chaining.</returns>
+		public int GetSkipValue()
+		{
+			return TheSkipData;
+		}
+
+		/// <summary>
+		/// Defines the contents of the TAKE clause. Any previous ones are removed.
+		/// </summary>
+		/// <param name="take">An integer with the value to set for the TAKE clause. A value of cero
+		/// or negative merely removes this clause.</param>
+		/// <returns>A self-reference to permit a fluent syntax chaining.</returns>
 		public IQueryCommand Take(int take)
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
@@ -982,14 +985,6 @@ namespace Kerosene.ORM.Core.Concrete
 				TheTopData = 0;
 			}
 			return this;
-		}
-
-		/// <summary>
-		/// Gets the current 'Skip' value.
-		/// </summary>
-		public int GetSkipValue()
-		{
-			return TheSkipData;
 		}
 
 		/// <summary>

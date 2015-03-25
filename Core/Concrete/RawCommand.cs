@@ -6,14 +6,14 @@ namespace Kerosene.ORM.Core.Concrete
 	using System.Collections;
 	using System.Collections.Generic;
 	using System.Linq;
-	using System.Runtime.Serialization;
 	using System.Text;
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents a generic command where its contents can be explicitly set as needed.
+	/// Represents a command whose contents can be set explicitly as needed.
 	/// <para>Instances of this type are usefull to express logic not supported by other command
-	/// types, and also to invoke stored procedures.</para>
+	/// types, as for instance specific functions or constructions supported by the dialect of
+	/// the underlying database engine, and also to invoke stored procedures.</para>
 	/// </summary>
 	public class RawCommand : CommandEnumSca, IRawCommand
 	{
@@ -95,13 +95,14 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Sets the contents of this command removing any previous ones it may had.
+		/// Sets the contents of this command with the text and arguments given. Any previous
+		/// contents and arguments are removed.
 		/// </summary>
 		/// <param name="text">The new text of the command. Embedded arguments are specified
-		/// using the standard positional '{n}' format.</param>
-		/// <param name="args">An optional collection containing the arguments to be used by
-		/// this command.</param>
-		/// <returns>This instance to permit a fluent syntax chaining.</returns>
+		/// using the standard '{n}' positional format.</param>
+		/// <param name="args">An optional collection containing the arguments specified in the
+		/// text set into this command.</param>
+		/// <returns>A self-reference to permit a fluent syntax chaining.</returns>
 		public IRawCommand Set(string text, params object[] args)
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
@@ -112,11 +113,13 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Sets the contents of this command removing any previous ones it may had.
+		/// Sets the contents of this command parsing the dynamic lambda expression given. Any
+		/// previous contents and arguments are removed.
 		/// </summary>
-		/// <param name="spec">A dynamic lambda expression that when parsed specified the new
-		/// contents of this command.</param>
-		/// <returns>This instance to permit a fluent syntax chaining.</returns>
+		/// <param name="spec">A dynamic lambda expression that resolves into the logic of this
+		/// command. Embedded arguments are extracted and captured automatically in order to
+		/// avoid injection attacks.</param>
+		/// <returns>A self-reference to permit a fluent syntax chaining.</returns>
 		public IRawCommand Set(Func<dynamic, object> spec)
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
@@ -127,13 +130,13 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Appends to the contents of the command the new ones specified.
+		/// Appends to the previous contents the new text and arguments given.
 		/// </summary>
-		/// <param name="text">The text to append to this command. Embedded arguments are
-		/// specified using the standard positional '{n}' format.</param>
-		/// <param name="args">An optional collection containing the arguments to be used by
-		/// this command.</param>
-		/// <returns>This instance to permit a fluent syntax chaining.</returns>
+		/// <param name="text">The text to append to this command. Embedded arguments are specified
+		/// using the standard '{n}' positional format.</param>
+		/// <param name="args">An optional collection containing the arguments specified in the
+		/// text to append to this command.</param>
+		/// <returns>A self-reference to permit a fluent syntax chaining.</returns>
 		public IRawCommand Append(string text, params object[] args)
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
@@ -157,11 +160,13 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Appends to the contents of the command the new ones specified.
+		/// Appends to the previous contents the new ones obtained by parsing the dynamic lambda
+		/// expression given.
 		/// </summary>
-		/// <param name="spec">A dynamic lambda expression that when parsed specified the contents
-		/// to be appended to the previous ones of this command.</param>
-		/// <returns>This instance to permit a fluent syntax chaining.</returns>
+		/// <param name="spec">A dynamic lambda expression that resolves into the logic of this
+		/// command. Embedded arguments are extracted and captured automatically in order to
+		/// avoid injection attacks.</param>
+		/// <returns>A self-reference to permit a fluent syntax chaining.</returns>
 		public IRawCommand Append(Func<dynamic, object> spec)
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());

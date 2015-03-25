@@ -12,7 +12,8 @@ namespace Kerosene.ORM.Core.Concrete
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents a record returned by the execution of an enumerable command.
+	/// Represents a record returned by the execution of an enumerable command, that provides
+	/// both an indexed and dynamic ways to access its contents.
 	/// </summary>
 	[Serializable]
 	public class Record : DynamicObject, IRecord
@@ -83,6 +84,8 @@ namespace Kerosene.ORM.Core.Concrete
 		/// Invoked when disposing or finalizing this instance.
 		/// </summary>
 		/// <param name="disposing">True if the object is being disposed, false otherwise.</param>
+		/// <param name="disposeSchema">True to also dispose the schema this instance is
+		/// associated with.</param>
 		protected virtual void OnDispose(bool disposing, bool disposeSchema)
 		{
 			if (disposing)
@@ -148,17 +151,13 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Returns a new instance that is a copy of the original one.
+		/// Returns a new instance that otherwise is a copy of the original one.
 		/// </summary>
 		/// <returns>A new instance.</returns>
 		public Record Clone()
 		{
 			return Clone(cloneSchema: false);
 		}
-		//{
-		//	var cloned = new Record();
-		//	OnClone(cloned); return cloned;
-		//}
 		IRecord IRecord.Clone()
 		{
 			return this.Clone();
@@ -203,16 +202,17 @@ namespace Kerosene.ORM.Core.Concrete
 				"Cloned instance '{0}' is not a valid '{1}' one."
 				.FormatWith(cloned.Sketch(), typeof(Record).EasyName()));
 
-			// Schema / Count: constructor
 			temp.SerializeSchema = this.SerializeSchema;
 			for (int i = 0; i < _Values.Length; i++) temp[i] = this[i].TryClone();
 		}
 
 		/// <summary>
-		/// Returns true if this object can be considered as equivalent to the target one given.
+		/// Returns true if the state of this object can be considered as equivalent to the target
+		/// one, based upon any arbitrary criteria implemented in this method.
 		/// </summary>
-		/// <param name="target">The target object this one will be tested for equivalence.</param>
-		/// <returns>True if this object can be considered as equivalent to the target one given.</returns>
+		/// <param name="target">The target instance this one will be tested for equivalence against.</param>
+		/// <returns>True if the state of this instance can be considered as equivalent to the
+		/// target one, or false otherwise.</returns>
 		public bool EquivalentTo(IRecord target)
 		{
 			return OnEquivalentTo(target, onlyValues: false);
@@ -258,16 +258,19 @@ namespace Kerosene.ORM.Core.Concrete
 				else { if (!this.Schema.EquivalentTo(temp.Schema)) return false; }
 			}
 
-			// SerializeSchema: not considered!
+			// SerializeSchema: not considered on purpose!
 
 			return true;
 		}
 
 		/// <summary>
-		/// The schema this record is associated with.
+		/// The schema that describes the structure and metadata of the contents in this record.
 		/// <para>The setter fails if the value is not null and this instance already has a
 		/// schema associated with it.</para>
 		/// </summary>
+		/// <remarks>The value held by this property can be null if this instance is disposed,
+		/// or when there is no schema associated to it, which can happen in some border case
+		/// scenarios (as for instance while it is being deserialized, among others).</remarks>
 		public ISchema Schema
 		{
 			get { return _Schema; }
@@ -297,8 +300,7 @@ namespace Kerosene.ORM.Core.Concrete
 		/// Whether the schema this instance may has associated with it is serialized along with
 		/// this record or not. A value of 'false' can be used when serializing many records
 		/// associated with the same schema, for performance reasons, and in this case it is
-		/// assumed it is expected that the schema reference is set by the receiving environment
-		/// afterwards.
+		/// assumed that the schema reference is set by the receiving environment afterwards.
 		/// </summary>
 		public bool SerializeSchema
 		{
@@ -319,7 +321,7 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// The number of columns in this record.
+		/// The number of table-column entries in this record.
 		/// </summary>
 		public int Count
 		{
@@ -327,10 +329,10 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Gets or sets the value held by column whose index is given.
+		/// Gets or sets the value held by table-column entry whose index is given.
 		/// </summary>
-		/// <param name="index">The index of the affected column.</param>
-		/// <returns>The value held by the column whose index is given.</returns>
+		/// <param name="index">The index of the table-column entry.</param>
+		/// <returns>The value held by the entry whose index is given.</returns>
 		public object this[int index]
 		{
 			get
@@ -346,24 +348,25 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Gets or sets the value held by the column whose table and column names are given.
+		/// Gets or sets the value stored in this record by the entry whose table and column names
+		/// are given.
 		/// </summary>
-		/// <param name="table">The table name of the entry to find, or null to refer to the
-		/// default one in this context.</param>
-		/// <param name="column">The column name.</param>
-		/// <returns>The value held by the requested entry.</returns>
-		public object this[string table, string column]
+		/// <param name="tableName">The table name of the entry to use, or null if it refers to
+		/// the default one in this context.</param>
+		/// <param name="columnName">The column name of the entry to use.</param>
+		/// <returns>The value held by the entry whose table and column names are given.</returns>
+		public object this[string tableName, string columnName]
 		{
 			get
 			{
 				if (IsDisposed) throw new ObjectDisposedException(this.ToString());
 				if (_Schema == null) throw new InvalidOperationException("This '{0}' is not associated with any schema.".FormatWith(this));
-				table = Core.SchemaEntry.ValidateTable(table);
-				column = Core.SchemaEntry.ValidateColumn(column);
+				tableName = Core.SchemaEntry.ValidateTable(tableName);
+				columnName = Core.SchemaEntry.ValidateColumn(columnName);
 
-				var entry = _Schema.FindEntry(table, column);
+				var entry = _Schema.FindEntry(tableName, columnName);
 				if (entry == null) throw new NotFoundException(
-					"Entry '{0}' not found in this '{1}'".FormatWith(Core.SchemaEntry.NormalizedName(table, column), this));
+					"Entry '{0}' not found in this '{1}'".FormatWith(Core.SchemaEntry.NormalizedName(tableName, columnName), this));
 
 				var index = _Schema.IndexOf(entry);
 				return _Values[index];
@@ -372,12 +375,12 @@ namespace Kerosene.ORM.Core.Concrete
 			{
 				if (IsDisposed) throw new ObjectDisposedException(this.ToString());
 				if (_Schema == null) throw new InvalidOperationException("This '{0}' is not associated with any schema.".FormatWith(this));
-				table = Core.SchemaEntry.ValidateTable(table);
-				column = Core.SchemaEntry.ValidateColumn(column);
+				tableName = Core.SchemaEntry.ValidateTable(tableName);
+				columnName = Core.SchemaEntry.ValidateColumn(columnName);
 
-				var entry = _Schema.FindEntry(table, column);
+				var entry = _Schema.FindEntry(tableName, columnName);
 				if (entry == null) throw new NotFoundException(
-					"Entry '{0}' not found in this '{1}'".FormatWith(Core.SchemaEntry.NormalizedName(table, column), this));
+					"Entry '{0}' not found in this '{1}'".FormatWith(Core.SchemaEntry.NormalizedName(tableName, columnName), this));
 
 				var index = _Schema.IndexOf(entry);
 				_Values[index] = value;
@@ -385,23 +388,22 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Gets or sets the value held by the unique column whose column name is given. If
-		/// several entries are found sharing the same column name for different tables then
-		/// an exception is thrown.
+		/// Gets or sets the value stored by the entry whose unique column name is given. If
+		/// several entries are found with the same column name then an exception is thrown.
 		/// </summary>
-		/// <param name="column">The column name.</param>
-		/// <returns>The value held by the requested entry.</returns>
-		public object this[string column]
+		/// <param name="columnName">The column name of the entry to use.</param>
+		/// <returns>The value held by the entry whose unique column name is given.</returns>
+		public object this[string columnName]
 		{
 			get
 			{
 				if (IsDisposed) throw new ObjectDisposedException(this.ToString());
 				if (_Schema == null) throw new InvalidOperationException("This '{0}' is not associated with any schema.".FormatWith(this));
-				column = Core.SchemaEntry.ValidateColumn(column);
+				columnName = Core.SchemaEntry.ValidateColumn(columnName);
 
-				var entry = _Schema.FindEntry(column);
+				var entry = _Schema.FindEntry(columnName);
 				if (entry == null) throw new NotFoundException(
-					"Entry '{0}' not found in this '{1}'".FormatWith(column, this));
+					"Entry '{0}' not found in this '{1}'".FormatWith(columnName, this));
 
 				var index = _Schema.IndexOf(entry);
 				return _Values[index];
@@ -410,11 +412,11 @@ namespace Kerosene.ORM.Core.Concrete
 			{
 				if (IsDisposed) throw new ObjectDisposedException(this.ToString());
 				if (_Schema == null) throw new InvalidOperationException("This '{0}' is not associated with any schema.".FormatWith(this));
-				column = Core.SchemaEntry.ValidateColumn(column);
+				columnName = Core.SchemaEntry.ValidateColumn(columnName);
 
-				var entry = _Schema.FindEntry(column);
+				var entry = _Schema.FindEntry(columnName);
 				if (entry == null) throw new NotFoundException(
-					"Entry '{0}' not found in this '{1}'".FormatWith(column, this));
+					"Entry '{0}' not found in this '{1}'".FormatWith(columnName, this));
 
 				var index = _Schema.IndexOf(entry);
 				_Values[index] = value;
@@ -422,13 +424,15 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Gets or sets the value held by the column whose table and colum names are obtained
-		/// parsing the given dynamic lambda expression, using either the 'x => x.Table.Column'
-		/// or 'x => x.Column' forms. In the later case, if several members are found sharing the
-		/// same column name for different tables then an exception is thrown.
+		/// Gets or sets the value stored at the entry whose table and column names are obtained
+		/// by parsing the dynamic lambda expression given. This expression can use either the
+		/// 'x => x.Table.Column' or the 'x => x.Column' forms, or resolve into a valid string.
+		/// If only the column name is used, then it has to be unique because if several columns
+		/// are found with the same column name then an exception is thrown.
 		/// </summary>
-		/// <param name="column">The column name.</param>
-		/// <returns>The value held by the requested entry.</returns>
+		/// <param name="spec">The dynamic lambda expression that resolves into the specification
+		/// of the entry to use.</param>
+		/// <returns>The value held by the entry specified by the dynamic lambda expression.</returns>
 		public object this[Func<dynamic, object> spec]
 		{
 			get

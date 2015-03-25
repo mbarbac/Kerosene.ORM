@@ -3,15 +3,15 @@ namespace Kerosene.ORM.Core
 {
 	using Kerosene.Tools;
 	using System;
-	using System.Linq;
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents a generic command where its contents can be explicitly set as needed.
+	/// Represents a command whose contents can be set explicitly as needed.
 	/// <para>Instances of this type are usefull to express logic not supported by other command
-	/// types, and also to invoke stored procedures.</para>
+	/// types, as for instance specific functions or constructions supported by the dialect of
+	/// the underlying database engine, and also to invoke stored procedures.</para>
 	/// </summary>
-	public interface IRawCommand : ICommand, IEnumerableCommand, IScalarCommand
+	public interface IRawCommand : IEnumerableCommand, IScalarCommand
 	{
 		/// <summary>
 		/// Returns a new instance that is a copy of the original one.
@@ -20,39 +20,44 @@ namespace Kerosene.ORM.Core
 		new IRawCommand Clone();
 
 		/// <summary>
-		/// Sets the contents of this command removing any previous ones it may had.
+		/// Sets the contents of this command with the text and arguments given. Any previous
+		/// contents and arguments are removed.
 		/// </summary>
 		/// <param name="text">The new text of the command. Embedded arguments are specified
-		/// using the standard positional '{n}' format.</param>
-		/// <param name="args">An optional collection containing the arguments to be used by
-		/// this command.</param>
-		/// <returns>This instance to permit a fluent syntax chaining.</returns>
+		/// using the standard '{n}' positional format.</param>
+		/// <param name="args">An optional collection containing the arguments specified in the
+		/// text set into this command.</param>
+		/// <returns>A self-reference to permit a fluent syntax chaining.</returns>
 		IRawCommand Set(string text, params object[] args);
 
 		/// <summary>
-		/// Sets the contents of this command removing any previous ones it may had.
+		/// Sets the contents of this command parsing the dynamic lambda expression given. Any
+		/// previous contents and arguments are removed.
 		/// </summary>
-		/// <param name="spec">A dynamic lambda expression that when parsed specified the new
-		/// contents of this command.</param>
-		/// <returns>This instance to permit a fluent syntax chaining.</returns>
+		/// <param name="spec">A dynamic lambda expression that resolves into the logic of this
+		/// command. Embedded arguments are extracted and captured automatically in order to
+		/// avoid injection attacks.</param>
+		/// <returns>A self-reference to permit a fluent syntax chaining.</returns>
 		IRawCommand Set(Func<dynamic, object> spec);
 
 		/// <summary>
-		/// Appends to the contents of the command the new ones specified.
+		/// Appends to the previous contents the new text and arguments given.
 		/// </summary>
-		/// <param name="text">The text to append to this command. Embedded arguments are
-		/// specified using the standard positional '{n}' format.</param>
-		/// <param name="args">An optional collection containing the arguments to be used by
-		/// this command.</param>
-		/// <returns>This instance to permit a fluent syntax chaining.</returns>
+		/// <param name="text">The text to append to this command. Embedded arguments are specified
+		/// using the standard '{n}' positional format.</param>
+		/// <param name="args">An optional collection containing the arguments specified in the
+		/// text to append to this command.</param>
+		/// <returns>A self-reference to permit a fluent syntax chaining.</returns>
 		IRawCommand Append(string text, params object[] args);
 
 		/// <summary>
-		/// Appends to the contents of the command the new ones specified.
+		/// Appends to the previous contents the new ones obtained by parsing the dynamic lambda
+		/// expression given.
 		/// </summary>
-		/// <param name="spec">A dynamic lambda expression that when parsed specified the contents
-		/// to be appended to the previous ones of this command.</param>
-		/// <returns>This instance to permit a fluent syntax chaining.</returns>
+		/// <param name="spec">A dynamic lambda expression that resolves into the logic of this
+		/// command. Embedded arguments are extracted and captured automatically in order to
+		/// avoid injection attacks.</param>
+		/// <returns>A self-reference to permit a fluent syntax chaining.</returns>
 		IRawCommand Append(Func<dynamic, object> spec);
 	}
 }

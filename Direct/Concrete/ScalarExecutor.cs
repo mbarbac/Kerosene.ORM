@@ -6,13 +6,12 @@ namespace Kerosene.ORM.Direct.Concrete
 	using System.Collections;
 	using System.Collections.Generic;
 	using System.Linq;
-	using System.Runtime.Serialization;
 	using System.Text;
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents an object able to execute a scalar command, in a direct connection scenario,
-	/// and to return the interger produced by that execution.
+	/// Represents an object able to execute a scalar command, in a direct connection scenarios,
+	/// and to produce the integer resulting from this execution.
 	/// </summary>
 	public class ScalarExecutor : Core.Concrete.ScalarExecutor, IScalarExecutor
 	{

@@ -7,12 +7,11 @@ namespace Kerosene.ORM.Core.Concrete
 	using System.Collections.Generic;
 	using System.Linq;
 	using System.Linq.Expressions;
-	using System.Runtime.Serialization;
 	using System.Text;
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents an update operation against the underlying database.
+	/// Represents an update command.
 	/// </summary>
 	public class UpdateCommand : CommandEnumSca, IUpdateCommand
 	{
@@ -120,17 +119,15 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Defines the contents of the WHERE clause, or appends the new ones to any previous
+		/// Defines the contents of the WHERE clause or append the new ones to any previous
 		/// specification.
+		/// <para>By default if any previous contents exist the new ones are appended using an AND
+		/// operator. However, the virtual extension methods 'x => x.And(...)' and 'x => x.Or(...)'
+		/// can be used to specify what logical operator to use.</para>
 		/// </summary>
 		/// <param name="where">The dynamic lambda expression that resolves into the contents of
-		/// this clause.
-		/// <para>- By default, if any previous contents exist the new ones are appended using an
-		/// AND logical operator. However, the virtual extension methods 'x => x.And(...)' and
-		/// 'x => x.Or(...)' can be used to specify the concrete logical operator to use for
-		/// concatenation purposes.</para>
-		/// </param>
-		/// <returns>This instance to permit a fluent syntax chaining.</returns>
+		/// this clause.</param>
+		/// <returns>A self-reference to permit a fluent syntax chaining.</returns>
 		public IUpdateCommand Where(Func<dynamic, object> where)
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
@@ -184,13 +181,13 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Defines, or adds to a previous specification, the columns affected by this command
-		/// along with its values.
+		/// Defines the names and values of the columns affected by this command, or adds the new
+		/// ones to any previous one that may exist.
 		/// </summary>
 		/// <param name="columns">A collection of dynamic lambda expressions resolving into the
 		/// column and values affected by this command using a 'x => x.Column = Value' syntax,
 		/// where the value part can be any valid SQL sentence.</param>
-		/// <returns>This instance to permit a fluent syntax chaining.</returns>
+		/// <returns>A self-reference to permit a fluent syntax chaining.</returns>
 		public IUpdateCommand Columns(params Func<dynamic, object>[] columns)
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());

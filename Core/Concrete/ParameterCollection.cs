@@ -11,7 +11,8 @@ namespace Kerosene.ORM.Core.Concrete
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents the collection of generic parameters captured for a command.
+	/// Represents the collection of generic parameters captured for a command, typically, but
+	/// also potentially or for any other element.
 	/// </summary>
 	[Serializable]
 	public class ParameterCollection : IParameterCollection
@@ -67,9 +68,7 @@ namespace Kerosene.ORM.Core.Concrete
 			{
 				if (_Members != null)
 				{
-					var list = new List<IParameter>(_Members);
-					foreach (var member in list) if (!member.IsDisposed) member.Dispose();
-					list.Clear(); list = null;
+					var list = _Members.ToArray(); foreach (var member in list) member.Dispose();
 				}
 			}
 			_Members = null;
@@ -152,16 +151,16 @@ namespace Kerosene.ORM.Core.Concrete
 				"Cloned instance '{0}' is not a valid '{1}' one."
 				.FormatWith(cloned.Sketch(), typeof(ParameterCollection).EasyName()));
 
-			// CaseSensitiveNames: constructor
-			// Prefix: constructor
 			temp.AddRange(_Members, cloneNotOrphans: true);
 		}
 
 		/// <summary>
-		/// Returns true if this object can be considered as equivalent to the target one given.
+		/// Returns true if the state of this object can be considered as equivalent to the target
+		/// one, based upon any arbitrary criteria implemented in this method.
 		/// </summary>
-		/// <param name="target">The target object this one will be tested for equivalence.</param>
-		/// <returns>True if this object can be considered as equivalent to the target one given.</returns>
+		/// <param name="target">The target instance this one will be tested for equivalence against.</param>
+		/// <returns>True if the state of this instance can be considered as equivalent to the
+		/// target one, or false otherwise.</returns>
 		public bool EquivalentTo(IParameterCollection target)
 		{
 			return OnEquivalentTo(target);
@@ -453,9 +452,7 @@ namespace Kerosene.ORM.Core.Concrete
 
 			if (disposeMembers)
 			{
-				var members = new List<IParameter>(_Members);
-				foreach (var member in members) if (!member.IsDisposed) member.Dispose();
-				members.Clear(); members = null;
+				var list = _Members.ToArray(); foreach (var member in list) member.Dispose();
 			}
 
 			_Members.Clear();

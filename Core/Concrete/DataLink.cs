@@ -6,15 +6,13 @@ namespace Kerosene.ORM.Core.Concrete
 	using System.Collections;
 	using System.Collections.Generic;
 	using System.Linq;
-	using System.Runtime.Serialization;
 	using System.Text;
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents an abstract connection against an underlying database, also acting as a
-	/// factory to create objects adapted to it.
+	/// Represents an abstract connection against an underlying database-alike service.
 	/// </summary>
-	public abstract class DataLink : IDataLink
+	public abstract partial class DataLink : IDataLink
 	{
 		static ulong _LastSerialId = 0;
 
@@ -29,7 +27,8 @@ namespace Kerosene.ORM.Core.Concrete
 		/// Initializes a new instance.
 		/// </summary>
 		/// <param name="engine">The engine this instance will be associated with.</param>
-		/// <param name="mode">The default initial mode for the transaction to be created when needed.</param>
+		/// <param name="mode">The default initial mode to use when needed to create the nestable
+		/// transtransaction object maintained by this instance.</param>
 		protected DataLink(
 			IDataEngine engine,
 			NestableTransactionMode mode = NestableTransactionMode.Database)
@@ -99,7 +98,7 @@ namespace Kerosene.ORM.Core.Concrete
 			string str = string.Format("{0}:{1}({2})",
 				SerialId,
 				ToStringType(),
-				Engine.Sketch()); 
+				Engine.Sketch());
 
 			return IsDisposed ? string.Format("disposed::{0}", str) : str;
 		}
@@ -117,10 +116,15 @@ namespace Kerosene.ORM.Core.Concrete
 		/// Returns a new instance that is a copy of the original one.
 		/// </summary>
 		/// <returns>A new instance.</returns>
-		IDataLink IDataLink.Clone()
+		public DataLink Clone()
 		{
 			throw new NotSupportedException(
 				"Abstract IDataLink::{0}.Clone() invoked.".FormatWith(GetType().EasyName()));
+		}
+		IDataLink IDataLink.Clone()
+		{
+			throw new NotSupportedException(
+				"Abstract ICloneable::{0}.Clone() invoked.".FormatWith(GetType().EasyName()));
 		}
 		object ICloneable.Clone()
 		{
@@ -141,7 +145,6 @@ namespace Kerosene.ORM.Core.Concrete
 				"Cloned instance '{0}' is not a valid '{1}' one."
 				.FormatWith(cloned.Sketch(), typeof(DataLink).EasyName()));
 
-			// Engine: constructor
 			temp.DefaultTransactionMode = this.DefaultTransactionMode;
 		}
 
@@ -154,8 +157,7 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// The engine this link is associated with, that maintains the main characteristics
-		/// of the underlying database engine.
+		/// The engine this link is associated with.
 		/// </summary>
 		public IDataEngine Engine
 		{
@@ -164,6 +166,8 @@ namespace Kerosene.ORM.Core.Concrete
 
 		/// <summary>
 		/// The parser instance this link maintains.
+		/// <para>The value held by this property is generated on demand when the previous one
+		/// was null or disposed.</para>
 		/// </summary>
 		public IParser Parser
 		{
@@ -182,7 +186,9 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// The nestable transaction this link maintains.
+		/// The abstract nestable transaction this instance maintains. If the reference this
+		/// property maintains is null, or if it is is disposed, the getter generates a new
+		/// instance on demand. This property can return null if the link is disposed.
 		/// </summary>
 		public INestableTransaction Transaction
 		{
@@ -208,6 +214,7 @@ namespace Kerosene.ORM.Core.Concrete
 		/// <summary>
 		/// Gets or sets the default transaction mode to use when creating a new transaction
 		/// for this instance.
+		/// <para>The setter may also fail if the mode is not supported by the concrete instance.</para>
 		/// </summary>
 		public NestableTransactionMode DefaultTransactionMode
 		{
@@ -218,6 +225,7 @@ namespace Kerosene.ORM.Core.Concrete
 		/// <summary>
 		/// Opens the connection against the underlying database-alike service.
 		/// <para>Note that this method is called automatically by the framework when needed.</para>
+		/// <para>Invoking this method on an open link may generate an exception.</para>
 		/// </summary>
 		public abstract void Open();
 
@@ -225,6 +233,7 @@ namespace Kerosene.ORM.Core.Concrete
 		/// Closes the connection that might be opened against the underlying database-alike
 		/// service.
 		/// <para>Note that this method is called automatically by the framework when needed.</para>
+		/// <para>Invoking this method on an already closed connection has no effects.</para>
 		/// </summary>
 		public abstract void Close();
 
@@ -270,12 +279,13 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Creates a new raw command for this link, and sets its initial contents.
+		/// Creates a new raw command for this link and sets its initial contents using the text
+		/// and arguments given.
 		/// </summary>
-		/// <param name="text">The text of the command. Embedded arguments are specified using
-		/// the standard positional '{n}' format.</param>
-		/// <param name="args">An optional collection containing the arguments to be used by
-		/// this command.</param>
+		/// <param name="text">The new text of the command. Embedded arguments are specified
+		/// using the standard '{n}' positional format.</param>
+		/// <param name="args">An optional collection containing the arguments specified in the
+		/// text set into this command.</param>
 		/// <returns>The new command.</returns>
 		public IRawCommand Raw(string text, params object[] args)
 		{
@@ -283,11 +293,13 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Creates a new raw command for this link, and sets its initial contents.
+		/// Creates a new raw command for this link and sets its initial contents by parsing the
+		/// dynamic lambda expression given.
 		/// </summary>
-		/// <param name="spec">A dynamic lambda expression that when parsed specified the new
-		/// contents of this command.</param>
-		/// <returns>The new command.</returns>
+		/// <param name="spec">A dynamic lambda expression that resolves into the logic of this
+		/// command. Embedded arguments are extracted and captured automatically in order to
+		/// avoid injection attacks.</param>
+		/// <returns><The new command.</returns>
 		public IRawCommand Raw(Func<dynamic, object> spec)
 		{
 			return Raw().Set(spec);
@@ -304,8 +316,7 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Creates a new query command for this link, and sets the initial contents of its
-		/// FROM clause.
+		/// Creates a new query command for this link and sets the contents of its FROM clause.
 		/// </summary>
 		/// <param name="froms">The collection of lambda expressions that resolve into the
 		/// elements to include in this clause:
@@ -321,8 +332,7 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Creates a new query command for this link, and sets the initial contents of its
-		/// SELECT clause.
+		/// Creates a new query command for this link and sets the contents of its SELECT clause.
 		/// </summary>
 		/// <param name="selects">The collection of lambda expressions that resolve into the
 		/// elements to include into this clause:

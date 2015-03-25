@@ -14,6 +14,6 @@ namespace Kerosene.ORM.Maps
 	/// <summary>
 	/// Represents an insert operation for its associated entity.
 	/// </summary>
-	public interface IDataInsert<T> : IDataInsert, IMetaOperation<T> where T : class { }
+	public interface IDataInsert<T> : IMetaOperation<T>, IDataInsert where T : class { }
 }
 // ======================================================== 

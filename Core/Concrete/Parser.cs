@@ -7,14 +7,14 @@ namespace Kerosene.ORM.Core.Concrete
 	using System.Collections.Generic;
 	using System.Linq;
 	using System.Linq.Expressions;
-	using System.Runtime.Serialization;
 	using System.Text;
 
 	// ==================================================== 
 	/// <summary>
 	/// Represents an object able to parse an arbitrary object, including any arbitrary command
-	/// logic expressed as a dynamic lambda expression, extracting and capturing the arguments
-	/// found in it, returning a string that can be understood by the underlying database engine.
+	/// logic, expressed as a dynamic lambda expression, extracting and capturing the arguments
+	/// found in it, and returning a string that can be understood by the underlying database
+	/// engine.
 	/// </summary>
 	public class Parser : IParser
 	{
@@ -59,9 +59,7 @@ namespace Kerosene.ORM.Core.Concrete
 		/// <param name="disposing">True if the object is being disposed, false otherwise.</param>
 		protected virtual void OnDispose(bool disposing)
 		{
-			if (disposing) { }
 			_Engine = null;
-
 			_IsDisposed = true;
 		}
 
@@ -339,6 +337,7 @@ namespace Kerosene.ORM.Core.Concrete
 		/// <para>- x.Element.As(name) => Element AS name</para>
 		/// <para>- x.Element.In(arg, ...) => Element IN (arg, ...)</para>
 		/// <para>- x.Element.NotIn(arg, ...) => NOT Element IN (arg, ...)</para>
+		/// <para>- x.Element.InList(...) / .NotInList(...) => Interprets the single argument as a list</para>
 		/// <para>- x.Element.Between(arg1, arg2) => Element BETWEEN arg1 AND arg2</para>
 		/// <para>- x.Element.Like(arg) => Element LIKE arg</para>
 		/// <para>- x.Element.NotLike(arg) => Element NOT LIKE arg</para>
@@ -353,6 +352,7 @@ namespace Kerosene.ORM.Core.Concrete
 			StringBuilder sb = new StringBuilder();
 			string str = null;
 			int i = 0;
+			IEnumerable iter = null;
 
 			// Root-level methods...
 			if (parent == null)
@@ -398,6 +398,28 @@ namespace Kerosene.ORM.Core.Concrete
 					for (i = 0; i < obj.Arguments.Length; i++)
 					{
 						str = Parse(obj.Arguments[i], pc, nulls);
+						item = item == null ? str : "{0}, {1}".FormatWith(item, str);
+					}
+					return "NOT {0} IN ({1})".FormatWith(parent, item);
+
+				case "INLIST":
+					if (obj.Arguments == null) throw new ArgumentException("INLIST() argument list is null.");
+					if (obj.Arguments.Length != 1) throw new ArgumentException("INLIST() requires just one argument.");
+					iter = obj.Arguments[0] as IEnumerable; if (iter == null) throw new ArgumentException("Argument '{0}' is not an iterable one.".FormatWith(obj.Arguments[0].Sketch()));
+					foreach (var temp in iter)
+					{
+						str = Parse(temp, pc, nulls);
+						item = item == null ? str : "{0}, {1}".FormatWith(item, str);
+					}
+					return "{0} IN ({1})".FormatWith(parent, item);
+
+				case "NOTINLIST":
+					if (obj.Arguments == null) throw new ArgumentException("NOTINLIST() argument list is null.");
+					if (obj.Arguments.Length != 1) throw new ArgumentException("NOTINLIST() requires just one argument.");
+					iter = obj.Arguments[0] as IEnumerable; if (iter == null) throw new ArgumentException("Argument '{0}' is not an iterable one.".FormatWith(obj.Arguments[0].Sketch()));
+					foreach (var temp in iter)
+					{
+						str = Parse(temp, pc, nulls);
 						item = item == null ? str : "{0}, {1}".FormatWith(item, str);
 					}
 					return "NOT {0} IN ({1})".FormatWith(parent, item);

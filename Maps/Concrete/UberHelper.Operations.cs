@@ -17,17 +17,17 @@ namespace Kerosene.ORM.Maps.Concrete
 	internal static partial class UberHelper
 	{
 		/// <summary>
-		/// Returns either an ad-hoc schema containing the changes detected from the last record
+		/// Returns either an ad-hoc record containing the changes detected from the last record
 		/// captured, or null if no changes were detected.
 		/// </summary>
 		internal static IRecord DetectRecordChanges(this MetaEntity meta)
 		{
 			object obj = meta.Entity; if (obj == null) return null;
-			if (meta.Map == null) return null;
+			if (meta.UberMap == null) return null;
 			if (meta.Record == null) return null;
 
-			var current = new Core.Concrete.Record(meta.Map.Schema);
-			meta.Map.WriteRecord(obj, current);
+			var current = new Core.Concrete.Record(meta.UberMap.Schema);
+			meta.UberMap.WriteRecord(obj, current);
 
 			var changes = current.Changes(meta.Record);
 			current.Dispose();
@@ -57,7 +57,7 @@ namespace Kerosene.ORM.Maps.Concrete
 			var obj = meta.Entity; if (obj == null) return list;
 			var type = obj.GetType();
 
-			foreach (var kvp in meta.MemberChilds)
+			foreach (var kvp in meta.TrackedChilds)
 			{
 				var info = ElementInfo.Create(type, kvp.Key, flags: TypeEx.InstancePublicAndHidden);
 				if (!info.CanRead) continue;
@@ -65,6 +65,40 @@ namespace Kerosene.ORM.Maps.Concrete
 
 				foreach (var item in kvp.Value) if (!curr.Contains(item)) list.Add(item);
 				curr.Clear(); curr = null;
+			}
+
+			return list;
+		}
+
+		/// <summary>
+		/// Returns a list containing the dependencies of the given entity whose mode match the
+		/// mode given.
+		/// </summary>
+		internal static List<object> GetDependencies(this MetaEntity meta, MemberDependencyMode mode)
+		{
+			var list = new List<object>();
+			var obj = meta.Entity; if (obj == null) return list;
+
+			foreach (var member in ((IEnumerable<IUberMember>)meta.UberMap.Members))
+			{
+				if (member.DependencyMode != mode) continue;
+				if (!member.ElementInfo.CanRead) continue;
+
+				var source = member.ElementInfo.GetValue(obj);
+				if (source == null) continue;
+
+				var type = source.GetType(); if (!type.IsListAlike())
+				{
+					if (type.IsClass) list.Add(source);
+				}
+				else
+				{
+					type = type.ListAlikeMemberType(); if (type.IsClass)
+					{
+						var iter = source as IEnumerable;
+						foreach (var item in iter) if (item != null) list.Add(item);
+					}
+				}
 			}
 
 			return list;
@@ -110,40 +144,6 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 
 		/// <summary>
-		/// Returns a list containing the dependencies of the given entity whose mode match the
-		/// mode given.
-		/// </summary>
-		internal static List<object> GetDependencies(this MetaEntity meta, MemberDependencyMode mode)
-		{
-			var list = new List<object>();
-			var obj = meta.Entity; if (obj == null) return list;
-
-			foreach (var member in ((IEnumerable<IUberMember>)meta.Map.Members))
-			{
-				if (member.DependencyMode != mode) continue;
-				if (!member.ElementInfo.CanRead) continue;
-
-				var source = member.ElementInfo.GetValue(obj);
-				if (source == null) continue;
-
-				var type = source.GetType(); if (!type.IsListAlike())
-				{
-					if (type.IsClass) list.Add(source);
-				}
-				else
-				{
-					type = type.ListAlikeMemberType(); if (type.IsClass)
-					{
-						var iter = source as IEnumerable;
-						foreach (var item in iter) if (item != null) list.Add(item);
-					}
-				}
-			}
-
-			return list;
-		}
-
-		/// <summary>
 		/// Generates an update command for the given entity, or returns null if such command
 		/// cannot be generated.
 		/// </summary>
@@ -156,7 +156,7 @@ namespace Kerosene.ORM.Maps.Concrete
 
 			var meta = MetaEntity.Locate(entity, create: true);
 			var changes = meta.DetectRecordChanges();
-			
+
 			var num = changes == null ? 0 : changes.Schema.Count(x => !x.IsReadOnlyColumn);
 			if (num != 0)
 			{
@@ -260,7 +260,6 @@ namespace Kerosene.ORM.Maps.Concrete
 			return cmd;
 		}
 
-
 		/// <summary>
 		/// Validates that the row version captured in the meta-entity is the same as the current
 		/// one in the database, throwing an exception if a change is detected.
@@ -268,16 +267,16 @@ namespace Kerosene.ORM.Maps.Concrete
 		internal static void ValidateRowVersion(this MetaEntity meta)
 		{
 			var obj = meta.Entity; if (obj == null) return;
-			if (meta.Map == null) return;
+			if (meta.UberMap == null) return;
 			if (meta.Record == null) return;
 
-			var vc = meta.Map.VersionColumn;
+			var vc = meta.UberMap.VersionColumn;
 			if (vc.Name == null) return;
 
 			// Getting the most updated record, if any...
-			var cmd = meta.Map.Link.From(x => meta.Map.Table);
+			var cmd = meta.UberMap.Link.From(x => meta.UberMap.Table);
 			var tag = new DynamicNode.Argument("x");
-			var id = meta.Map.ExtractId(meta.Record);
+			var id = meta.UberMap.ExtractId(meta.Record);
 
 			for (int i = 0; i < id.Count; i++)
 			{
@@ -300,7 +299,7 @@ namespace Kerosene.ORM.Maps.Concrete
 
 			if (string.Compare(captured, current) != 0)
 				throw new ChangedException(
-					"Captured version for entity '{0}': '{1}' if not the same as current one in the database: '{2}'."
+					"Captured version for entity '{0}': '{1}' if not the same as the current one in the database: '{2}'."
 					.FormatWith(meta, captured, current));
 		}
 	}

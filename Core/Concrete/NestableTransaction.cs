@@ -6,12 +6,11 @@ namespace Kerosene.ORM.Core.Concrete
 	using System.Collections;
 	using System.Collections.Generic;
 	using System.Linq;
-	using System.Runtime.Serialization;
 	using System.Text;
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents an abstract nestable transaction.
+	/// Represents an abstract nestable transaction associated with a given <see cref="IDataLink"/>.
 	/// </summary>
 	public abstract class NestableTransaction : INestableTransaction
 	{
@@ -90,7 +89,7 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// The link this transaction is associated with.
+		/// The database-alike service link this instance is associated with.
 		/// </summary>
 		public IDataLink Link
 		{
@@ -100,6 +99,7 @@ namespace Kerosene.ORM.Core.Concrete
 		/// <summary>
 		/// The current mode of this instance.
 		/// <para>The setter fails if the transaction is active.</para>
+		/// <para>The setter may also fail if the mode is not supported by the concrete instance.</para>
 		/// </summary>
 		public NestableTransactionMode Mode
 		{
@@ -137,11 +137,13 @@ namespace Kerosene.ORM.Core.Concrete
 		/// <summary>
 		/// Commits the underlying transation if it is a first-level one, or decreases its
 		/// nesting level.
+		/// <para>If this transaction was not active this method has no effects.</para>
 		/// </summary>
 		public abstract void Commit();
 
 		/// <summary>
 		/// Inconditionally aborts this transaction redardless of its nesting level.
+		/// <para>If this transaction was not active this method has no effects.</para>
 		/// </summary>
 		public abstract void Abort();
 	}

@@ -7,7 +7,6 @@ namespace Kerosene.ORM.Direct.Concrete
 	using System.Collections.Generic;
 	using System.Data;
 	using System.Linq;
-	using System.Runtime.Serialization;
 	using System.Text;
 	using System.Transactions;
 
@@ -19,7 +18,6 @@ namespace Kerosene.ORM.Direct.Concrete
 	{
 		bool _IsDisposed = false;
 		Core.ICommand _Command = null;
-
 		bool _LinkOpenedBySurrogate = false;
 		IDbCommand _DbCommand = null;
 		IDataReader _DataReader = null;
@@ -29,7 +27,7 @@ namespace Kerosene.ORM.Direct.Concrete
 		/// Initializes a new instance.
 		/// </summary>
 		/// <param name="command">The command this instance is associated with.</param>
-		public SurrogateDirect(Core.ICommand command)
+		internal SurrogateDirect(Core.ICommand command)
 		{
 			if ((_Command = command) == null) throw new ArgumentNullException(
 				"command", "Command cannot be null.");

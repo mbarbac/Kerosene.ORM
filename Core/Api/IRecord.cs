@@ -14,11 +14,11 @@ namespace Kerosene.ORM.Core
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents a record returned by the execution of an enumerable command.
+	/// Represents a record returned by the execution of an enumerable command, that provides
+	/// both an indexed and dynamic ways to access its contents.
 	/// </summary>
 	public interface IRecord
-		: IDynamicMetaObjectProvider
-		, IDisposableEx, ICloneable, ISerializable, IEquivalent<IRecord>, IEnumerable
+		: IDynamicMetaObjectProvider, IDisposableEx, ICloneable, ISerializable, IEnumerable, IEquivalent<IRecord>
 	{
 		/// <summary>
 		/// Disposes this instance and optionally disposes the schema it is associated with,
@@ -56,59 +56,63 @@ namespace Kerosene.ORM.Core
 		bool EquivalentTo(IRecord target, bool onlyValues);
 
 		/// <summary>
-		/// The schema this record is associated with.
+		/// The schema that describes the structure and metadata of the contents in this record.
 		/// <para>The setter fails if the value is not null and this instance already has a
 		/// schema associated with it.</para>
 		/// </summary>
+		/// <remarks>The value held by this property can be null if this instance is disposed,
+		/// or when there is no schema associated to it, which can happen in some border case
+		/// scenarios (as for instance while it is being deserialized, among others).</remarks>
 		ISchema Schema { get; set; }
 
 		/// <summary>
 		/// Whether the schema this instance may has associated with it is serialized along with
 		/// this record or not. A value of 'false' can be used when serializing many records
 		/// associated with the same schema, for performance reasons, and in this case it is
-		/// assumed it is expected that the schema reference is set by the receiving environment
-		/// afterwards.
+		/// assumed that the schema reference is set by the receiving environment afterwards.
 		/// </summary>
 		bool SerializeSchema { get; set; }
 
 		/// <summary>
-		/// The number of columns in this record.
+		/// The number of table-column entries in this record.
 		/// </summary>
 		int Count { get; }
 
 		/// <summary>
-		/// Gets or sets the value held by column whose index is given.
+		/// Gets or sets the value held by table-column entry whose index is given.
 		/// </summary>
-		/// <param name="index">The index of the affected column.</param>
-		/// <returns>The value held by the column whose index is given.</returns>
+		/// <param name="index">The index of the table-column entry.</param>
+		/// <returns>The value held by the entry whose index is given.</returns>
 		object this[int index] { get; set; }
 
 		/// <summary>
-		/// Gets or sets the value held by the column whose table and column names are given.
+		/// Gets or sets the value stored in this record by the entry whose table and column names
+		/// are given.
 		/// </summary>
-		/// <param name="table">The table name of the entry to find, or null to refer to the
-		/// default one in this context.</param>
-		/// <param name="column">The column name.</param>
-		/// <returns>The value held by the requested entry.</returns>
-		object this[string table, string column] { get; set; }
+		/// <param name="tableName">The table name of the entry to use, or null if it refers to
+		/// the default one in this context.</param>
+		/// <param name="columnName">The column name of the entry to use.</param>
+		/// <returns>The value held by the entry whose table and column names are given.</returns>
+		object this[string tableName, string columnName] { get; set; }
 
 		/// <summary>
-		/// Gets or sets the value held by the unique column whose column name is given. If
-		/// several entries are found sharing the same column name for different tables then
-		/// an exception is thrown.
+		/// Gets or sets the value stored by the entry whose unique column name is given. If
+		/// several entries are found with the same column name then an exception is thrown.
 		/// </summary>
-		/// <param name="column">The column name.</param>
-		/// <returns>The value held by the requested entry.</returns>
-		object this[string column] { get; set; }
+		/// <param name="columnName">The column name of the entry to use.</param>
+		/// <returns>The value held by the entry whose unique column name is given.</returns>
+		object this[string columnName] { get; set; }
 
 		/// <summary>
-		/// Gets or sets the value held by the column whose table and colum names are obtained
-		/// parsing the given dynamic lambda expression, using either the 'x => x.Table.Column'
-		/// or 'x => x.Column' forms. In the later case, if several members are found sharing the
-		/// same column name for different tables then an exception is thrown.
+		/// Gets or sets the value stored at the entry whose table and column names are obtained
+		/// by parsing the dynamic lambda expression given. This expression can use either the
+		/// 'x => x.Table.Column' or the 'x => x.Column' forms, or resolve into a valid string.
+		/// If only the column name is used, then it has to be unique because if several columns
+		/// are found with the same column name then an exception is thrown.
 		/// </summary>
-		/// <param name="column">The column name.</param>
-		/// <returns>The value held by the requested entry.</returns>
+		/// <param name="spec">The dynamic lambda expression that resolves into the specification
+		/// of the entry to use.</param>
+		/// <returns>The value held by the entry specified by the dynamic lambda expression.</returns>
 		object this[Func<dynamic, object> spec] { get; set; }
 
 		/// <summary>
@@ -464,7 +468,7 @@ namespace Kerosene.ORM.Core
 			var values = new List<object>();
 			var entries = new List<ISchemaEntry>();
 
-			for (int i = 0, count = source.Count; i < count; i++)
+			for (int i = 0; i < source.Count; i++)
 			{
 				var sourceEntry = source.Schema[i];
 				var targetEntry = target.Schema.FindEntry(sourceEntry.TableName, sourceEntry.ColumnName);

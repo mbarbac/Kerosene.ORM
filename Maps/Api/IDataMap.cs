@@ -27,8 +27,8 @@ namespace Kerosene.ORM.Maps
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents a map registered in a given repository between the entities of the type it
-	/// is associated with and their database representation.
+	/// Represents a map between the type of the entities it manages and their database
+	/// representation.
 	/// </summary>
 	public interface IDataMap : IDisposableEx
 	{
@@ -46,6 +46,17 @@ namespace Kerosene.ORM.Maps
 		IDataRepository Repository { get; }
 
 		/// <summary>
+		/// The type of the entities managed by this map.
+		/// </summary>
+		Type EntityType { get; }
+
+		/// <summary>
+		/// The name of the primary table in the underlying database associated with the entities
+		/// managed by this map.
+		/// </summary>
+		string Table { get; }
+
+		/// <summary>
 		/// Whether this map is considered a weak one.
 		/// <para>Weak maps are created automatically when an entity type is referenced by any
 		/// map operation and there was no registered map for that type. Weak maps are disposed
@@ -54,22 +65,9 @@ namespace Kerosene.ORM.Maps
 		bool IsWeakMap { get; }
 
 		/// <summary>
-		/// The type of the entities managed by this map.
-		/// <para>Note that there is a strict one to one correspondence between a map and a type
-		/// for a given repository, and no covariance or contravariance are taken into account.</para>
-		/// </summary>
-		Type EntityType { get; }
-
-		/// <summary>
-		/// The name of the master table in the database where to find at least the identity
-		/// columns of the associated entities.
-		/// </summary>
-		string Table { get; }
-
-		/// <summary>
-		/// If not null a dynamic lambda expression that contains the logic of the WHERE clause
-		/// to use to differentiate among entities of different types that may share the master
-		/// table.
+		/// If not null a dynamic lambda expression that resolves into the logic to add into
+		/// the WHERE clauses sent to the database to discriminate among entities of different
+		/// types that may share the primary table.
 		/// </summary>
 		Func<dynamic, object> Discriminator { get; set; }
 
@@ -80,18 +78,20 @@ namespace Kerosene.ORM.Maps
 		MapDiscoveryMode DiscoveryMode { get; set; }
 
 		/// <summary>
-		/// The collection of members that have been explicitly defined for this map.
+		/// Represents the collection of members that have been explicitly defined for this
+		/// map.
 		/// </summary>
 		IMapMemberCollection Members { get; }
 
 		/// <summary>
-		/// The collection of columns to take into consideration for the operations of this map.
+		/// Represents the collection of columns in the primary table of the database this map
+		/// is taken into consideration for its operations.
 		/// </summary>
 		IMapColumnCollection Columns { get; }
 
 		/// <summary>
-		/// The instance that represents the database column to be used for row version control
-		/// if its name property is not null.
+		/// Represents the column in the primary table in the database that will be used for row
+		/// version control, if any.
 		/// </summary>
 		IMapVersionColumn VersionColumn { get; }
 
@@ -113,12 +113,14 @@ namespace Kerosene.ORM.Maps
 		void Validate();
 
 		/// <summary>
-		/// The cache of entities of this map, excluding collected or invalid ones.
+		/// Gets the collection of cached entities managed by this map, excluding the collected
+		/// or invalid ones.
 		/// </summary>
 		IEnumerable<IMetaEntity> MetaEntities { get; }
 
 		/// <summary>
-		/// Clears the cache of entities this map maintains.
+		/// Clears the cache of managed entities of this map, making them all to become detached
+		/// ones.
 		/// </summary>
 		void ClearEntities();
 
@@ -131,85 +133,96 @@ namespace Kerosene.ORM.Maps
 		object NewEntity();
 
 		/// <summary>
-		/// Attaches the given entity to this map.
+		/// Attaches the given entity into this map.
+		/// <para>Note that the framework supports attaching several entities that share the
+		/// same identity columns, which are treated as a group for the relevant operations.</para>
 		/// </summary>
-		/// <param name="entity">The entity to attach.</param>
+		/// <param name="entity">The entity to attach into this instance.</param>
 		void Attach(object entity);
 
 		/// <summary>
-		/// Detaches the given entity from this map. Returns true if it has been detached, or
-		/// false otherwise.
+		/// Removes the given entity from this map, making it become a detached one. Returns true
+		/// if the entity has been removed, or false otherwise.
 		/// </summary>
-		/// <param name="entity">The entity to detach.</param>
+		/// <param name="entity">The entity to detach from this instance.</param>
+		/// <returns>True if the instance has been removed, false otherwise.</returns>
 		bool Detach(object entity);
 
 		/// <summary>
-		/// Creates a new query operation for entities managed by the map.
+		/// Creates a new query command for the entities managed by this map.
 		/// </summary>
-		/// <returns>A new operation.</returns>
+		/// <returns>A new query command.</returns>
 		IDataQuery Query();
 
 		/// <summary>
-		/// Creates a new query operation for entities managed by the map, and sets the initial
-		/// contents of its WHERE clause:
+		/// Creates a new query command for the entities managed by this map, and sets the initial
+		/// contents of its WHERE clause.
 		/// </summary>
-		/// <param name="where">he dynamic lambda expression that resolves into the contents of
+		/// <param name="where">The dynamic lambda expression that resolves into the contents of
 		/// this clause.
-		/// <para>- By default, if any previous contents exist the new ones are appended using an
-		/// AND logical operator. However, the virtual extension methods 'x => x.And(...)' and
-		/// 'x => x.Or(...)' can be used to specify the concrete logical operator to use for
-		/// concatenation purposes.</para>
-		/// </param>
-		/// <returns>A new operation.</returns>
+		/// <returns>A new query command.</returns>
 		IDataQuery Where(Func<dynamic, object> where);
 
 		/// <summary>
-		/// Finds inmediately a suitable entity by either returning the first entity in the
-		/// cache that meets the given specifications or, if no one is found in the cache,
-		/// querying the underlying database for it. Returns null if no entity can be found
-		/// neither in the cache nor in the database.
+		/// Finds and returns inmediately a suitable entity that meets the conditions given, by
+		/// looking for it in the managed cache and, if it cannot be found there, querying the
+		/// database for it. Returns null if such entity cannot be found neither in the cache
+		/// nor in the database.
 		/// </summary>
 		/// <param name="specs">A collection of dynamic lambda expressions each containing the
-		/// name of column and the value to find for that column 'x => x.Column == Value'.</param>
+		/// name and value to find for a column, as in: 'x => x.Column == Value'.</param>
 		/// <returns>The requested entity, or null.</returns>
 		object FindNow(params Func<dynamic, object>[] specs);
 
 		/// <summary>
-		/// Refreshes inmediately from the database the given entity, even if it wwas not
-		/// attached to the map before, along with all the entities in the cache that share
-		/// the same identity.
+		/// Refreshes inmediately the contents of the given entity (and potentially of its
+		/// dependencies), along with all the entities in the cache that share the same
+		/// identity.
+		/// <para>Returns null if the entity cannot be found any longer in the database, or
+		/// a refreshed entity otherwise. In the later case it is NOT guaranteed that the one
+		/// returned is the same as the original one, but potentially any other suitable one.</para>
 		/// </summary>
-		/// <param name="entity">The entity to refresh</param>
-		/// <returns>A refreshed entity, or null if no one was found in the database.</returns>
+		/// <param name="entity">The entitt to refresh.</param>
+		/// <returns>A refreshed entity, or null.</returns>
 		object RefreshNow(object entity);
 
 		/// <summary>
-		/// Creates a new insert operation for the entity managed by the map.
+		/// Creates a new insert operation for the given entity.
+		/// <para>The new command must be firstly submitted into the associated repository in
+		/// order it to be executed when all pending change operations annotated into that
+		/// repository are executed as a group.</para>
 		/// </summary>
-		/// <param name="entity">The entity affected by this operation.</param>
-		/// <returns>A new operation.</returns>
+		/// <param name="entity">The entity to be inserted.</param>
+		/// <returns>A new command.</returns>
 		IDataInsert Insert(object entity);
 
 		/// <summary>
-		/// Creates a new delete operation for the entity managed by the map.
+		/// Creates a new delete operation for the given entity.
+		/// <para>The new command must be firstly submitted into the associated repository in
+		/// order it to be executed when all pending change operations annotated into that
+		/// repository are executed as a group.</para>
 		/// </summary>
-		/// <param name="entity">The entity affected by this operation.</param>
-		/// <returns>A new operation.</returns>
+		/// <param name="entity">The entity to be inserted.</param>
+		/// <returns>A new command.</returns>
 		IDataDelete Delete(object entity);
 
 		/// <summary>
-		/// Creates a new update operation for the entity managed by the map.
+		/// Creates a new delete operation for the given entity.
+		/// <para>The new command must be firstly submitted into the associated repository in
+		/// order it to be executed when all pending change operations annotated into that
+		/// repository are executed as a group.</para>
 		/// </summary>
-		/// <param name="entity">The entity affected by this operation.</param>
-		/// <returns>A new operation.</returns>
+		/// <param name="entity">The entity to be inserted.</param>
+		/// <returns>A new command.</returns>
 		IDataUpdate Update(object entity);
 	}
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents a map registered in a given repository between the entities of the type it
-	/// is associated with and their database representation.
+	/// Represents a map between the type of the entities it manages and their database
+	/// representation.
 	/// </summary>
+	/// <typeparam name="T">The type of the entities managed by this map.</typeparam>
 	public interface IDataMap<T> : IDataMap where T : class
 	{
 		/// <summary>
@@ -221,18 +234,20 @@ namespace Kerosene.ORM.Maps
 		new IDataMap<T> Clone(IDataRepository repo);
 
 		/// <summary>
-		/// The collection of members that have been explicitly defined for this map.
+		/// Represents the collection of members that have been explicitly defined for this
+		/// map.
 		/// </summary>
 		new IMapMemberCollection<T> Members { get; }
 
 		/// <summary>
-		/// The collection of columns to take into consideration for the operations of this map.
+		/// Represents the collection of columns in the primary table of the database this map
+		/// is taken into consideration for its operations.
 		/// </summary>
 		new IMapColumnCollection<T> Columns { get; }
 
 		/// <summary>
-		/// The instance that represents the database column to be used for row version control
-		/// if its name property is not null.
+		/// Represents the column in the primary table in the database that will be used for row
+		/// version control, if any.
 		/// </summary>
 		new IMapVersionColumn<T> VersionColumn { get; }
 
@@ -245,77 +260,87 @@ namespace Kerosene.ORM.Maps
 		new T NewEntity();
 
 		/// <summary>
-		/// Attaches the given entity to this map.
+		/// Attaches the given entity into this map.
+		/// <para>Note that the framework supports attaching several entities that share the
+		/// same identity columns, which are treated as a group for the relevant operations.</para>
 		/// </summary>
-		/// <param name="entity">The entity to attach.</param>
+		/// <param name="entity">The entity to attach into this instance.</param>
 		void Attach(T entity);
 
 		/// <summary>
-		/// Detaches the given entity from this map. Returns true if it has been detached, or
-		/// false otherwise.
+		/// Removes the given entity from this map, making it become a detached one. Returns true
+		/// if the entity has been removed, or false otherwise.
 		/// </summary>
-		/// <param name="entity">The entity to detach.</param>
+		/// <param name="entity">The entity to detach from this instance.</param>
+		/// <returns>True if the instance has been removed, false otherwise.</returns>
 		bool Detach(T entity);
 
 		/// <summary>
-		/// Creates a new query operation for entities managed by the map.
+		/// Creates a new query command for the entities managed by this map.
 		/// </summary>
-		/// <returns>A new operation.</returns>
+		/// <returns>A new query command.</returns>
 		new IDataQuery<T> Query();
 
 		/// <summary>
-		/// Creates a new query operation for entities managed by the map, and sets the initial
-		/// contents of its WHERE clause:
+		/// Creates a new query command for the entities managed by this map, and sets the initial
+		/// contents of its WHERE clause.
 		/// </summary>
-		/// <param name="where">he dynamic lambda expression that resolves into the contents of
+		/// <param name="where">The dynamic lambda expression that resolves into the contents of
 		/// this clause.
-		/// <para>- By default, if any previous contents exist the new ones are appended using an
-		/// AND logical operator. However, the virtual extension methods 'x => x.And(...)' and
-		/// 'x => x.Or(...)' can be used to specify the concrete logical operator to use for
-		/// concatenation purposes.</para>
-		/// </param>
-		/// <returns>A new operation.</returns>
+		/// <returns>A new query command.</returns>
 		new IDataQuery<T> Where(Func<dynamic, object> where);
 
 		/// <summary>
-		/// Finds inmediately a suitable entity by either returning the first entity in the
-		/// cache that meets the given specifications or, if no one is found in the cache,
-		/// querying the underlying database for it. Returns null if no entity can be found
-		/// neither in the cache nor in the database.
+		/// Finds and returns inmediately a suitable entity that meets the conditions given, by
+		/// looking for it in the managed cache and, if it cannot be found there, querying the
+		/// database for it. Returns null if such entity cannot be found neither in the cache
+		/// nor in the database.
 		/// </summary>
 		/// <param name="specs">A collection of dynamic lambda expressions each containing the
-		/// name of column and the value to find for that column 'x => x.Column == Value'.</param>
+		/// name and value to find for a column, as in: 'x => x.Column == Value'.</param>
 		/// <returns>The requested entity, or null.</returns>
 		new T FindNow(params Func<dynamic, object>[] specs);
 
 		/// <summary>
-		/// Refreshes inmediately from the database the given entity, even if it wwas not
-		/// attached to the map before, along with all the entities in the cache that share
-		/// the same identity.
+		/// Refreshes inmediately the contents of the given entity (and potentially of its
+		/// dependencies), along with all the entities in the cache that share the same
+		/// identity.
+		/// <para>Returns null if the entity cannot be found any longer in the database, or
+		/// a refreshed entity otherwise. In the later case it is NOT guaranteed that the one
+		/// returned is the same as the original one, but potentially any other suitable one.</para>
 		/// </summary>
-		/// <param name="entity">The entity to refresh</param>
-		/// <returns>A refreshed entity, or null if no one was found in the database.</returns>
+		/// <param name="entity">The entitt to refresh.</param>
+		/// <returns>A refreshed entity, or null.</returns>
 		T RefreshNow(T entity);
 
 		/// <summary>
-		/// Creates a new insert operation for the entity managed by the map.
+		/// Creates a new insert operation for the given entity.
+		/// <para>The new command must be firstly submitted into the associated repository in
+		/// order it to be executed when all pending change operations annotated into that
+		/// repository are executed as a group.</para>
 		/// </summary>
-		/// <param name="entity">The entity affected by this operation.</param>
-		/// <returns>A new operation.</returns>
+		/// <param name="entity">The entity to be inserted.</param>
+		/// <returns>A new command.</returns>
 		IDataInsert<T> Insert(T entity);
 
 		/// <summary>
-		/// Creates a new delete operation for the entity managed by the map.
+		/// Creates a new delete operation for the given entity.
+		/// <para>The new command must be firstly submitted into the associated repository in
+		/// order it to be executed when all pending change operations annotated into that
+		/// repository are executed as a group.</para>
 		/// </summary>
-		/// <param name="entity">The entity affected by this operation.</param>
-		/// <returns>A new operation.</returns>
+		/// <param name="entity">The entity to be inserted.</param>
+		/// <returns>A new command.</returns>
 		IDataDelete<T> Delete(T entity);
 
 		/// <summary>
-		/// Creates a new update operation for the entity managed by the map.
+		/// Creates a new delete operation for the given entity.
+		/// <para>The new command must be firstly submitted into the associated repository in
+		/// order it to be executed when all pending change operations annotated into that
+		/// repository are executed as a group.</para>
 		/// </summary>
-		/// <param name="entity">The entity affected by this operation.</param>
-		/// <returns>A new operation.</returns>
+		/// <param name="entity">The entity to be inserted.</param>
+		/// <returns>A new command.</returns>
 		IDataUpdate<T> Update(T entity);
 	}
 }

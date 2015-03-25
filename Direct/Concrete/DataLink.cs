@@ -7,13 +7,11 @@ namespace Kerosene.ORM.Direct.Concrete
 	using System.Collections.Generic;
 	using System.Data;
 	using System.Linq;
-	using System.Runtime.Serialization;
 	using System.Text;
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents a direct connection against an underlying database, also acting as a factory
-	/// to create objects adapted to it.
+	/// Represents an abstract direct connection against an underlying database-alike service.
 	/// </summary>
 	public class DataLink : Core.Concrete.DataLink, IDataLink
 	{
@@ -26,7 +24,8 @@ namespace Kerosene.ORM.Direct.Concrete
 		/// Initializes a new instance.
 		/// </summary>
 		/// <param name="engine">The engine this instance will be associated with.</param>
-		/// <param name="mode">The default initial mode for the transaction to be created when needed.</param>
+		/// <param name="mode">The default initial mode to use when needed to create the nestable
+		/// transtransaction object maintained by this instance.</param>
 		public DataLink(
 			IDataEngine engine,
 			Core.NestableTransactionMode mode = Core.NestableTransactionMode.Database)
@@ -45,10 +44,14 @@ namespace Kerosene.ORM.Direct.Concrete
 		/// Returns a new instance that is a copy of the original one.
 		/// </summary>
 		/// <returns>A new instance.</returns>
-		public IDataLink Clone()
+		public new DataLink Clone()
 		{
 			var cloned = new DataLink(Engine, DefaultTransactionMode);
 			OnClone(cloned); return cloned;
+		}
+		IDataLink IDataLink.Clone()
+		{
+			return this.Clone();
 		}
 		Core.IDataLink Core.IDataLink.Clone()
 		{
@@ -78,8 +81,7 @@ namespace Kerosene.ORM.Direct.Concrete
 		}
 
 		/// <summary>
-		/// The engine this link is associated with, that maintains the main characteristics
-		/// of the underlying database engine.
+		/// The engine this link is associated with.
 		/// </summary>
 		public new IDataEngine Engine
 		{
@@ -91,7 +93,9 @@ namespace Kerosene.ORM.Direct.Concrete
 		}
 
 		/// <summary>
-		/// The nestable transaction this link maintains.
+		/// The abstract nestable transaction this instance maintains. If the reference this
+		/// property maintains is null, or if it is is disposed, the getter generates a new
+		/// instance on demand. This property can return null if the link is disposed.
 		/// </summary>
 		public new INestableTransaction Transaction
 		{
@@ -180,6 +184,53 @@ namespace Kerosene.ORM.Direct.Concrete
 		}
 
 		/// <summary>
+		/// Opens the connection against the underlying database-alike service.
+		/// <para>Note that this method is called automatically by the framework when needed.</para>
+		/// <para>Invoking this method on an open link may generate an exception.</para>
+		/// </summary>
+		public override void Open()
+		{
+			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
+
+			if (IsOpen) return;
+			if (DbConnection != null) return;
+
+			if (ConnectionString == null) throw new InvalidOperationException(
+				"No connection string in this link '{0}'.".FormatWith(this));
+
+			_DbConnection = Engine.ProviderFactory.CreateConnection();
+			_DbConnection.ConnectionString = _ConnectionString;
+			_DbConnection.Open();
+		}
+
+		/// <summary>
+		/// Closes the connection that might be opened against the underlying database-alike
+		/// service.
+		/// <para>Note that this method is called automatically by the framework when needed.</para>
+		/// <para>Invoking this method on an already closed connection has no effects.</para>
+		/// </summary>
+		public override void Close()
+		{
+			if (Transaction != null && Transaction.IsActive) Transaction.Abort();
+
+			if (_DbConnection != null)
+			{
+				if (_DbConnection.State != ConnectionState.Closed) _DbConnection.Close();
+				_DbConnection.Dispose();
+				_DbConnection = null;
+			}
+		}
+
+		/// <summary>
+		/// Whether the connection against the underlying database-alike service can be considered
+		/// to be opened or not.
+		/// </summary>
+		public override bool IsOpen
+		{
+			get { return (DbConnection == null) ? false : (DbConnection.State == ConnectionState.Open); }
+		}
+
+		/// <summary>
 		/// Factory method invoked to create an enumerator to execute the given enumerable
 		/// command.
 		/// </summary>
@@ -222,51 +273,6 @@ namespace Kerosene.ORM.Direct.Concrete
 		Core.IScalarExecutor Core.IDataLink.CreateScalarExecutor(Core.IScalarCommand command)
 		{
 			return this.CreateScalarExecutor(command);
-		}
-
-		/// <summary>
-		/// Opens the connection against the underlying database-alike service.
-		/// <para>Note that this method is called automatically by the framework when needed.</para>
-		/// </summary>
-		public override void Open()
-		{
-			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
-
-			if (IsOpen) return;
-			if (DbConnection != null) return;
-
-			if (ConnectionString == null) throw new InvalidOperationException(
-				"No connection string in this link '{0}'.".FormatWith(this));
-
-			_DbConnection = Engine.ProviderFactory.CreateConnection();
-			_DbConnection.ConnectionString = _ConnectionString;
-			_DbConnection.Open();
-		}
-
-		/// <summary>
-		/// Closes the connection that might be opened against the underlying database-alike
-		/// service.
-		/// <para>Note that this method is called automatically by the framework when needed.</para>
-		/// </summary>
-		public override void Close()
-		{
-			if (Transaction != null && Transaction.IsActive) Transaction.Abort();
-
-			if (_DbConnection != null)
-			{
-				if (_DbConnection.State != ConnectionState.Closed) _DbConnection.Close();
-				_DbConnection.Dispose();
-				_DbConnection = null;
-			}
-		}
-
-		/// <summary>
-		/// Whether the connection against the underlying database-alike service can be considered
-		/// to be opened or not.
-		/// </summary>
-		public override bool IsOpen
-		{
-			get { return (DbConnection == null) ? false : (DbConnection.State == ConnectionState.Open); }
 		}
 	}
 }

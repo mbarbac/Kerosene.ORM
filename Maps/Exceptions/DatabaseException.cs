@@ -1,6 +1,7 @@
 ﻿// ======================================================== DatabaseException.cs
 namespace Kerosene.ORM.Maps
 {
+	using Kerosene.Tools;
 	using System;
 
 	// ==================================================== 

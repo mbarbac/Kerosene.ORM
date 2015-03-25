@@ -8,8 +8,9 @@ namespace Kerosene.ORM.Maps
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents a repository for mapped entities, implementing both the dynamic repository
-	/// and the dynamic unit of work patterns.
+	/// Represents a view on the state and contents of an underlying database, related to the
+	/// maps associated with this instance, that implements both the Dynamic Repository and the
+	/// Dynamic Unit Of Work patterns.
 	/// </summary>
 	public interface IDataRepository : IDisposableEx
 	{
@@ -22,8 +23,7 @@ namespace Kerosene.ORM.Maps
 		IDataRepository Clone(IDataLink link);
 
 		/// <summary>
-		/// The data link that represents the connection with the underlying database that this
-		/// repository uses.
+		/// The database-alike service link this instance is associated with.
 		/// </summary>
 		IDataLink Link { get; }
 
@@ -89,20 +89,22 @@ namespace Kerosene.ORM.Maps
 		IDataMap<T> RetrieveMap<T>(Func<dynamic, object> table = null) where T : class;
 
 		/// <summary>
-		/// Clears and disposes all the maps registered into this instance.
+		/// Clears and disposes all the maps registered into this instance, making all their
+		/// managed entities to become detached ones.
 		/// </summary>
 		void ClearMaps();
 
 		/// <summary>
-		/// Clears the cache of entities of all the maps registered into the instance.
-		/// </summary>
-		void ClearEntities();
-
-		/// <summary>
-		/// Gets a safe collection containing the meta entities managed by the maps registeted
-		/// into this repository, excluding collected or detached ones.
+		/// Gets the collection of cached entities managed by the maps registered into this
+		/// instance, excluding the collected or invalid ones.
 		/// </summary>
 		IEnumerable<IMetaEntity> MetaEntities { get; }
+
+		/// <summary>
+		/// Clears the caches of managed entities of all the maps registered into this instance,
+		/// making them all become detached entities.
+		/// </summary>
+		void ClearEntities();
 
 		/// <summary>
 		/// Creates a new entity with the appropriate type for the requested map.
@@ -114,113 +116,123 @@ namespace Kerosene.ORM.Maps
 		T NewEntity<T>() where T : class;
 
 		/// <summary>
-		/// Attaches the given entity to this map.
+		/// Attaches the given entity into this map.
+		/// <para>Note that the framework supports attaching several entities that share the
+		/// same identity columns, which are treated as a group for the relevant operations.</para>
 		/// </summary>
-		/// <typeparam name="T">The type of the entities managed by the map to use.</typeparam>
-		/// <param name="entity">The entity to attach.</param>
+		/// <typeparam name="T">The type of the managed entities.</typeparam>
+		/// <param name="entity">The entity to attach into this instance.</param>
 		void Attach<T>(T entity) where T : class;
 
 		/// <summary>
-		/// Detaches the given entity from this map. Returns true if it has been detached, or
-		/// false otherwise.
+		/// Removes the given entity from this map, making it become a detached one. Returns true
+		/// if the entity has been removed, or false otherwise.
 		/// </summary>
-		/// <typeparam name="T">The type of the entities managed by the map to use.</typeparam>
-		/// <param name="entity">The entity to detach.</param>
+		/// <typeparam name="T">The type of the managed entities.</typeparam>
+		/// <param name="entity">The entity to detach from this instance.</param>
+		/// <returns>True if the instance has been removed, false otherwise.</returns>
 		bool Detach<T>(T entity) where T : class;
 
 		/// <summary>
-		/// Creates a new query operation for entities managed by the map.
+		/// Creates a new query command for the entities managed by this map.
 		/// </summary>
-		/// <typeparam name="T">The type of the entities managed by the map to use.</typeparam>
-		/// <returns>A new operation.</returns>
+		/// <typeparam name="T">The type of the managed entities.</typeparam>
+		/// <returns>A new query command.</returns>
 		IDataQuery<T> Query<T>() where T : class;
 
 		/// <summary>
-		/// Creates a new query operation for entities managed by the map, and sets the initial
-		/// contents of its WHERE clause:
+		/// Creates a new query command for the entities managed by this map, and sets the initial
+		/// contents of its WHERE clause.
 		/// </summary>
-		/// <typeparam name="T">The type of the entities managed by the map to use.</typeparam>
-		/// <param name="where">he dynamic lambda expression that resolves into the contents of
+		/// <typeparam name="T">The type of the managed entities.</typeparam>
+		/// <param name="where">The dynamic lambda expression that resolves into the contents of
 		/// this clause.
-		/// <para>- By default, if any previous contents exist the new ones are appended using an
-		/// AND logical operator. However, the virtual extension methods 'x => x.And(...)' and
-		/// 'x => x.Or(...)' can be used to specify the concrete logical operator to use for
-		/// concatenation purposes.</para>
-		/// </param>
-		/// <returns>A new operation.</returns>
+		/// <returns>A new query command.</returns>
 		IDataQuery<T> Where<T>(Func<dynamic, object> where) where T : class;
 
 		/// <summary>
-		/// Finds inmediately a suitable entity by either returning the first entity in the
-		/// cache that meets the given specifications or, if no one is found in the cache,
-		/// querying the underlying database for it. Returns null if no entity can be found
-		/// neither in the cache nor in the database.
+		/// Finds and returns inmediately a suitable entity that meets the conditions given, by
+		/// looking for it in the managed cache and, if it cannot be found there, querying the
+		/// database for it. Returns null if such entity cannot be found neither in the cache
+		/// nor in the database.
 		/// </summary>
-		/// <typeparam name="T">The type of the entities managed by the map to use.</typeparam>
+		/// <typeparam name="T">The type of the managed entities.</typeparam>
 		/// <param name="specs">A collection of dynamic lambda expressions each containing the
-		/// name of column and the value to find for that column 'x => x.Column == Value'.</param>
+		/// name and value to find for a column, as in: 'x => x.Column == Value'.</param>
 		/// <returns>The requested entity, or null.</returns>
 		T FindNow<T>(params Func<dynamic, object>[] specs) where T : class;
 
 		/// <summary>
-		/// Refreshes inmediately from the database the given entity, even if it wwas not
-		/// attached to the map before, along with all the entities in the cache that share
-		/// the same identity.
+		/// Refreshes inmediately the contents of the given entity (and potentially of its
+		/// dependencies), along with all the entities in the cache that share the same
+		/// identity.
+		/// <para>Returns null if the entity cannot be found any longer in the database, or
+		/// a refreshed entity otherwise. In the later case it is NOT guaranteed that the one
+		/// returned is the same as the original one, but potentially any other suitable one.</para>
 		/// </summary>
-		/// <typeparam name="T">The type of the entities managed by the map to use.</typeparam>
-		/// <param name="entity">The entity to refresh</param>
-		/// <returns>A refreshed entity, or null if no one was found in the database.</returns>
+		/// <typeparam name="T">The type of the managed entities.</typeparam>
+		/// <param name="entity">The entitt to refresh.</param>
+		/// <returns>A refreshed entity, or null.</returns>
 		T RefreshNow<T>(T entity) where T : class;
 
 		/// <summary>
-		/// Creates a new insert operation for the entity managed by the map.
+		/// Creates a new insert operation for the given entity.
+		/// <para>The new command must be firstly submitted into the associated repository in
+		/// order it to be executed when all pending change operations annotated into that
+		/// repository are executed as a group.</para>
 		/// </summary>
-		/// <typeparam name="T">The type of the entities managed by the map to use.</typeparam>
-		/// <param name="entity">The entity affected by this operation.</param>
-		/// <returns>A new operation.</returns>
+		/// <typeparam name="T">The type of the managed entities.</typeparam>
+		/// <param name="entity">The entity to be inserted.</param>
+		/// <returns>A new command.</returns>
 		IDataInsert<T> Insert<T>(T entity) where T : class;
 
 		/// <summary>
-		/// Convenience method to execute inmediately an insert operation with the given entity,
-		/// along with all other pending change operations that might be annotated into this
-		/// repository.
+		/// Convenience method to create the operation associated with the given entity, to
+		/// submit it into the repository, and to execute inmediately all the pending change
+		/// operations annotated into it.
 		/// </summary>
-		/// <typeparam name="T">The type of the entities managed by the map to use.</typeparam>
-		/// <param name="entity">The entity affected by this operation.</param>
+		/// <typeparam name="T">The type of the managed entities.</typeparam>
+		/// <param name="entity">The entity affected by the operation.</param>
 		void InsertNow<T>(T entity) where T : class;
 
 		/// <summary>
-		/// Creates a new delete operation for the entity managed by the map.
+		/// Creates a new delete operation for the given entity.
+		/// <para>The new command must be firstly submitted into the associated repository in
+		/// order it to be executed when all pending change operations annotated into that
+		/// repository are executed as a group.</para>
 		/// </summary>
-		/// <typeparam name="T">The type of the entities managed by the map to use.</typeparam>
-		/// <param name="entity">The entity affected by this operation.</param>
-		/// <returns>A new operation.</returns>
+		/// <typeparam name="T">The type of the managed entities.</typeparam>
+		/// <param name="entity">The entity to be inserted.</param>
+		/// <returns>A new command.</returns>
 		IDataDelete<T> Delete<T>(T entity) where T : class;
 
 		/// <summary>
-		/// Convenience method to execute inmediately a delete operation with the given entity,
-		/// along with all other pending change operations that might be annotated into this
-		/// repository.
+		/// Convenience method to create the operation associated with the given entity, to
+		/// submit it into the repository, and to execute inmediately all the pending change
+		/// operations annotated into it.
 		/// </summary>
-		/// <typeparam name="T">The type of the entities managed by the map to use.</typeparam>
-		/// <param name="entity">The entity affected by this operation.</param>
+		/// <typeparam name="T">The type of the managed entities.</typeparam>
+		/// <param name="entity">The entity affected by the operation.</param>
 		void DeleteNow<T>(T entity) where T : class;
 
 		/// <summary>
-		/// Creates a new update operation for the entity managed by the map.
+		/// Creates a new delete operation for the given entity.
+		/// <para>The new command must be firstly submitted into the associated repository in
+		/// order it to be executed when all pending change operations annotated into that
+		/// repository are executed as a group.</para>
 		/// </summary>
-		/// <typeparam name="T">The type of the entities managed by the map to use.</typeparam>
-		/// <param name="entity">The entity affected by this operation.</param>
-		/// <returns>A new operation.</returns>
+		/// <typeparam name="T">The type of the managed entities.</typeparam>
+		/// <param name="entity">The entity to be inserted.</param>
+		/// <returns>A new command.</returns>
 		IDataUpdate<T> Update<T>(T entity) where T : class;
 
 		/// <summary>
-		/// Convenience method to execute inmediately an update operation with the given entity,
-		/// along with all other pending change operations that might be annotated into this
-		/// repository.
+		/// Convenience method to create the operation associated with the given entity, to
+		/// submit it into the repository, and to execute inmediately all the pending change
+		/// operations annotated into it.
 		/// </summary>
-		/// <typeparam name="T">The type of the entities managed by the map to use.</typeparam>
-		/// <param name="entity">The entity affected by this operation.</param>
+		/// <typeparam name="T">The type of the managed entities.</typeparam>
+		/// <param name="entity">The entity affected by the operation.</param>
 		void UpdateNow<T>(T entity) where T : class;
 
 		/// <summary>

@@ -11,7 +11,7 @@ namespace Kerosene.ORM.Core.Concrete
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents an entry of an schema containing the metadata of a column in a table.
+	/// Represents the metadata of a given table-column entry on a given a given schema.
 	/// </summary>
 	[Serializable]
 	public class SchemaEntry : ISchemaEntry
@@ -66,13 +66,6 @@ namespace Kerosene.ORM.Core.Concrete
 
 			_IsDisposed = true;
 		}
-		//{
-		//	if (disposing)
-		//	{
-		//	}
-
-		//	_IsDisposed = true;
-		//}
 
 		/// <summary>
 		/// Returns the string representation of this instance.
@@ -125,7 +118,7 @@ namespace Kerosene.ORM.Core.Concrete
 		public virtual void GetObjectData(SerializationInfo info, StreamingContext context)
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
-			
+
 			// As serialization is quite fragile we will only consider types that are known to the CLR...
 			int count = 0; foreach (var kvp in _Metadata)
 			{
@@ -206,7 +199,7 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Returns a new instance that is a copy of the original one.
+		/// Returns a new instance that otherwise is a copy of the original one.
 		/// </summary>
 		/// <returns>A new instance.</returns>
 		public SchemaEntry Clone()
@@ -245,10 +238,12 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Returns true if this object can be considered as equivalent to the target one given.
+		/// Returns true if the state of this object can be considered as equivalent to the target
+		/// one, based upon any arbitrary criteria implemented in this method.
 		/// </summary>
-		/// <param name="target">The target object this one will be tested for equivalence.</param>
-		/// <returns>True if this object can be considered as equivalent to the target one given.</returns>
+		/// <param name="target">The target instance this one will be tested for equivalence against.</param>
+		/// <returns>True if the state of this instance can be considered as equivalent to the
+		/// target one, or false otherwise.</returns>
 		public bool EquivalentTo(ISchemaEntry target)
 		{
 			return OnEquivalentTo(target);
@@ -369,7 +364,7 @@ namespace Kerosene.ORM.Core.Concrete
 
 		/// <summary>
 		/// The current metadata this instance carries (including the standard properties), as
-		/// a collection of name-value pairs where their names are case insensitive.
+		/// a collection of name-value pairs, where their names are case insensitive.
 		/// </summary>
 		public IEnumerable<KeyValuePair<string, object>> Metadata
 		{
