@@ -3,16 +3,12 @@ namespace Kerosene.ORM.Direct.Concrete
 {
 	using Kerosene.Tools;
 	using System;
-	using System.Collections;
-	using System.Collections.Generic;
 	using System.Linq;
-	using System.Text;
 
 	// ==================================================== 
 	/// <summary>
 	/// Represents an object able to execute an enumerable command, in a direct connection
-	/// scenario, and to produce the collection collection of records resulting from this
-	/// execution.
+	/// scenario, and to produce the collection of records resulting from this execution.
 	/// </summary>
 	public class EnumerableExecutor : Core.Concrete.EnumerableExecutor, IEnumerableExecutor
 	{
@@ -57,7 +53,7 @@ namespace Kerosene.ORM.Direct.Concrete
 		/// <para>Hack to permit this instance to be enumerated in order to simplify its usage
 		/// and syntax.</para>
 		/// </summary>
-		/// <returns>A new enumerator.</returns>
+		/// <returns>A self-reference.</returns>
 		public new IEnumerableExecutor GetEnumerator()
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());

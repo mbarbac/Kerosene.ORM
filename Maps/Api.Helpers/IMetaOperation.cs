@@ -1,12 +1,16 @@
 ﻿// ======================================================== IMetaOperation.cs
 namespace Kerosene.ORM.Maps
 {
+	using Kerosene.ORM.Core;
 	using Kerosene.Tools;
 	using System;
+	using System.Linq;
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents a change operation associated with a given entity.
+	/// Represents a change operation associated with a given entity that can be submitted
+	/// into a given repository for its future execution along with all other pending change
+	/// operations that may have annotated into that repository.
 	/// </summary>
 	public interface IMetaOperation : IMetaCommand
 	{
@@ -30,9 +34,11 @@ namespace Kerosene.ORM.Maps
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents a change operation associated with a given entity.
+	/// Represents a change operation associated with a given entity that can be submitted
+	/// into a given repository for its future execution along with all other pending change
+	/// operations that may have annotated into that repository.
 	/// </summary>
-	public interface IMetaOperation<T> : IMetaOperation where T : class
+	public interface IMetaOperation<T> : IMetaCommand<T>, IMetaOperation where T : class
 	{
 		/// <summary>
 		/// The entity affected by this operation.

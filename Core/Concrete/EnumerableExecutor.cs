@@ -3,15 +3,13 @@ namespace Kerosene.ORM.Core.Concrete
 {
 	using Kerosene.Tools;
 	using System;
-	using System.Collections;
 	using System.Collections.Generic;
 	using System.Linq;
-	using System.Text;
 
 	// ==================================================== 
 	/// <summary>
 	/// Represents an object able to execute an enumerable command and to produce the collection
-	/// collection of records resulting from this execution.
+	/// of records resulting from this execution.
 	/// </summary>
 	public abstract class EnumerableExecutor : IEnumerableExecutor
 	{
@@ -145,6 +143,15 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
+		/// Gets the current object being enumerated, or null if this enumerator has not been
+		/// executed yet, or if there are not more objects available.
+		/// </summary>
+		public object Current
+		{
+			get { return _Current; }
+		}
+
+		/// <summary>
 		/// If not null this property is the delegate to invoke each iteration to convert the
 		/// record returned by the database into whatever instance the delegate returns, that
 		/// becomes the new value held by the 'Current' property of this instance.
@@ -157,29 +164,6 @@ namespace Kerosene.ORM.Core.Concrete
 				if (IsDisposed) throw new ObjectDisposedException(this.ToString());
 				_Converter = value;
 			}
-		}
-
-		/// <summary>
-		/// Convenience method to set the converter of this instance and returns a self-reference
-		/// to permit a fluent syntax chaining.
-		/// </summary>
-		/// <param name="converter">The converter to set, or null to clear it.</param>
-		/// <returns>A self-reference to permit a fluent syntax chaining.</returns>
-		public IEnumerableExecutor ConvertBy(Func<IRecord, object> converter)
-		{
-			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
-
-			Converter = converter;
-			return this;
-		}
-
-		/// <summary>
-		/// Gets the current object being enumerated, or null if this enumerator has not been
-		/// executed yet, or if there are not more objects available.
-		/// </summary>
-		public object Current
-		{
-			get { return _Current; }
 		}
 
 		/// <summary>

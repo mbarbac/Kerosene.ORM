@@ -6,10 +6,9 @@ namespace Kerosene.ORM.Core
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents an object able to parse an arbitrary object, including any arbitrary command
-	/// logic, expressed as a dynamic lambda expression, extracting and capturing the arguments
-	/// found in it, and returning a string that can be understood by the underlying database
-	/// engine.
+	/// Represents the ability of parsing any arbitrary object, including null references and
+	/// dynamic lambda expressions,	and translate it into a string representation the database
+	/// engine can understand.
 	/// </summary>
 	public interface IParser : IDisposableEx
 	{
@@ -45,36 +44,37 @@ namespace Kerosene.ORM.Core
 		/// Whether, by default, complex tags are kept in the result of a parsing, or rather they
 		/// are treated as regular arguments and so extracted out from that result.
 		/// </summary>
-		public const bool DEFAULT_KEEP_COMPLEX_TAGS = true;
+		public const bool DEFAULT_COMPLEX_TAGS = true;
 
 		/// <summary>
-		/// Whether complex tags are kept in the result of a parsing, or rather they are treated
-		/// as regular arguments and so extracted out from that result.
+		/// Whether if a value transformer for a given type is not found a value transformer for
+		/// a base type can be used, or not.
 		/// </summary>
-		public static bool KeepComplexTags
+		public static bool ComplexTags
 		{
 			get
 			{
-				if (_KeepComplexTagsInfoNeeded)
+				while (!_ComplexTagsCaptured)
 				{
 					var info = Configuration.ORMConfiguration.GetInfo();
-					if (info != null &&
-						info.KeepComplexTags != null &&
-						info.KeepComplexTags.Keep != null)
-						_KeepComplexTags = (bool)info.KeepComplexTags.Keep;
+					if (info == null ||
+						info.DataEngine == null ||
+						info.DataEngine.ComplexTags == null) break;
 
-					_KeepComplexTagsInfoNeeded = false;
+					_ComplexTags = (bool)info.DataEngine.ComplexTags;
+					break;
 				}
-				return _KeepComplexTags;
+				_ComplexTagsCaptured = true;
+				return _ComplexTags;
 			}
 			set
 			{
-				_KeepComplexTags = value;
-				_KeepComplexTagsInfoNeeded = false;
+				_ComplexTagsCaptured = true;
+				_ComplexTags = value;
 			}
 		}
-		static bool _KeepComplexTags = DEFAULT_KEEP_COMPLEX_TAGS;
-		static bool _KeepComplexTagsInfoNeeded = true;
+		static bool _ComplexTags = DEFAULT_COMPLEX_TAGS;
+		static bool _ComplexTagsCaptured = false;
 
 		/// <summary>
 		/// Splits the given source string, with the form 'main AS alias' in its main and alias

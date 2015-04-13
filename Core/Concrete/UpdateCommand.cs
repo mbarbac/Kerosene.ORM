@@ -3,8 +3,6 @@ namespace Kerosene.ORM.Core.Concrete
 {
 	using Kerosene.Tools;
 	using System;
-	using System.Collections;
-	using System.Collections.Generic;
 	using System.Linq;
 	using System.Linq.Expressions;
 	using System.Text;
@@ -28,7 +26,7 @@ namespace Kerosene.ORM.Core.Concrete
 		public UpdateCommand(IDataLink link, Func<dynamic, object> table)
 			: base(link)
 		{
-			_TableName = Link.Parser.Parse(table);
+			_TableName = Link.Engine.Parser.Parse(table);
 			_TableName = _TableName.Validated("Table");
 		}
 
@@ -81,6 +79,14 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
+		/// The name of the primary table this instance refers to.
+		/// </summary>
+		public string TableName
+		{
+			get { return _TableName; }
+		}
+
+		/// <summary>
 		/// Whether the state and contents of this command permits its execution.
 		/// </summary>
 		public override bool CanBeExecuted
@@ -108,14 +114,6 @@ namespace Kerosene.ORM.Core.Concrete
 			if (TheWhereData != null) sb.AppendFormat(" WHERE {0}", TheWhereData);
 
 			return sb.ToString();
-		}
-
-		/// <summary>
-		/// The name of the primary table this instance refers to.
-		/// </summary>
-		public string TableName
-		{
-			get { return _TableName; }
 		}
 
 		/// <summary>
@@ -166,7 +164,7 @@ namespace Kerosene.ORM.Core.Concrete
 					}
 				}
 
-				main = Link.Parser.Parse(result, pc: Parameters);
+				main = Link.Engine.Parser.Parse(result, pc: Parameters);
 				break;
 			}
 
@@ -219,10 +217,10 @@ namespace Kerosene.ORM.Core.Concrete
 					if (result is DynamicNode.SetMember)
 					{
 						var node = (DynamicNode.SetMember)result;
-						var host = Link.Parser.Parse(node.Host);
+						var host = Link.Engine.Parser.Parse(node.Host);
 
 						main = host == null ? node.Name : "{0}.{1}".FormatWith(host, node.Name);
-						value = Link.Parser.Parse(node.Value, Parameters);
+						value = Link.Engine.Parser.Parse(node.Value, Parameters);
 						break;
 					}
 
@@ -231,8 +229,8 @@ namespace Kerosene.ORM.Core.Concrete
 						var node = (DynamicNode.Binary)result;
 						if (node.Operation == ExpressionType.Equal)
 						{
-							main = Link.Parser.Parse(node.Left);
-							value = Link.Parser.Parse(node.Right, Parameters);
+							main = Link.Engine.Parser.Parse(node.Left);
+							value = Link.Engine.Parser.Parse(node.Right, Parameters);
 							break;
 						}
 					}

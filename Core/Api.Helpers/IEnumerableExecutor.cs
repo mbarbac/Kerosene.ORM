@@ -9,9 +9,9 @@ namespace Kerosene.ORM.Core
 	// ==================================================== 
 	/// <summary>
 	/// Represents an object able to execute an enumerable command and to produce the collection
-	/// collection of records resulting from this execution.
+	/// of records resulting from this execution.
 	/// </summary>
-	public interface IEnumerableExecutor : IEnumerator, IDisposableEx
+	public interface IEnumerableExecutor : IDisposableEx, IEnumerator
 	{
 		/// <summary>
 		/// Returns a new enumerator for this instance.
@@ -46,14 +46,6 @@ namespace Kerosene.ORM.Core
 		/// becomes the new value held by the 'Current' property of this instance.
 		/// </summary>
 		Func<IRecord, object> Converter { get; set; }
-
-		/// <summary>
-		/// Convenience method to set the converter of this instance and returns a self-reference
-		/// to permit a fluent syntax chaining.
-		/// </summary>
-		/// <param name="converter">The converter to set, or null to clear it.</param>
-		/// <returns>A self-reference to permit a fluent syntax chaining.</returns>
-		IEnumerableExecutor ConvertBy(Func<IRecord, object> converter);
 
 		/// <summary>
 		/// Executes the associated command and returns a list with the results.

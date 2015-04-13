@@ -3,8 +3,6 @@ namespace Kerosene.ORM.Core.Concrete
 {
 	using Kerosene.Tools;
 	using System;
-	using System.Collections;
-	using System.Collections.Generic;
 	using System.Linq;
 	using System.Text;
 
@@ -26,7 +24,7 @@ namespace Kerosene.ORM.Core.Concrete
 		public DeleteCommand(IDataLink link, Func<dynamic, object> table)
 			: base(link)
 		{
-			_TableName = Link.Parser.Parse(table);
+			_TableName = Link.Engine.Parser.Parse(table);
 			_TableName = _TableName.Validated("Table");
 		}
 
@@ -162,7 +160,7 @@ namespace Kerosene.ORM.Core.Concrete
 					}
 				}
 
-				main = Link.Parser.Parse(result, pc: Parameters);
+				main = Link.Engine.Parser.Parse(result, pc: Parameters);
 				break;
 			}
 

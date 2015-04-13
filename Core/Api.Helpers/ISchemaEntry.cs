@@ -8,7 +8,8 @@ namespace Kerosene.ORM.Core
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents the metadata of a given table-column entry on a given a given schema.
+	/// Represents the metadata associated with a given table and column combination on a given
+	/// schema.
 	/// </summary>
 	public interface ISchemaEntry : IDisposableEx, ICloneable, ISerializable, IEquivalent<ISchemaEntry>
 	{
@@ -49,11 +50,22 @@ namespace Kerosene.ORM.Core
 		bool IsReadOnlyColumn { get; set; }
 
 		/// <summary>
-		/// The current metadata this instance carries (including the standard properties), as
-		/// a collection of name-value pairs, where their names are case insensitive.
+		/// The actual metadata this entry carries.
 		/// </summary>
-		IEnumerable<KeyValuePair<string, object>> Metadata { get; }
+		ISchemaEntryMetadata Metadata { get; }
 
+		/// <summary>
+		/// The tags used to identity the standard properties in the metadata collection.
+		/// </summary>
+		ISchemaEntryTags Tags { get; }
+	}
+
+	// ==================================================== 
+	/// <summary>
+	/// The actual metadata collection a schema entry carries.
+	/// </summary>
+	public interface ISchemaEntryMetadata : IEnumerable<KeyValuePair<string, object>>
+	{
 		/// <summary>
 		/// The number of metadata entries this instance contains, always taking into consideratin
 		/// the standard ones.
@@ -64,35 +76,50 @@ namespace Kerosene.ORM.Core
 		/// Returns whether a metadata entry with the given case insensitive name exists is in
 		/// this collection.
 		/// </summary>
-		/// <param name="metadata">The metadata name to validate.</param>
+		/// <param name="name">The metadata name to validate.</param>
 		/// <returns>True if a metadata entry with the given name is part of this collection, or
 		/// false otherwise.</returns>
-		bool Contains(string metadata);
+		bool Contains(string name);
 
 		/// <summary>
 		/// Gets or sets the value of the metadata entry whose case insensitive name is given.
 		/// <para>- The getter throws an exception if the requested entry does not exist.</para>
 		/// <para>- The setter adds a new entry if the requested one did not exist.</para>
 		/// </summary>
-		/// <param name="metadata">The name of the metadata entry.</param>
+		/// <param name="name">The name of the metadata entry.</param>
 		/// <returns>The member at the given position.</returns>
-		object this[string metadata] { get; set; }
+		object this[string name] { get; set; }
+
+		/// <summary>
+		/// Adds a new metadata entry using its case insensitive name and value.
+		/// </summary>
+		/// <param name="name">The case insensitive name of the new metadata entry.</param>
+		/// <param name="value">The value the new metadata entry will hold.</param>
+		void Add(string name, object value);
 
 		/// <summary>
 		/// Removes from this collection the metadata entry whose case insensitive name is given.
 		/// Returns true if it has been removed succesfully, or false otherwise.
 		/// </summary>
-		/// <param name="metadata">The name of the metadata entry.</param>
+		/// <param name="name">The name of the metadata entry.</param>
 		/// <returns>True if the metadata entry has been removed succesfully, or false otherwise.</returns>
-		bool Remove(string metadata);
+		bool Remove(string name);
 
 		/// <summary>
 		/// Clears all the metadata entries this instance may carry.
-		/// <para>- Note that, as a side effect, the standard properties will return their default
-		/// values.</para>
+		/// <para>Note that, as a side effect, the standard properties will return their default
+		/// values. If the entry this instance is associated with is not orphan then an exception
+		/// might be thrown.</para>
 		/// </summary>
 		void Clear();
+	}
 
+	// ==================================================== 
+	/// <summary>
+	/// The tags used to identity the standard properties in the metadata collection.
+	/// </summary>
+	public interface ISchemaEntryTags
+	{
 		/// <summary>
 		/// The tag to identify the 'table name' entry in a metadata collection.
 		/// </summary>
@@ -128,22 +155,22 @@ namespace Kerosene.ORM.Core
 		/// <summary>
 		/// Returns a validated table name.
 		/// </summary>
-		/// <param name="table">The table name to validate. Can be null if it is the default
+		/// <param name="tableName">The table name to validate. Can be null if it is the default
 		/// one in a given context.</param>
 		/// <returns>The validated table name.</returns>
-		public static string ValidateTable(string table)
+		public static string ValidateTable(string tableName)
 		{
-			return table.Validated("Table Name", canbeNull: true);
+			return tableName.NullIfTrimmedIsEmpty();
 		}
 
 		/// <summary>
 		/// Returns a validated column name.
 		/// </summary>
-		/// <param name="column">The column name to validate.</param>
+		/// <param name="columnName">The column name to validate.</param>
 		/// <returns>The validated column name.</returns>
-		public static string ValidateColumn(string column)
+		public static string ValidateColumn(string columnName)
 		{
-			return column.Validated("Column Name");
+			return columnName.Validated("Column Name");
 		}
 
 		/// <summary>
@@ -151,7 +178,7 @@ namespace Kerosene.ORM.Core
 		/// <para>This method does not throw any execptions even if such names are not valid ones.</para>
 		/// </summary>
 		/// <param name="tableName">The table name, or null if it is the dafault one in its context.</param>
-		/// <param name="columnName">The column name.</param>
+		/// <param name="columnName">The column name. Null values do not throw an exception in this method.</param>
 		/// <returns>The normalized schema entry name.</returns>
 		public static string NormalizedName(string tableName, string columnName)
 		{

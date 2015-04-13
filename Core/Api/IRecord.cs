@@ -7,18 +7,18 @@ namespace Kerosene.ORM.Core
 	using System.Collections.Generic;
 	using System.Dynamic;
 	using System.IO;
-	using System.Linq;
 	using System.Linq.Expressions;
 	using System.Runtime.Serialization;
 	using System.Runtime.Serialization.Formatters.Binary;
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents a record returned by the execution of an enumerable command, that provides
-	/// both an indexed and dynamic ways to access its contents.
+	/// Represents a record on the database, typically obtained by the execution of an enumarable
+	/// command, that provides both indexed and dynamic ways to access its contents.
 	/// </summary>
 	public interface IRecord
-		: IDynamicMetaObjectProvider, IDisposableEx, ICloneable, ISerializable, IEnumerable, IEquivalent<IRecord>
+		: IDynamicMetaObjectProvider, IDisposableEx, ICloneable, ISerializable
+		, IEnumerable, IEquivalent<IRecord>
 	{
 		/// <summary>
 		/// Disposes this instance and optionally disposes the schema it is associated with,
@@ -49,8 +49,8 @@ namespace Kerosene.ORM.Core
 		/// considering only the values and not equivalence of the respective schemas.
 		/// </summary>
 		/// <param name="target">The target object to test for equivalence against.</param>
-		/// <param name="onlyValues">True to perform the comparison only on the values and not
-		/// on their respective schemas.</param>
+		/// <param name="onlyValues">True (by default) to perform the comparison only on the
+		/// values and not on their respective schemas.</param>
 		/// <returns>True if the state of this instance can be considered as equivalent to the
 		/// target object given, or false otherwise</returns>
 		bool EquivalentTo(IRecord target, bool onlyValues);
@@ -86,33 +86,33 @@ namespace Kerosene.ORM.Core
 		object this[int index] { get; set; }
 
 		/// <summary>
-		/// Gets or sets the value stored in this record by the entry whose table and column names
-		/// are given.
+		/// Gets or sets the value stored at the entry whose table and column names are given.
 		/// </summary>
-		/// <param name="tableName">The table name of the entry to use, or null if it refers to
-		/// the default one in this context.</param>
-		/// <param name="columnName">The column name of the entry to use.</param>
-		/// <returns>The value held by the entry whose table and column names are given.</returns>
+		/// <param name="tableName">The table name, or null if it refers to the default one in
+		/// this context.</param>
+		/// <param name="columnName">The column name.</param>
+		/// <returns>The value held at the given entry.</returns>
 		object this[string tableName, string columnName] { get; set; }
 
 		/// <summary>
-		/// Gets or sets the value stored by the entry whose unique column name is given. If
-		/// several entries are found with the same column name then an exception is thrown.
+		/// Gets or sets the value stored at the entry whose unique column name is given.
+		/// <para>If the schema of the record contains several columns with the same column
+		/// name an exception is thrown.</para>
 		/// </summary>
-		/// <param name="columnName">The column name of the entry to use.</param>
-		/// <returns>The value held by the entry whose unique column name is given.</returns>
+		/// <param name="columnName">The column name.</param>
+		/// <returns>The value held at the given entry.</returns>
 		object this[string columnName] { get; set; }
 
 		/// <summary>
-		/// Gets or sets the value stored at the entry whose table and column names are obtained
-		/// by parsing the dynamic lambda expression given. This expression can use either the
-		/// 'x => x.Table.Column' or the 'x => x.Column' forms, or resolve into a valid string.
-		/// If only the column name is used, then it has to be unique because if several columns
-		/// are found with the same column name then an exception is thrown.
+		/// Gets or sets the value stored at the entry whose table and colum name are obtained
+		/// parsing the given dynamic lambda expression, using either the 'x => x.Table.Column'
+		/// or 'x => x.Column' forms, or null if no such member can be found. In the later case,
+		/// if the collection contains several members with the same column name, even if they
+		/// belong to different tables, an exception is thrown.
 		/// </summary>
-		/// <param name="spec">The dynamic lambda expression that resolves into the specification
-		/// of the entry to use.</param>
-		/// <returns>The value held by the entry specified by the dynamic lambda expression.</returns>
+		/// <param name="spec">A dynamic lambda expressin that resolves into the specification
+		/// of the entry to find.</param>
+		/// <returns>The member found, or null.</returns>
 		object this[Func<dynamic, object> spec] { get; set; }
 
 		/// <summary>
@@ -342,6 +342,7 @@ namespace Kerosene.ORM.Core
 
 				if (type == typeof(string)) { size += ((string)value).Length * sizeof(char); continue; }
 
+				// What follows is a last resort mechanism, slow and possibly inaccurate...
 				try
 				{
 					using (Stream stream = new MemoryStream())
@@ -438,7 +439,7 @@ namespace Kerosene.ORM.Core
 		/// <returns>A new record.</returns>
 		public static IRecord Create(params Func<dynamic, object>[] specs)
 		{
-			return Create(Schema.DEFAULT_CASE_SENSITIVE_NAMES, specs);
+			return Create(Schema.DEFAULT_CASESENSITIVE_NAMES, specs);
 		}
 
 		/// <summary>
@@ -473,6 +474,7 @@ namespace Kerosene.ORM.Core
 				var sourceEntry = source.Schema[i];
 				var targetEntry = target.Schema.FindEntry(sourceEntry.TableName, sourceEntry.ColumnName);
 
+				if (targetEntry == null) targetEntry = target.Schema.FindEntry(sourceEntry.ColumnName, raise: false);
 				if (targetEntry == null)
 				{
 					values.Add(source[i].TryClone());

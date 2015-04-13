@@ -2,26 +2,24 @@
 namespace Kerosene.ORM.Core.Concrete
 {
 	using Kerosene.Tools;
-	using System;
-	using System.Collections;
-	using System.Collections.Generic;
-	using System.Linq;
-	using System.Text;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents a generic OLE DB database.
+	/// Represents a generic OLEDB database engine.
 	/// </summary>
 	public class OleDbEngine : DataEngine, IDataEngine
 	{
-		const string OLEDB_INVARIANT_NAME = "System.Data.OleDb";
-		const bool OLEDB_CASE_SENSITIVENAMES = false;
-		const string OLEDB_PARAMETER_PREFIX = "?";
-		const bool OLEDB_POSITIONAL_PARAMETERS = true;
-		const bool OLEDB_SUPPORT_NATIVE_SKIPTAKE = false;
+		public const string OLEDB_INVARIANT_NAME = "System.Data.OleDb";
+		public const bool OLEDB_CASE_SENSITIVENAMES = false;
+		public const string OLEDB_PARAMETER_PREFIX = "?";
+		public const bool OLEDB_POSITIONAL_PARAMETERS = true;
+		public const bool OLEDB_SUPPORT_NATIVE_SKIPTAKE = false;
 
 		/// <summary>
-		/// Initializes a new engine.
+		/// Initializes a new instance using default values.
 		/// </summary>
 		public OleDbEngine()
 			: base()
@@ -31,6 +29,26 @@ namespace Kerosene.ORM.Core.Concrete
 			ParameterPrefix = OLEDB_PARAMETER_PREFIX;
 			PositionalParameters = OLEDB_POSITIONAL_PARAMETERS;
 			SupportsNativeSkipTake = OLEDB_SUPPORT_NATIVE_SKIPTAKE;
+		}
+
+		/// <summary>
+		/// Initializes a new instance using the values given.
+		/// </summary>
+		/// <param name="invariantName">The invariant name of the engine.</param>
+		/// <param name="serverVersion">The server version, or null.</param>
+		/// <param name="caseSensitiveNames">Whether names in the database are case sensitive or not.</param>
+		/// <param name="parameterPrefix">The default prefix for naming command parameters.</param>
+		/// <param name="positionalParameters">Whether the command parameters are positional or not.</param>
+		/// <param name="supportsSkipTake">Whether the engine supports a normalized way of implementing a skip/take functionality or not.</param>
+		public OleDbEngine(
+			string invariantName,
+			string serverVersion = null,
+			bool caseSensitiveNames = OLEDB_CASE_SENSITIVENAMES,
+			string parameterPrefix = OLEDB_PARAMETER_PREFIX,
+			bool positionalParameters = OLEDB_POSITIONAL_PARAMETERS,
+			bool supportsSkipTake = OLEDB_SUPPORT_NATIVE_SKIPTAKE)
+			: base(invariantName, serverVersion, caseSensitiveNames, parameterPrefix, positionalParameters, supportsSkipTake)
+		{
 		}
 
 		/// <summary>

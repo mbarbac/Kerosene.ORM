@@ -1,17 +1,21 @@
 <?xml version="1.0"?>
 <package >
-  <metadata>
-    <id>$id$</id>
-    <version>7.0.2</version>
-    <title>$title$</title>
-    <authors>$author$</authors>
-    <owners>$author$</owners>
-    <licenseUrl>http://www.codeproject.com/info/cpol10.aspx</licenseUrl>
-    <projectUrl>http://www.codeproject.com</projectUrl>
-    <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <description>The seventh version of the configuration-less, dynamic and self-adaptive database-first oriented Kerosene ORM library, with real full support for POCO objects, natural SQL-like syntax from plain C#, and advanced maps and lazy properties.</description>
-    <releaseNotes>Streamlined architecture that provides enhanced control on dependency properties, and noticiable performance improvements. Out of the box support for Sql Server, Oracle, Odbc and OleDb databases.</releaseNotes>
-    <copyright>Copyright (c) Moises Barba Cebeira 2008-2015</copyright>
-    <tags>Kerosene ORM Database Database-First Dynamic Generics C# SqlServer Oracle Odbc Oledb Entity ADO.NET</tags>
-  </metadata>
+	<metadata>
+		<id>$id$</id>
+		<version>$version$</version>
+		<title>$title$</title>
+		<authors>$author$</authors>
+		<owners>$author$</owners>
+		<licenseUrl>http://www.codeproject.com/info/cpol10.aspx</licenseUrl>
+		<projectUrl>http://www.codeproject.com</projectUrl>
+		<requireLicenseAcceptance>true</requireLicenseAcceptance>
+		<description>The seventh version of the configuration-less, dynamic and self-adaptive database-first oriented Kerosene ORM library, with real full support for POCO objects, natural SQL-like syntax from plain C#, and advanced maps and lazy properties.</description>
+		<releaseNotes>Streamlined architecture that provides enhanced control on dependency properties, and noticiable performance improvements. Out of the box support for Sql Server, Oracle, Odbc and OleDb databases.</releaseNotes>
+		<copyright>Copyright (c) Moises Barba Cebeira 2008-2015</copyright>
+		<tags>Kerosene ORM Database Database-First Dynamic Generics C# SqlServer Oracle Odbc Oledb Entity ADO.NET</tags>
+	</metadata>
+	<files>
+		<file src="License.txt" target="lib" />
+		<file src="ReleaseNotes.txt" target="lib" />
+	</files>
 </package>

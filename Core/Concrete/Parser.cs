@@ -4,17 +4,15 @@ namespace Kerosene.ORM.Core.Concrete
 	using Kerosene.Tools;
 	using System;
 	using System.Collections;
-	using System.Collections.Generic;
 	using System.Linq;
 	using System.Linq.Expressions;
 	using System.Text;
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents an object able to parse an arbitrary object, including any arbitrary command
-	/// logic, expressed as a dynamic lambda expression, extracting and capturing the arguments
-	/// found in it, and returning a string that can be understood by the underlying database
-	/// engine.
+	/// Represents the ability of parsing any arbitrary object, including null references and
+	/// dynamic lambda expressions,	and translate it into a string representation the database
+	/// engine can understand.
 	/// </summary>
 	public class Parser : IParser
 	{
@@ -22,9 +20,9 @@ namespace Kerosene.ORM.Core.Concrete
 		IDataEngine _Engine = null;
 
 		/// <summary>
-		/// Initializes a new instance.
+		/// Initializes a new instance associated with the given engine.
 		/// </summary>
-		/// <param name="engine">The engine this parser is associated with.</param>
+		/// <param name="engine">The engine this instance is associated with.</param>
 		public Parser(IDataEngine engine)
 		{
 			if (engine == null) throw new ArgumentNullException("engine", "Engine cannot be null.");
@@ -209,7 +207,7 @@ namespace Kerosene.ORM.Core.Concrete
 		/// </summary>
 		protected virtual string OnParseArgument(DynamicNode.Argument obj)
 		{
-			if (!Core.Parser.KeepComplexTags) return null;
+			if (!Core.Parser.ComplexTags) return null;
 
 			if (obj.Name.Length <= 1) return null;
 			return obj.Name;

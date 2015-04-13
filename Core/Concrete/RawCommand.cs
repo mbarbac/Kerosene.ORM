@@ -3,10 +3,7 @@ namespace Kerosene.ORM.Core.Concrete
 {
 	using Kerosene.Tools;
 	using System;
-	using System.Collections;
-	using System.Collections.Generic;
 	using System.Linq;
-	using System.Text;
 
 	// ==================================================== 
 	/// <summary>
@@ -172,7 +169,7 @@ namespace Kerosene.ORM.Core.Concrete
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
 			if (spec == null) throw new ArgumentNullException("spec", "Specification cannot be null.");
 
-			var text = Link.Parser.Parse(spec, Parameters);
+			var text = Link.Engine.Parser.Parse(spec, Parameters);
 			TheTextData = TheTextData == null
 				? text
 				: string.Format("{0}{1}", TheTextData, text);

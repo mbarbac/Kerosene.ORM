@@ -3,15 +3,13 @@ namespace Kerosene.ORM.Direct.Concrete
 {
 	using Kerosene.Tools;
 	using System;
-	using System.Collections;
-	using System.Collections.Generic;
 	using System.Data;
 	using System.Linq;
-	using System.Text;
+	using System.Threading;
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents an abstract direct connection against an underlying database-alike service.
+	/// Represents an agnostic direct connection with an underlying database.
 	/// </summary>
 	public class DataLink : Core.Concrete.DataLink, IDataLink
 	{
@@ -32,8 +30,7 @@ namespace Kerosene.ORM.Direct.Concrete
 			: base(engine, mode) { }
 
 		/// <summary>
-		/// Invoked to obtain a string with identification of this string for representation
-		/// purposes.
+		/// Invoked to obtain the string type for string representation purposes.
 		/// </summary>
 		protected override string ToStringType()
 		{
@@ -44,7 +41,7 @@ namespace Kerosene.ORM.Direct.Concrete
 		/// Returns a new instance that is a copy of the original one.
 		/// </summary>
 		/// <returns>A new instance.</returns>
-		public new DataLink Clone()
+		public DataLink Clone()
 		{
 			var cloned = new DataLink(Engine, DefaultTransactionMode);
 			OnClone(cloned); return cloned;
@@ -93,9 +90,8 @@ namespace Kerosene.ORM.Direct.Concrete
 		}
 
 		/// <summary>
-		/// The abstract nestable transaction this instance maintains. If the reference this
-		/// property maintains is null, or if it is is disposed, the getter generates a new
-		/// instance on demand. This property can return null if the link is disposed.
+		/// The nestable transaction this instance maintains, created on-demand if needed (for
+		/// instance if the previous reference is disposed).
 		/// </summary>
 		public new INestableTransaction Transaction
 		{
@@ -184,9 +180,9 @@ namespace Kerosene.ORM.Direct.Concrete
 		}
 
 		/// <summary>
-		/// Opens the connection against the underlying database-alike service.
-		/// <para>Note that this method is called automatically by the framework when needed.</para>
-		/// <para>Invoking this method on an open link may generate an exception.</para>
+		/// Opens the connection against the database-alike service.
+		/// <para>The framework invokes this method automatically when needed.</para>
+		/// <para>Invoking this method in an opened link may throw an exception.</para>
 		/// </summary>
 		public override void Open()
 		{
@@ -200,14 +196,50 @@ namespace Kerosene.ORM.Direct.Concrete
 
 			_DbConnection = Engine.ProviderFactory.CreateConnection();
 			_DbConnection.ConnectionString = _ConnectionString;
-			_DbConnection.Open();
+
+			if (_Retries < 0)
+			{
+				var info = Configuration.ORMConfiguration.GetInfo();
+				if (info != null &&
+					info.DataLink != null &&
+					info.DataLink.Retries != null) _Retries = (int)info.DataLink.Retries;
+
+				if (_Retries < MIN_RETRIES) _Retries = MIN_RETRIES;
+			}
+			if (_RetryInterval < 0)
+			{
+				var info = Configuration.ORMConfiguration.GetInfo();
+				if (info != null &&
+					info.DataLink != null &&
+					info.DataLink.RetryInterval != null) _RetryInterval = (int)info.DataLink.RetryInterval;
+
+				if (_RetryInterval < MIN_RETRY_INTERVAL) _RetryInterval = MIN_RETRY_INTERVAL;
+			}
+
+			Exception e = null;
+			int retries = _Retries; while (retries >= 0)
+			{
+				try { _DbConnection.Open(); }
+				catch (Exception x) { e = x; }
+
+				if (_DbConnection.State == ConnectionState.Open) break;
+
+				if (--retries < 0)
+				{
+					if (e != null) throw e;
+					throw new CannotExecuteException("Cannot open connection for this '{0}'.".FormatWith(this));
+				}
+				Thread.Sleep(_RetryInterval);
+			}
 		}
+		int _Retries = -1;
+		int _RetryInterval = -1;
+		public const int MIN_RETRIES = 3;
+		public const int MIN_RETRY_INTERVAL = 50;
 
 		/// <summary>
-		/// Closes the connection that might be opened against the underlying database-alike
-		/// service.
-		/// <para>Note that this method is called automatically by the framework when needed.</para>
-		/// <para>Invoking this method on an already closed connection has no effects.</para>
+		/// Closes the connection that might be opened against the database-alike service.
+		/// <para>The framework invokes this method automatically when needed.</para>
 		/// </summary>
 		public override void Close()
 		{
@@ -222,8 +254,7 @@ namespace Kerosene.ORM.Direct.Concrete
 		}
 
 		/// <summary>
-		/// Whether the connection against the underlying database-alike service can be considered
-		/// to be opened or not.
+		/// Whether this connection can be considered opened or not.
 		/// </summary>
 		public override bool IsOpen
 		{

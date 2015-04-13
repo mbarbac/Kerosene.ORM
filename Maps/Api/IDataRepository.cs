@@ -5,21 +5,23 @@ namespace Kerosene.ORM.Maps
 	using Kerosene.Tools;
 	using System;
 	using System.Collections.Generic;
+	using System.Linq;
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents a view on the state and contents of an underlying database, related to the
-	/// maps associated with this instance, that implements both the Dynamic Repository and the
-	/// Dynamic Unit Of Work patterns.
+	/// Represents a repository for a set of maps between their POCO classes and their related
+	/// primary tables in the underlying database-alike service, implementing both the Dynamic
+	/// Repository and the Dynamic Unit Of Work patterns.
 	/// </summary>
 	public interface IDataRepository : IDisposableEx
 	{
 		/// <summary>
-		/// Returns a new repository associated with the given data link that contains a copy
-		/// of the maps that were registered in the original one.
+		/// Returns a new repository associated with the given link containing a copy of the
+		/// original maps and customizations existing in the original one. Cloned maps will not
+		/// be validated and can be modified as needed.
 		/// </summary>
-		/// <param name="link">The link the new repository will use.</param>
-		/// <returns>A new repository.</returns>
+		/// <param name="link">The link the new respository will be associated with.</param>
+		/// <returns>A new respository.</returns>
 		IDataRepository Clone(IDataLink link);
 
 		/// <summary>
@@ -28,25 +30,14 @@ namespace Kerosene.ORM.Maps
 		IDataLink Link { get; }
 
 		/// <summary>
-		/// The collection of maps registered into this instance.
+		/// The collection of maps registered into this repository.
 		/// </summary>
 		IEnumerable<IDataMap> Maps { get; }
 
 		/// <summary>
-		/// Gets the map registered to manage the entities of the given type, or null if no
-		/// such map can be found.
+		/// Clears and disposes all the maps registered into this instance.
 		/// </summary>
-		/// <param name="type">The type of the entities managed by the map to find.</param>
-		/// <returns>The requested map, or null.</returns>
-		IDataMap GetMap(Type type);
-
-		/// <summary>
-		/// Gets the map registered to manage the entities of the given type, or null if no
-		/// such map can be found.
-		/// </summary>
-		/// <typeparam name="T">The type of the entities managed by the map to find.</typeparam>
-		/// <returns>The requested map, or null.</returns>
-		IDataMap<T> GetMap<T>() where T : class;
+		void ClearMaps();
 
 		/// <summary>
 		/// Whether weak maps are enabled or not for this instance.
@@ -57,54 +48,54 @@ namespace Kerosene.ORM.Maps
 		bool WeakMapsEnabled { get; set; }
 
 		/// <summary>
-		/// Returns the map registered to manage the entities of the given type, or if such map
-		/// is not found, tries to create a new one. Returns null if there was no map registered
-		/// and if it was impossible to create a new one.
+		/// Returns the map registeres to manage the entities of the given type or, if such map
+		/// is not found, creates a new one using the table name given or, is such is null, tries
+		/// to automatically locate a suitable table in the database and, if so, creates a weak
+		/// map for that type if weak maps are are enabled. Returns null if finally a map cannot
+		/// be located.
 		/// </summary>
-		/// <param name="type">The type of the entities managed by the map to retrieve.</param>
+		/// <param name="type">The type of the entities of the map to locate.</param>
 		/// <param name="table">A dynamic lambda expression that resolves into the name of the
-		/// master table in the database where to find at least the identity columns of the
-		/// entities.
-		/// <para>If this argument is null then the framework tries to create a new weak map
-		/// probing for its table name a number of suitable candidates based upon the name of
-		/// the entities' type.</para>
-		/// </param>
+		/// primary table where to find, at least, the identity columns associated with the map.
+		/// If this argument is null then a number of pluralization rules are automatically used
+		/// based upon the name of the type.</param>
 		/// <returns>The requested map, or null.</returns>
-		IDataMap RetrieveMap(Type type, Func<dynamic, object> table = null);
+		IDataMap LocateMap(Type type, Func<dynamic, object> table = null);
 
 		/// <summary>
-		/// Returns the map registered to manage the entities of the given type, or if such map
-		/// is not found, tries to create a new one. Returns null if there was no map registered
-		/// and if it was impossible to create a new one.
+		/// Returns the map registeres to manage the entities of the given type or, if such map
+		/// is not found, creates a new one using the table name given or, is such is null, tries
+		/// to automatically locate a suitable table in the database and, if so, creates a weak
+		/// map for that type if weak maps are are enabled. Returns null if finally a map cannot
+		/// be located.
 		/// </summary>
-		/// <typeparam name="T">The type of the entities managed by the map to retrieve.</typeparam>
+		/// <typeparam name="T">The type of the entities of the map to locate.</typeparam>
 		/// <param name="table">A dynamic lambda expression that resolves into the name of the
-		/// master table in the database where to find at least the identity columns of the
-		/// entities.
-		/// <para>If this argument is null then the framework tries to create a new weak map
-		/// probing for its table name a number of suitable candidates based upon the name of
-		/// the entities' type.</para>
-		/// </param>
+		/// primary table where to find, at least, the identity columns associated with the map.
+		/// If this argument is null then a number of pluralization rules are automatically used
+		/// based upon the name of the type.</param>
 		/// <returns>The requested map, or null.</returns>
-		IDataMap<T> RetrieveMap<T>(Func<dynamic, object> table = null) where T : class;
+		IDataMap<T> LocateMap<T>(Func<dynamic, object> table = null) where T : class;
 
 		/// <summary>
-		/// Clears and disposes all the maps registered into this instance, making all their
-		/// managed entities to become detached ones.
+		/// Whether the maps registered into this instance keep track of the entities they have
+		/// managed in their internal caches, or not. The setter cascades the new value to all
+		/// the registered maps.
 		/// </summary>
-		void ClearMaps();
+		bool TrackEntities { get; set; }
 
 		/// <summary>
-		/// Gets the collection of cached entities managed by the maps registered into this
-		/// instance, excluding the collected or invalid ones.
+		/// The current collection of entities in a valid state tracked by the maps registered
+		/// into this instance, if any.
 		/// </summary>
-		IEnumerable<IMetaEntity> MetaEntities { get; }
+		IEnumerable<IMetaEntity> Entities { get; }
 
 		/// <summary>
-		/// Clears the caches of managed entities of all the maps registered into this instance,
-		/// making them all become detached entities.
+		/// Clears the caches of tracked entities maintained by the maps registered into this
+		/// instance and, optionally, detaches those entities.
 		/// </summary>
-		void ClearEntities();
+		/// <param name="detach">True to forcibly detach the entities found in the caches.</param>
+		void ClearEntities(bool detach = true);
 
 		/// <summary>
 		/// Creates a new entity with the appropriate type for the requested map.
@@ -117,8 +108,6 @@ namespace Kerosene.ORM.Maps
 
 		/// <summary>
 		/// Attaches the given entity into this map.
-		/// <para>Note that the framework supports attaching several entities that share the
-		/// same identity columns, which are treated as a group for the relevant operations.</para>
 		/// </summary>
 		/// <typeparam name="T">The type of the managed entities.</typeparam>
 		/// <param name="entity">The entity to attach into this instance.</param>
@@ -236,8 +225,8 @@ namespace Kerosene.ORM.Maps
 		void UpdateNow<T>(T entity) where T : class;
 
 		/// <summary>
-		/// Executes against the underlying database all pending change operations that may have
-		/// been annotated into this repository.
+		/// Executes the change operations annotated into this instance against the underlying
+		/// database as a single logical operation that either succeeds or fails as a whole.
 		/// </summary>
 		void ExecuteChanges();
 
@@ -246,13 +235,6 @@ namespace Kerosene.ORM.Maps
 		/// repository.
 		/// </summary>
 		void DiscardChanges();
-
-		/// <summary>
-		/// Maintains a delegate that, if it is not null, will be invoked to process any exception
-		/// encountered when executing the pending changes at the database. If it is null then the
-		/// exception is thrown.
-		/// </summary>
-		Action<Exception> OnExecuteChangesError { get; set; }
 	}
 }
 // ======================================================== 

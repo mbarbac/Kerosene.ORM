@@ -1,8 +1,10 @@
 ﻿// ======================================================== IDataUpdate.cs
 namespace Kerosene.ORM.Maps
 {
+	using Kerosene.ORM.Core;
 	using Kerosene.Tools;
 	using System;
+	using System.Linq;
 
 	// ==================================================== 
 	/// <summary>

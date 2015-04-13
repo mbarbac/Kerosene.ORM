@@ -147,12 +147,10 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Returns true if the state of this object can be considered as equivalent to the target
-		/// one, based upon any arbitrary criteria implemented in this method.
+		/// Returns true if this object can be considered as equivalent to the target one given.
 		/// </summary>
-		/// <param name="target">The target instance this one will be tested for equivalence against.</param>
-		/// <returns>True if the state of this instance can be considered as equivalent to the
-		/// target one, or false otherwise.</returns>
+		/// <param name="target">The target object this one will be tested for equivalence.</param>
+		/// <returns>True if this object can be considered as equivalent to the target one given.</returns>
 		public bool EquivalentTo(IElementAliasCollection target)
 		{
 			return OnEquivalentTo(target);
@@ -241,10 +239,10 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Returns whether the given member belongs to this collection of not.
+		/// Returns whether the given member is in this collection.
 		/// </summary>
-		/// <param name="member">The member to verify.</param>
-		/// <returns>True if the given member belongs to this collection, false otherwise.</returns>
+		/// <param name="member">The member to validate.</param>
+		/// <returns>True if the given member is part of this collection, or false otherwise.</returns>
 		public bool Contains(IElementAlias member)
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
@@ -253,36 +251,9 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Returns the first member in this instance that matches the conditions given in the
-		/// predicate, or null if not such member can be found.
+		/// Returns the unique entry whose alias is given, or null if such cannot be found.
 		/// </summary>
-		/// <param name="match">The predicate that defines the conditions of the member to find.</param>
-		/// <returns>The member found, or null.</returns>
-		public IElementAlias Find(Predicate<IElementAlias> match)
-		{
-			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
-			if (match == null) throw new ArgumentNullException("match", "Predicate cannot be null.");
-			return _Members.Find(match);
-		}
-
-		/// <summary>
-		/// Returns the collection of members in this instance that match the conditions given in
-		/// the predicate. This collection might be empty if there were no members that match that
-		/// conditions.
-		/// </summary>
-		/// <param name="match">The predicate that defines the conditions of the members to find.</param>
-		/// <returns>A collection with the members found.</returns>
-		public IEnumerable<IElementAlias> FindAll(Predicate<IElementAlias> match)
-		{
-			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
-			if (match == null) throw new ArgumentNullException("match", "Predicate cannot be null.");
-			return _Members.FindAll(match);
-		}
-
-		/// <summary>
-		/// Gets the member whose alias is given, or null if not such member can be found.
-		/// </summary>
-		/// <param name="alias">The alias of the member to find.</param>
+		/// <param name="alias">The alias of the entry to find.</param>
 		/// <returns>The member found, or null.</returns>
 		public IElementAlias FindAlias(string alias)
 		{
@@ -293,27 +264,16 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Gets an enumeration containing all the members where the given element is referenced.
-		/// The enumeration might be empty is there were no members found.
+		/// Returns the collection of entries whose name match the one given.
 		/// </summary>
-		/// <param name="element">The string representation of the element to find.</param>
-		/// <returns>The requested enumeration.</returns>
+		/// <param name="element">The name of the elements to return.</param>
+		/// <returns>The requested collection.</returns>
 		public IEnumerable<IElementAlias> FindElement(string element)
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
 			element = Core.ElementAlias.ValidateElement(element);
 
 			return _Members.FindAll(x => string.Compare(x.Element, element, !CaseSensitiveNames) == 0);
-		}
-
-		/// <summary>
-		/// Factory method invoked to create a new orphan member but with the right type for
-		/// this collection.
-		/// </summary>
-		/// <returns>A new orphan member.</returns>
-		public virtual IElementAlias CreateOrphanMember()
-		{
-			return new ElementAlias();
 		}
 
 		/// <summary>
@@ -355,6 +315,16 @@ namespace Kerosene.ORM.Core.Concrete
 
 			_Members.Add(member); // To intercept re-entrant operation...
 			member.Owner = this;
+		}
+
+		/// <summary>
+		/// Factory method invoked to create a new orphan member but with the right type for
+		/// this collection.
+		/// </summary>
+		/// <returns>A new orphan member.</returns>
+		public virtual IElementAlias CreateOrphanMember()
+		{
+			return new ElementAlias();
 		}
 
 		/// <summary>

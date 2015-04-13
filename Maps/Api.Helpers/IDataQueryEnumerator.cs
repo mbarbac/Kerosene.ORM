@@ -1,15 +1,17 @@
 ﻿// ======================================================== IDataQueryEnumerator.cs
 namespace Kerosene.ORM.Maps
 {
+	using Kerosene.ORM.Core;
 	using Kerosene.Tools;
 	using System;
 	using System.Collections;
 	using System.Collections.Generic;
+	using System.Linq;
 
 	// ==================================================== 
 	/// <summary>
 	/// Represents an object able to execute a query command and return the entities produced
-	/// as the result of that execuciton.
+	/// as the result of that execution.
 	/// </summary>
 	public interface IDataQueryEnumerator : IEnumerator, IDisposableEx
 	{
@@ -53,7 +55,7 @@ namespace Kerosene.ORM.Maps
 	// ==================================================== 
 	/// <summary>
 	/// Represents an object able to execute a query command and return the entities produced
-	/// as the result of that execuciton.
+	/// as the result of that execution.
 	/// </summary>
 	public interface IDataQueryEnumerator<T> : IEnumerator<T>, IDataQueryEnumerator where T : class
 	{

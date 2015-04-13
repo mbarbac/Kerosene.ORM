@@ -3,15 +3,11 @@ namespace Kerosene.ORM.Core.Concrete
 {
 	using Kerosene.Tools;
 	using System;
-	using System.Collections;
-	using System.Collections.Generic;
 	using System.Linq;
-	using System.Text;
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents an abstract command to be executed against the underlying database-alike
-	/// service it is associated with.
+	/// Represents an abstract command to be executed against a database-alike service.
 	/// </summary>
 	public abstract class Command : ICommand
 	{
@@ -87,7 +83,7 @@ namespace Kerosene.ORM.Core.Concrete
 		ICommand ICommand.Clone()
 		{
 			throw new NotSupportedException(
-				"Abstract ICommand::{0}.Clone() invoked.".FormatWith(GetType().EasyName()));
+				"Abstract ICoreCommand::{0}.Clone() invoked.".FormatWith(GetType().EasyName()));
 		}
 		object ICloneable.Clone()
 		{
@@ -120,43 +116,6 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Generates a trace string for this command built by generating the actual text of the
-		/// command in a syntax the underlying database can understand, and appending to it the
-		/// name and value of parameters the command will use, if any.
-		/// </summary>
-		/// <param name="iterable">True to indicate the method to generate the enumerable version
-		/// of the command, if possible, or false to generate the scalar one.</param>
-		/// <returns>The requested trace string.</returns>
-		public string TraceString(bool iterable)
-		{
-			var str = GetCommandText(iterable);
-			var pars = Parameters;
-
-			var temp = IsDisposed
-				? string.Format("disposed::{0}({1})", GetType().EasyName(), str)
-				: (str.NullIfTrimmedIsEmpty() == null
-					? string.Format("empty::{0}", GetType().EasyName())
-					: str);
-
-			if (pars != null && pars.Count != 0) temp = string.Format("{0} -- {1}", temp, pars);
-			return temp;
-		}
-
-		/// <summary>
-		/// Generates a trace string for this command built by generating the actual text of the
-		/// command in a syntax the underlying database can understand, and appending to it the
-		/// name and value of parameters the command will use, if any.
-		/// <para>This method generates either the enumerable version of the command, or rather
-		/// the scalar one, using the default version for its concrete type.</para>
-		/// </summary>
-		/// <returns>The requested trace string.</returns>
-		public string TraceString()
-		{
-			bool iterable = (this is IQueryCommand || this is IRawCommand);
-			return TraceString(iterable);
-		}
-
-		/// <summary>
 		/// Whether the state and contents maintained in this instance permits the execution
 		/// of this command or not.
 		/// </summary>
@@ -180,6 +139,42 @@ namespace Kerosene.ORM.Core.Concrete
 		/// <returns>The requested command string.</returns>
 		/// <remarks>This method must not throw an exception if this instance is disposed.</remarks>
 		public abstract string GetCommandText(bool iterable);
+
+		/// <summary>
+		/// Generates a trace string for this command built by generating the actual text of the
+		/// command in a syntax the underlying database can understand, and appending to it the
+		/// name and value of parameters the command will use, if any.
+		/// </summary>
+		/// <param name="iterable">True to indicate the method to generate the enumerable version
+		/// of the command, if possible, or false to generate the scalar one.</param>
+		/// <returns>The requested trace string.</returns>
+		public string TraceString(bool iterable)
+		{
+			var str = GetCommandText(iterable).NullIfTrimmedIsEmpty();
+			var pars = Parameters;
+
+			var temp = str ?? string.Empty;
+			if (pars != null && pars.Count != 0) temp = string.Format("{0} -- {1}", temp, pars);
+
+			if (IsDisposed) temp = string.Format("disposed::{0}({1})", GetType().EasyName(), temp);
+			else if (str == null) temp = string.Format("empty::{0}({1})", GetType().EasyName(), temp);
+
+			return temp;
+		}
+
+		/// <summary>
+		/// Generates a trace string for this command built by generating the actual text of the
+		/// command in a syntax the underlying database can understand, and appending to it the
+		/// name and value of parameters the command will use, if any.
+		/// <para>This method generates either the enumerable version of the command, or rather
+		/// the scalar one, using the default version for its concrete type.</para>
+		/// </summary>
+		/// <returns>The requested trace string.</returns>
+		public string TraceString()
+		{
+			bool iterable = (this is IQueryCommand || this is IRawCommand);
+			return TraceString(iterable);
+		}
 	}
 }
 // ======================================================== 

@@ -15,22 +15,33 @@ namespace Kerosene.ORM.Core.Concrete
 	/// from the execution of an enumerable command.
 	/// </summary>
 	[Serializable]
-	public class Schema : ISchema
+	public partial class Schema : ISchema
 	{
 		bool _IsDisposed = false;
+#if OLD_702
 		List<ISchemaEntry> _Members = new List<ISchemaEntry>();
-		bool _CaseSensitiveNames = Core.Schema.DEFAULT_CASE_SENSITIVE_NAMES;
+#else
+		EntryList _Members = null;
+#endif
+		bool _CaseSensitiveNames = Core.Schema.DEFAULT_CASESENSITIVE_NAMES;
 		IElementAliasCollection _Aliases = null;
 
 		/// <summary>
 		/// Initializes a new instance.
 		/// </summary>
-		public Schema(bool caseSensitiveNames = Core.Schema.DEFAULT_CASE_SENSITIVE_NAMES)
+		/// <param name="caseSensitiveNames">Whether the table and column names in this collection
+		/// are case sensitive or not.</param>
+		public Schema(
+			bool caseSensitiveNames = Core.Schema.DEFAULT_CASESENSITIVE_NAMES)
 		{
 			_CaseSensitiveNames = caseSensitiveNames;
-
 			if ((_Aliases = CreateAliasCollection()) == null)
-				throw new CannotCreateException("Cannot create a collection of aliases for this instance.");
+				throw new CannotCreateException("Cannot create a collection of aliases.");
+#if OLD_702
+			List<ISchemaEntry> _Members = new List<ISchemaEntry>();
+#else
+			_Members = new EntryList(caseSensitiveNames);
+#endif
 		}
 
 		/// <summary>
@@ -72,7 +83,9 @@ namespace Kerosene.ORM.Core.Concrete
 			{
 				if (_Members != null)
 				{
-					var list = _Members.ToArray(); foreach (var member in list) member.Dispose();
+					var list = _Members.ToArray();
+					foreach (var member in list) member.Dispose();
+					list = null;
 				}
 
 				if (_Aliases != null && !_Aliases.IsDisposed) _Aliases.Dispose();
@@ -86,21 +99,16 @@ namespace Kerosene.ORM.Core.Concrete
 		/// <summary>
 		/// Returns the string representation of this instance.
 		/// </summary>
-		/// <param name="extended">True to obtain the extended string representation instead of
-		/// the regular one.</param>
 		/// <returns>A string containing the standard representation of this instance.</returns>
-		public string ToString(bool extended)
+		public override string ToString()
 		{
 			StringBuilder sb = new StringBuilder();
 
 			sb.Append("["); if (_Members != null)
 			{
-				for (int i = 0; i < _Members.Count; i++)
+				bool first = true; foreach (var entry in _Members)
 				{
-					if (i != 0) sb.Append(", ");
-
-					var entry = _Members[i];
-					var temp = (entry is SchemaEntry) ? ((SchemaEntry)entry).ToString(extended) : entry.ToString();
+					if (first) first = false; else sb.Append(", ");
 					sb.Append(entry);
 				}
 			}
@@ -108,15 +116,6 @@ namespace Kerosene.ORM.Core.Concrete
 
 			var str = sb.ToString();
 			return IsDisposed ? string.Format("disposed::{0}({1})", GetType().EasyName(), str) : str;
-		}
-
-		/// <summary>
-		/// Returns the string representation of this instance.
-		/// </summary>
-		/// <returns>A string containing the standard representation of this instance.</returns>
-		public override string ToString()
-		{
-			return ToString(extended: false);
 		}
 
 		/// <summary>
@@ -128,7 +127,17 @@ namespace Kerosene.ORM.Core.Concrete
 
 			info.AddValue("CaseSensitiveNames", _CaseSensitiveNames);
 			info.AddExtended("Aliases", _Aliases);
+
+#if OLD_702
 			info.AddExtended("List", _Members);
+#else
+			int count = 0; foreach (var member in _Members)
+			{
+				info.AddExtended("Member" + count, member);
+				count++;
+			}
+			info.AddValue("MembersCount", count);
+#endif 
 		}
 
 		/// <summary>
@@ -138,7 +147,18 @@ namespace Kerosene.ORM.Core.Concrete
 		{
 			_CaseSensitiveNames = info.GetBoolean("CaseSensitiveNames");
 			_Aliases = info.GetExtended<IElementAliasCollection>("Aliases");
+
+#if OLD_702
 			_Members = info.GetExtended<List<ISchemaEntry>>("List");
+#else
+			_Members = new EntryList(_CaseSensitiveNames);
+			int count = (int)info.GetValue("MembersCount", typeof(int));
+			for (int i = 0; i < count; i++)
+			{
+				var member = info.GetExtended<ISchemaEntry>("Member" + i);
+				_Members.Add(member);
+			}
+#endif
 		}
 
 		/// <summary>
@@ -177,12 +197,10 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Returns true if the state of this object can be considered as equivalent to the target
-		/// one, based upon any arbitrary criteria implemented in this method.
+		/// Returns true if this object can be considered as equivalent to the target one given.
 		/// </summary>
-		/// <param name="target">The target instance this one will be tested for equivalence against.</param>
-		/// <returns>True if the state of this instance can be considered as equivalent to the
-		/// target one, or false otherwise.</returns>
+		/// <param name="target">The target object this one will be tested for equivalence.</param>
+		/// <returns>True if this object can be considered as equivalent to the target one given.</returns>
 		public bool EquivalentTo(ISchema target)
 		{
 			return OnEquivalentTo(target);
@@ -214,19 +232,19 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// The collection of aliases used in the context of this instance.
-		/// </summary>
-		public IElementAliasCollection Aliases
-		{
-			get { return _Aliases; }
-		}
-
-		/// <summary>
 		/// Whether the names of the members of this collection are case sensitive or not.
 		/// </summary>
 		public bool CaseSensitiveNames
 		{
 			get { return _CaseSensitiveNames; }
+		}
+
+		/// <summary>
+		/// The collection of aliases used in the context of this instance.
+		/// </summary>
+		public IElementAliasCollection Aliases
+		{
+			get { return _Aliases; }
 		}
 
 		/// <summary>
@@ -276,6 +294,7 @@ namespace Kerosene.ORM.Core.Concrete
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
 			if (member == null) throw new ArgumentNullException("member", "Member cannot be null.");
+
 			return _Members.IndexOf(member);
 		}
 
@@ -288,43 +307,17 @@ namespace Kerosene.ORM.Core.Concrete
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
 			if (member == null) throw new ArgumentNullException("Member cannot be null.");
+
 			return _Members.Contains(member);
 		}
 
 		/// <summary>
-		/// Returns the first member in this instance that matches the conditions given in the
-		/// predicate, or null if not such member can be found.
+		/// Returns the member whose table and column name are given, or null if not such member
+		/// can be found.
 		/// </summary>
-		/// <param name="match">The predicate that defines the conditions of the member to find.</param>
-		/// <returns>The member found, or null.</returns>
-		public ISchemaEntry Find(Predicate<ISchemaEntry> match)
-		{
-			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
-			if (match == null) throw new ArgumentNullException("match", "Predicate cannot be null.");
-			return _Members.Find(match);
-		}
-
-		/// <summary>
-		/// Returns the collection of members in this instance that match the conditions given in
-		/// the predicate. This collection might be empty if there were no members that match that
-		/// conditions.
-		/// </summary>
-		/// <param name="match">The predicate that defines the conditions of the members to find.</param>
-		/// <returns>A collection with the members found.</returns>
-		public IEnumerable<ISchemaEntry> FindAll(Predicate<ISchemaEntry> match)
-		{
-			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
-			if (match == null) throw new ArgumentNullException("match", "Predicate cannot be null.");
-			return _Members.FindAll(match);
-		}
-
-		/// <summary>
-		/// Gets the member whose table and column name are given, or null if not such member can
-		/// be found.
-		/// </summary>
-		/// <param name="table">The table name of the member to find, or null to refer to the
+		/// <param name="tableName">The table name of the member to find, or null to refer to the
 		/// default one in this context.</param>
-		/// <param name="column">The column name.</param>
+		/// <param name="columnName">The column name.</param>
 		/// <returns>The member found, or null.</returns>
 		public ISchemaEntry FindEntry(string table, string column)
 		{
@@ -335,40 +328,54 @@ namespace Kerosene.ORM.Core.Concrete
 			var alias = (IElementAlias)(table == null ? null : Aliases.FindAlias(table));
 			if (alias != null) table = alias.Element;
 
+#if OLD_702
 			var name = Core.SchemaEntry.NormalizedName(table, column);
 			return _Members.Find(x =>
 				string.Compare(Core.SchemaEntry.NormalizedName(x.TableName, x.ColumnName), name, !CaseSensitiveNames) == 0);
+#else
+			return _Members.FindEntry(table, column);
+#endif
 		}
 
 		/// <summary>
-		/// Gets the unique member whose column name is given, or null if not such member can be
-		/// found. If several members are found sharing the same column name then an exception is
-		/// thrown.
+		/// Returns the unique member whose column name is given, or null if no such member can
+		/// be found. If the collection contains several members with the same column name, even
+		/// if they belong to different tables, an exception is thrown by default.
 		/// </summary>
-		/// <param name="column">The column name.</param>
+		/// <param name="columnName">The column name.</param>
+		/// <param name="raise">True to raise an exception if several columns are found sharing
+		/// the same name. If false then null is returned in that case.</param>
 		/// <returns>The member found, or null.</returns>
-		public ISchemaEntry FindEntry(string column)
+		public ISchemaEntry FindEntry(string column, bool raise = true)
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
 			column = Core.SchemaEntry.ValidateColumn(column);
 
+#if OLD_702
 			var list = _Members.FindAll(x => string.Compare(x.ColumnName, column, !CaseSensitiveNames) == 0);
+#else
+			var list = _Members.FindColumn(column);
+#endif
 			if (list.Count == 0) return null;
 			if (list.Count == 1) return list[0];
 
-			throw new DuplicateException(
-				"Column name '{0}' found in several entries '{1}'.".FormatWith(column, list.Sketch()));
+			list.Clear(); list = null;
+			if (raise) throw new DuplicateException(
+					"Column name '{0}' found in several entries: '{1}'.".FormatWith(column, list.Sketch()));
+
+			return null;
 		}
 
 		/// <summary>
 		/// Gets the member whose table and colum name are obtained parsing the given dynamic
 		/// lambda expression, using either the 'x => x.Table.Column' or 'x => x.Column' forms,
-		/// or null if no such member can be found. In the later case, if several members are
-		/// found sharing the same column name for different tables then an exception is thrown.
+		/// or null if no such member can be found. In the later case, if the collection contains
+		/// several members with the same column name, even if they belong to different tables, an
+		/// exception is thrown.
 		/// </summary>
 		/// <param name="spec">A dynamic lambda expressin that resolves into the specification
 		/// of the entry to find.</param>
-		/// <returns></returns>
+		/// <returns>The member found, or null.</returns>
 		public ISchemaEntry FindEntry(Func<dynamic, object> spec)
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
@@ -397,7 +404,11 @@ namespace Kerosene.ORM.Core.Concrete
 			var alias = (IElementAlias)(table == null ? null : Aliases.FindAlias(table));
 			if (alias != null) table = alias.Element;
 
+#if OLD_702
 			return _Members.FindAll(x => string.Compare(x.TableName, table, !CaseSensitiveNames) == 0);
+#else
+			return _Members.FindTable(table);
+#endif
 		}
 
 		/// <summary>
@@ -410,7 +421,11 @@ namespace Kerosene.ORM.Core.Concrete
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
 			column = Core.SchemaEntry.ValidateColumn(column);
 
+#if OLD_702
 			return _Members.FindAll(x => string.Compare(x.ColumnName, column, !CaseSensitiveNames) == 0);
+#else
+			return _Members.FindColumn(column);
+#endif
 		}
 
 		/// <summary>
@@ -420,7 +435,12 @@ namespace Kerosene.ORM.Core.Concrete
 		public IEnumerable<ISchemaEntry> PrimaryKeyColumns()
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
+
+#if OLD_702
 			return _Members.FindAll(x => x.IsPrimaryKeyColumn);
+#else
+			return _Members.Where(x => x.IsPrimaryKeyColumn);
+#endif
 		}
 
 		/// <summary>
@@ -430,17 +450,12 @@ namespace Kerosene.ORM.Core.Concrete
 		public IEnumerable<ISchemaEntry> UniqueValuedColumns()
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
-			return _Members.FindAll(x => x.IsUniqueValuedColumn);
-		}
 
-		/// <summary>
-		/// Factory method invoked to create a new orphan member but with the right type for
-		/// this collection.
-		/// </summary>
-		/// <returns>A new orphan member.</returns>
-		public ISchemaEntry CreateOrphanMember()
-		{
-			return new SchemaEntry();
+#if OLD_702
+			return _Members.FindAll(x => x.IsUniqueValuedColumn);
+#else
+			return _Members.Where(x => x.IsUniqueValuedColumn);
+#endif
 		}
 
 		/// <summary>
@@ -484,6 +499,16 @@ namespace Kerosene.ORM.Core.Concrete
 
 			_Members.Add(member); // To intercept re-entrant operation...
 			member.Owner = this;
+		}
+
+		/// <summary>
+		/// Factory method invoked to create a new orphan member but with the right type for
+		/// this collection.
+		/// </summary>
+		/// <returns>A new orphan member.</returns>
+		public ISchemaEntry CreateOrphanMember()
+		{
+			return new SchemaEntry();
 		}
 
 		/// <summary>
@@ -576,6 +601,7 @@ namespace Kerosene.ORM.Core.Concrete
 			if (disposeMembers)
 			{
 				var list = _Members.ToArray(); foreach (var member in list) member.Dispose();
+				Array.Clear(list, 0, list.Length);
 			}
 
 			_Members.Clear();

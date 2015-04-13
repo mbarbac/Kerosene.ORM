@@ -3,14 +3,13 @@ namespace Kerosene.ORM.Core.Concrete
 {
 	using Kerosene.Tools;
 	using System;
-	using System.Collections;
-	using System.Collections.Generic;
 	using System.Linq;
 	using System.Text;
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents an abstract nestable transaction associated with a given <see cref="IDataLink"/>.
+	/// Represents an abstract nestable transaction associated with a given
+	/// <see cref="IDataLink"/>.
 	/// </summary>
 	public abstract class NestableTransaction : INestableTransaction
 	{
@@ -61,10 +60,7 @@ namespace Kerosene.ORM.Core.Concrete
 		/// <param name="disposing">True if the object is being disposed, false otherwise.</param>
 		protected virtual void OnDispose(bool disposing)
 		{
-			if (disposing)
-			{
-				if (_Link != null && !_Link.IsDisposed && this.IsActive) Abort();
-			}
+			if (_Link != null && !_Link.IsDisposed && this.IsActive) Abort();
 			_Link = null;
 
 			_IsDisposed = true;

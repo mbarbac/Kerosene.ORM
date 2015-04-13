@@ -8,8 +8,7 @@ namespace Kerosene.ORM.Core
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents the collection of generic parameters captured for a command, typically, but
-	/// also potentially or for any other element.
+	/// Represents the collection of parameters of a command.
 	/// </summary>
 	public interface IParameterCollection
 		: IDisposableEx, ICloneable, ISerializable, IEquivalent<IParameterCollection>
@@ -61,35 +60,11 @@ namespace Kerosene.ORM.Core
 		bool Contains(IParameter member);
 
 		/// <summary>
-		/// Returns the first member in this instance that matches the conditions given in the
-		/// predicate, or null if not such member can be found.
-		/// </summary>
-		/// <param name="match">The predicate that defines the conditions of the member to find.</param>
-		/// <returns>The member found, or null.</returns>
-		IParameter Find(Predicate<IParameter> match);
-
-		/// <summary>
-		/// Returns the collection of members in this instance that match the conditions given in
-		/// the predicate. This collection might be empty if there were no members that match that
-		/// conditions.
-		/// </summary>
-		/// <param name="match">The predicate that defines the conditions of the members to find.</param>
-		/// <returns>A collection with the members found.</returns>
-		IEnumerable<IParameter> FindAll(Predicate<IParameter> match);
-
-		/// <summary>
 		/// Gets the member whose name is given, or null if not such member can be found.
 		/// </summary>
 		/// <param name="name">The name of the member to find.</param>
 		/// <returns>The member found, or null.</returns>
 		IParameter FindName(string name);
-
-		/// <summary>
-		/// Factory method invoked to create a new orphan member but with the right type for
-		/// this collection.
-		/// </summary>
-		/// <returns>A new orphan member.</returns>
-		IParameter CreateOrphanMember();
 
 		/// <summary>
 		/// Adds the given orphan instance into this collection.
@@ -146,7 +121,7 @@ namespace Kerosene.ORM.Core
 		/// <summary>
 		/// Whether by default the names of the members in a collection are case sensitive or not.
 		/// </summary>
-		public const bool DEFAULT_CASE_SENSITIVE_NAMES = false;
+		public const bool DEFAULT_CASE_SENSITIVE_NAMES = DataEngine.DEFAULT_CASESENSITIVE_NAMES;
 
 		/// <summary>
 		/// The default prefix to use o automatically create the name of a new parameter if it was

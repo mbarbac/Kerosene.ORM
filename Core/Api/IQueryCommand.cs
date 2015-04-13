@@ -3,12 +3,13 @@ namespace Kerosene.ORM.Core
 {
 	using Kerosene.Tools;
 	using System;
+	using System.Linq;
 
 	// ==================================================== 
 	/// <summary>
 	/// Represents a query command.
 	/// </summary>
-	public interface IQueryCommand : IEnumerableCommand, IElementAliasProvider
+	public interface IQueryCommand : IEnumerableCommand, IElementAliasCollectionProvider
 	{
 		/// <summary>
 		/// Returns a new instance that is a copy of the original one.
@@ -142,17 +143,17 @@ namespace Kerosene.ORM.Core
 		IQueryCommand Skip(int skip);
 
 		/// <summary>
-		/// Gets the current 'Skip' value.
-		/// </summary>
-		int GetSkipValue();
-
-		/// <summary>
 		/// Defines the contents of the TAKE clause. Any previous ones are removed.
 		/// </summary>
 		/// <param name="take">An integer with the value to set for the TAKE clause. A value of cero
 		/// or negative merely removes this clause.</param>
 		/// <returns>A self-reference to permit a fluent syntax chaining.</returns>
 		IQueryCommand Take(int take);
+
+		/// <summary>
+		/// Gets the current 'Skip' value.
+		/// </summary>
+		int GetSkipValue();
 
 		/// <summary>
 		/// Gets the current 'Take' value.
@@ -164,6 +165,14 @@ namespace Kerosene.ORM.Core
 		/// implementation. If not it will be emulated by software.
 		/// </summary>
 		bool IsValidForNativeSkipTake();
+
+		/// <summary>
+		/// Convenience method to execute the query command and to return the scalar value the
+		/// query produces, defined as the value held by the first column of the first record.
+		/// <para>If the query produces no records then an exception is thrown.</para>
+		/// </summary>
+		/// <returns>The scalar value requested.</returns>
+		object ToScalar();
 	}
 }
 // ======================================================== 

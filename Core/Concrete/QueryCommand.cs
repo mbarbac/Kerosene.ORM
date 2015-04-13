@@ -3,8 +3,6 @@ namespace Kerosene.ORM.Core.Concrete
 {
 	using Kerosene.Tools;
 	using System;
-	using System.Collections;
-	using System.Collections.Generic;
 	using System.Linq;
 	using System.Text;
 
@@ -222,7 +220,7 @@ namespace Kerosene.ORM.Core.Concrete
 							if (node.Arguments.Length != 1) throw new ArgumentException("Virtual method 'AS()' can only have one argument while parsing '{0}'.".FormatWith(parser));
 							if (node.Arguments[0] == null) throw new ArgumentException("Argument of virtual method 'AS()' cannot be null while parsing '{0}'.".FormatWith(parser));
 
-							nick = Link.Parser.Parse(node.Arguments[0]);
+							nick = Link.Engine.Parser.Parse(node.Arguments[0]);
 							result = node.Host;
 							continue;
 						}
@@ -254,7 +252,7 @@ namespace Kerosene.ORM.Core.Concrete
 							}
 							if (arg is ICommand)
 							{
-								main = Link.Parser.Parse(arg, Parameters);
+								main = Link.Engine.Parser.Parse(arg, Parameters);
 								main = string.Format("({0})", main);
 								capture = false;
 
@@ -297,7 +295,7 @@ namespace Kerosene.ORM.Core.Concrete
 							}
 							if (arg is ICommand)
 							{
-								main = Link.Parser.Parse(arg, Parameters);
+								main = Link.Engine.Parser.Parse(arg, Parameters);
 								main = string.Format("({0})", main);
 								capture = false;
 
@@ -329,7 +327,7 @@ namespace Kerosene.ORM.Core.Concrete
 							"Cannot generate core command for '{0}'."
 							.FormatWith((ICoreCommandProvider)result));
 
-						main = Link.Parser.Parse(arg, Parameters);
+						main = Link.Engine.Parser.Parse(arg, Parameters);
 						main = string.Format("({0})", main);
 						capture = false;
 
@@ -339,13 +337,13 @@ namespace Kerosene.ORM.Core.Concrete
 
 					if (result is ICommand)
 					{
-						main = Link.Parser.Parse(result, Parameters);
+						main = Link.Engine.Parser.Parse(result, Parameters);
 						main = string.Format("({0})", main);
 						capture = false;
 						break;
 					}
 
-					main = Link.Parser.Parse(result, pc: Parameters);
+					main = Link.Engine.Parser.Parse(result, pc: Parameters);
 					break;
 				}
 
@@ -456,7 +454,7 @@ namespace Kerosene.ORM.Core.Concrete
 							if (node.Arguments.Length != 1) throw new ArgumentException("Virtual method 'AS()' can only have one argument while parsing '{0}'.".FormatWith(parser));
 							if (node.Arguments[0] == null) throw new ArgumentException("Argument of virtual method 'AS()' cannot be null while parsing '{0}'.".FormatWith(parser));
 
-							nick = Link.Parser.Parse(node.Arguments[0]);
+							nick = Link.Engine.Parser.Parse(node.Arguments[0]);
 							result = node.Host;
 							continue;
 						}
@@ -479,7 +477,7 @@ namespace Kerosene.ORM.Core.Concrete
 							}
 							if (arg is ICommand)
 							{
-								main = Link.Parser.Parse(arg, Parameters);
+								main = Link.Engine.Parser.Parse(arg, Parameters);
 								main = string.Format("({0})", main);
 								capture = false;
 
@@ -519,7 +517,7 @@ namespace Kerosene.ORM.Core.Concrete
 
 							if (arg is ICommand)
 							{
-								main = Link.Parser.Parse(arg, Parameters);
+								main = Link.Engine.Parser.Parse(arg, Parameters);
 								main = string.Format("({0})", main);
 								capture = false;
 
@@ -553,7 +551,7 @@ namespace Kerosene.ORM.Core.Concrete
 							"Cannot generate core command for '{0}'."
 							.FormatWith((ICoreCommandProvider)result));
 
-						main = Link.Parser.Parse(arg, Parameters);
+						main = Link.Engine.Parser.Parse(arg, Parameters);
 						main = string.Format("({0})", main);
 						capture = false;
 
@@ -563,13 +561,13 @@ namespace Kerosene.ORM.Core.Concrete
 
 					if (result is ICommand)
 					{
-						main = Link.Parser.Parse(result, Parameters);
+						main = Link.Engine.Parser.Parse(result, Parameters);
 						main = string.Format("({0})", main);
 						capture = false;
 						break;
 					}
 
-					main = Link.Parser.Parse(result, pc: Parameters);
+					main = Link.Engine.Parser.Parse(result, pc: Parameters);
 					break;
 				}
 
@@ -636,7 +634,7 @@ namespace Kerosene.ORM.Core.Concrete
 					}
 				}
 
-				main = Link.Parser.Parse(result, pc: Parameters);
+				main = Link.Engine.Parser.Parse(result, pc: Parameters);
 				break;
 			}
 
@@ -689,7 +687,7 @@ namespace Kerosene.ORM.Core.Concrete
 						var host = (DynamicNode.Invoke)node.Host;
 						if (host.Arguments == null) throw new ArgumentException("Virtual invocation x(...) cannot be parameterless while parsing '{0}'.".FormatWith(parser));
 						if (host.Arguments.Length != 1) throw new ArgumentException("Virtual invocation 'x(...)' can only have one argument while parsing '{0}'.".FormatWith(parser));
-						type = Link.Parser.Parse(host.Arguments[0]);
+						type = Link.Engine.Parser.Parse(host.Arguments[0]);
 						if (type == null) throw new ArgumentException("Join type cannot resolve into null while parsing '{0}'.".FormatWith(parser));
 
 						node.ChangeHost(node.Host.Host);
@@ -730,7 +728,7 @@ namespace Kerosene.ORM.Core.Concrete
 						if (node.Arguments.Length != 1) throw new ArgumentException("Virtual method 'AS()' can only have one argument while parsing '{0}'.".FormatWith(parser));
 						if (node.Arguments[0] == null) throw new ArgumentException("Argument of virtual method 'AS()' cannot be null while parsing '{0}'.".FormatWith(parser));
 
-						nick = Link.Parser.Parse(node.Arguments[0]);
+						nick = Link.Engine.Parser.Parse(node.Arguments[0]);
 						result = node.Host;
 						continue;
 					}
@@ -742,13 +740,13 @@ namespace Kerosene.ORM.Core.Concrete
 						if (node.Arguments.Length != 1) throw new ArgumentException("Virtual method 'ON()' can only have one argument while parsing '{0}'.".FormatWith(parser));
 						if (node.Arguments[0] == null) throw new ArgumentException("Argument of virtual method 'ON()' cannot be null while parsing '{0}'.".FormatWith(parser));
 
-						condition = Link.Parser.Parse(node.Arguments[0]);
+						condition = Link.Engine.Parser.Parse(node.Arguments[0]);
 						result = node.Host;
 						continue;
 					}
 				}
 
-				main = Link.Parser.Parse(result, pc: Parameters);
+				main = Link.Engine.Parser.Parse(result, pc: Parameters);
 				break;
 			}
 
@@ -799,7 +797,7 @@ namespace Kerosene.ORM.Core.Concrete
 						break;
 					}
 
-					main = Link.Parser.Parse(result, pc: Parameters);
+					main = Link.Engine.Parser.Parse(result, pc: Parameters);
 					break;
 				}
 
@@ -860,7 +858,7 @@ namespace Kerosene.ORM.Core.Concrete
 					}
 				}
 
-				main = Link.Parser.Parse(result, pc: Parameters);
+				main = Link.Engine.Parser.Parse(result, pc: Parameters);
 				break;
 			}
 
@@ -926,7 +924,7 @@ namespace Kerosene.ORM.Core.Concrete
 						}
 					}
 
-					main = Link.Parser.Parse(result, pc: Parameters);
+					main = Link.Engine.Parser.Parse(result, pc: Parameters);
 					break;
 				}
 
@@ -961,14 +959,6 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Gets the current 'Skip' value.
-		/// </summary>
-		public int GetSkipValue()
-		{
-			return TheSkipData;
-		}
-
-		/// <summary>
 		/// Defines the contents of the TAKE clause. Any previous ones are removed.
 		/// </summary>
 		/// <param name="take">An integer with the value to set for the TAKE clause. A value of cero
@@ -985,6 +975,14 @@ namespace Kerosene.ORM.Core.Concrete
 				TheTopData = 0;
 			}
 			return this;
+		}
+
+		/// <summary>
+		/// Gets the current 'Skip' value.
+		/// </summary>
+		public int GetSkipValue()
+		{
+			return TheSkipData;
 		}
 
 		/// <summary>
@@ -1008,6 +1006,22 @@ namespace Kerosene.ORM.Core.Concrete
 			if (!Link.Engine.SupportsNativeSkipTake) return false;
 			if (TheSkipData >= 0 && TheTakeData >= 1 && TheOrderByData != null) return false; // TO OVERRIDE!!!
 			return false;
+		}
+
+		/// <summary>
+		/// Convenience method to execute the query command and to return the scalar value the
+		/// query produces, defined as the value held by the first column of the first record.
+		/// <para>If the query produces no records then an exception is thrown.</para>
+		/// </summary>
+		/// <returns>The scalar value requested.</returns>
+		public object ToScalar()
+		{
+			IRecord record = (IRecord)First();
+			if (record == null) throw new EmptyException(
+				"No records produced by the excution of '{0}'."
+				.FormatWith(this));
+
+			return record[0];
 		}
 	}
 }

@@ -1,37 +1,39 @@
 ﻿// ======================================================== IMapMember.cs
 namespace Kerosene.ORM.Maps
 {
+	using Kerosene.ORM.Core;
 	using Kerosene.Tools;
 	using System;
+	using System.Linq;
 
 	// ==================================================== 
 	/// <summary>
-	/// Defines how a member depends on its host instance regarding to a change operation
-	/// (insert, delete, update) initiated on that host.
+	/// Defines how dependencies are treated for a member.
 	/// </summary>
 	public enum MemberDependencyMode
 	{
 		/// <summary>
-		/// The member is not taken into consideration (cascaded) for change operations.
+		/// The member is not taken into consideration (cascaded) for change operations that
+		/// are initiated on its host.
 		/// </summary>
 		None,
 
 		/// <summary>
-		/// The member is considered as a logical parent of the host instance.
+		/// The member is considered as a logical parent of its host instance. Typically parents
+		/// are just signalled when a change operation on its childs happens.
 		/// </summary>
 		Parent,
 
 		/// <summary>
-		/// The member is considered as a logical child of the host instance.
+		/// The member is considered as a logical child of its host instance. Typically childs
+		/// are affected by cascading change operations initiated on their parents.
 		/// </summary>
 		Child
 	}
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents a member of the type that has been explicitly included in the map. They are
-	/// typically used to identify dependency members, eager or lazy ones, or to identify
-	/// alternate ways to obtain their contents.
+	/// Represents a member in the type that has been explicitly associated with the map.
 	/// </summary>
 	public interface IMapMember
 	{
@@ -64,7 +66,7 @@ namespace Kerosene.ORM.Maps
 		/// value of this member. This delegate can invoke any actions it may need, and then
 		/// setting the value of the associated member is its sole responsibility.
 		/// </summary>
-		Action<Core.IRecord, object> CompleteMember { get; set; }
+		Action<IRecord, object> CompleteMember { get; set; }
 
 		/// <summary>
 		/// Sets the delegate to invoke, if it is not null, with (record, entity) arguments to
@@ -73,7 +75,7 @@ namespace Kerosene.ORM.Maps
 		/// </summary>
 		/// <param name="onComplete"></param>
 		/// <returns></returns>
-		IMapMember OnComplete(Action<Core.IRecord, object> onComplete);
+		IMapMember OnComplete(Action<IRecord, object> onComplete);
 
 		/// <summary>
 		/// The collection of columns that have been explicitly defined to support the mapping
@@ -102,9 +104,7 @@ namespace Kerosene.ORM.Maps
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents a member of the type that has been explicitly included in the map. They are
-	/// typically used to identify dependency members, eager or lazy ones, or to identify
-	/// alternate ways to obtain their contents.
+	/// Represents a member in the type that has been explicitly associated with the map.
 	/// </summary>
 	public interface IMapMember<T> : IMapMember where T : class
 	{
@@ -153,5 +153,6 @@ namespace Kerosene.ORM.Maps
 		/// <returns>This instance to permit a fluent chaining syntax.</returns>
 		IMapMember<T> WithColumn(Func<dynamic, object> name, Action<IMapMemberColumn<T>> onCreate = null);
 	}
+
 }
 // ======================================================== 

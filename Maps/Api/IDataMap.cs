@@ -1,14 +1,16 @@
 ﻿// ======================================================== IDataMap.cs
 namespace Kerosene.ORM.Maps
 {
+	using Kerosene.ORM.Core;
 	using Kerosene.Tools;
 	using System;
 	using System.Collections.Generic;
+	using System.Linq;
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents how a map will discover what database columns to take into consideration for
-	/// its structure and operations.
+	/// Represents how a map will discover the columns in the database that will be associated
+	/// with the type.
 	/// </summary>
 	public enum MapDiscoveryMode
 	{
@@ -27,18 +29,27 @@ namespace Kerosene.ORM.Maps
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents a map between the type of the entities it manages and their database
-	/// representation.
+	/// Represents a map between the type of the entities it is associated with and their
+	/// database representation.
 	/// </summary>
 	public interface IDataMap : IDisposableEx
 	{
 		/// <summary>
-		/// Returns a new instance associated with the given repository that contains a copy
-		/// of the structure and rules of the original map.
+		/// Returns a new map that is associated with the repository given, and that contains
+		/// a copy of the structure and rules of the original one. Maps created using this
+		/// method are not considered weak ones.
 		/// </summary>
-		/// <param name="repo">The repository the new map will be registered into.</param>
+		/// <param name="repo">The repository the new map will be associated with.</param>
 		/// <returns>A new map.</returns>
 		IDataMap Clone(IDataRepository repo);
+
+		/// <summary>
+		/// Whether this map is considered a weak map or not.
+		/// <para>Weak maps are created automatically when an entity type is referenced by any
+		/// map operation and there was no registered map for that type. Weak maps are disposed
+		/// if a regular non-weak map is registered (created) explicitly.</para>
+		/// </summary>
+		bool IsWeakMap { get; }
 
 		/// <summary>
 		/// The repository this map is registered into.
@@ -51,18 +62,10 @@ namespace Kerosene.ORM.Maps
 		Type EntityType { get; }
 
 		/// <summary>
-		/// The name of the primary table in the underlying database associated with the entities
-		/// managed by this map.
+		/// The name of the primary table in the underlying database the entities managed by
+		/// this map are associated with.
 		/// </summary>
 		string Table { get; }
-
-		/// <summary>
-		/// Whether this map is considered a weak one.
-		/// <para>Weak maps are created automatically when an entity type is referenced by any
-		/// map operation and there was no registered map for that type. Weak maps are disposed
-		/// if a regular non-weak map is registered (created) explicitly.</para>
-		/// </summary>
-		bool IsWeakMap { get; }
 
 		/// <summary>
 		/// If not null a dynamic lambda expression that resolves into the logic to add into
@@ -72,26 +75,26 @@ namespace Kerosene.ORM.Maps
 		Func<dynamic, object> Discriminator { get; set; }
 
 		/// <summary>
-		/// How the map will discover what database columns to take into consideration for its
-		/// structure and operations.
+		/// How the map will discover the columns in the database that will be associated with
+		/// the type.
 		/// </summary>
 		MapDiscoveryMode DiscoveryMode { get; set; }
 
 		/// <summary>
-		/// Represents the collection of members that have been explicitly defined for this
-		/// map.
+		/// The collection of members in the type that have been explicitly associated with
+		/// the map.
 		/// </summary>
 		IMapMemberCollection Members { get; }
 
 		/// <summary>
-		/// Represents the collection of columns in the primary table of the database this map
-		/// is taken into consideration for its operations.
+		/// The collection of columns in the primary table that have been explicitly associated
+		/// with the map.
 		/// </summary>
 		IMapColumnCollection Columns { get; }
 
 		/// <summary>
-		/// Represents the column in the primary table in the database that will be used for row
-		/// version control, if any.
+		/// If not empty represents the column in the primary table that will be used for row
+		/// version control purposes.
 		/// </summary>
 		IMapVersionColumn VersionColumn { get; }
 
@@ -113,16 +116,22 @@ namespace Kerosene.ORM.Maps
 		void Validate();
 
 		/// <summary>
-		/// Gets the collection of cached entities managed by this map, excluding the collected
-		/// or invalid ones.
+		/// Whether this instance keeps track of the entities it has managed in its internal
+		/// cache, or not.
 		/// </summary>
-		IEnumerable<IMetaEntity> MetaEntities { get; }
+		bool TrackEntities { get; set; }
 
 		/// <summary>
-		/// Clears the cache of managed entities of this map, making them all to become detached
-		/// ones.
+		/// The current collection of entities in a valid state tracked by this map, if any.
 		/// </summary>
-		void ClearEntities();
+		IEnumerable<IMetaEntity> Entities { get; }
+
+		/// <summary>
+		/// Clears the cache of tracked entities maintained by this map and optionally, detaches
+		/// those entities.
+		/// </summary>
+		/// <param name="detach">True to forcibly detach the entities found in the cache.</param>
+		void ClearEntities(bool detach = true);
 
 		/// <summary>
 		/// Creates a new entity with the appropriate type for the requested map.
@@ -134,8 +143,6 @@ namespace Kerosene.ORM.Maps
 
 		/// <summary>
 		/// Attaches the given entity into this map.
-		/// <para>Note that the framework supports attaching several entities that share the
-		/// same identity columns, which are treated as a group for the relevant operations.</para>
 		/// </summary>
 		/// <param name="entity">The entity to attach into this instance.</param>
 		void Attach(object entity);
@@ -219,35 +226,35 @@ namespace Kerosene.ORM.Maps
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents a map between the type of the entities it manages and their database
-	/// representation.
+	/// Represents a map between the type of the entities it is associated with and their
+	/// database representation.
 	/// </summary>
-	/// <typeparam name="T">The type of the entities managed by this map.</typeparam>
 	public interface IDataMap<T> : IDataMap where T : class
 	{
 		/// <summary>
-		/// Returns a new instance associated with the given repository that contains a copy
-		/// of the structure and rules of the original map.
+		/// Returns a new map that is associated with the repository given, and that contains
+		/// a copy of the structure and rules of the original one. Maps created using this
+		/// method are not considered weak ones.
 		/// </summary>
-		/// <param name="repo">The repository the new map will be registered into.</param>
+		/// <param name="repo">The repository the new map will be associated with.</param>
 		/// <returns>A new map.</returns>
 		new IDataMap<T> Clone(IDataRepository repo);
 
 		/// <summary>
-		/// Represents the collection of members that have been explicitly defined for this
-		/// map.
+		/// The collection of members in the type that have been explicitly associated with
+		/// the map.
 		/// </summary>
 		new IMapMemberCollection<T> Members { get; }
 
 		/// <summary>
-		/// Represents the collection of columns in the primary table of the database this map
-		/// is taken into consideration for its operations.
+		/// The collection of columns in the primary table that have been explicitly associated
+		/// with the map.
 		/// </summary>
 		new IMapColumnCollection<T> Columns { get; }
 
 		/// <summary>
-		/// Represents the column in the primary table in the database that will be used for row
-		/// version control, if any.
+		/// If not empty represents the column in the primary table that will be used for row
+		/// version control purposes.
 		/// </summary>
 		new IMapVersionColumn<T> VersionColumn { get; }
 
@@ -261,8 +268,6 @@ namespace Kerosene.ORM.Maps
 
 		/// <summary>
 		/// Attaches the given entity into this map.
-		/// <para>Note that the framework supports attaching several entities that share the
-		/// same identity columns, which are treated as a group for the relevant operations.</para>
 		/// </summary>
 		/// <param name="entity">The entity to attach into this instance.</param>
 		void Attach(T entity);

@@ -47,50 +47,25 @@ namespace Kerosene.ORM.Core
 		int IndexOf(IElementAlias member);
 
 		/// <summary>
-		/// Returns whether the given member belongs to this collection of not.
+		/// Returns whether the given member is in this collection.
 		/// </summary>
-		/// <param name="member">The member to verify.</param>
-		/// <returns>True if the given member belongs to this collection, false otherwise.</returns>
+		/// <param name="member">The member to validate.</param>
+		/// <returns>True if the given member is part of this collection, or false otherwise.</returns>
 		bool Contains(IElementAlias member);
 
 		/// <summary>
-		/// Returns the first member in this instance that matches the conditions given in the
-		/// predicate, or null if not such member can be found.
+		/// Returns the unique entry whose alias is given, or null if such cannot be found.
 		/// </summary>
-		/// <param name="match">The predicate that defines the conditions of the member to find.</param>
-		/// <returns>The member found, or null.</returns>
-		IElementAlias Find(Predicate<IElementAlias> match);
-
-		/// <summary>
-		/// Returns the collection of members in this instance that match the conditions given in
-		/// the predicate. This collection might be empty if there were no members that match that
-		/// conditions.
-		/// </summary>
-		/// <param name="match">The predicate that defines the conditions of the members to find.</param>
-		/// <returns>A collection with the members found.</returns>
-		IEnumerable<IElementAlias> FindAll(Predicate<IElementAlias> match);
-
-		/// <summary>
-		/// Gets the member whose alias is given, or null if not such member can be found.
-		/// </summary>
-		/// <param name="alias">The alias of the member to find.</param>
+		/// <param name="alias">The alias of the entry to find.</param>
 		/// <returns>The member found, or null.</returns>
 		IElementAlias FindAlias(string alias);
 
 		/// <summary>
-		/// Gets an enumeration containing all the members where the given element is referenced.
-		/// The enumeration might be empty is there were no members found.
+		/// Returns the collection of entries whose name match the one given.
 		/// </summary>
-		/// <param name="element">The string representation of the element to find.</param>
-		/// <returns>The requested enumeration.</returns>
+		/// <param name="element">The name of the elements to return.</param>
+		/// <returns>The requested collection.</returns>
 		IEnumerable<IElementAlias> FindElement(string element);
-
-		/// <summary>
-		/// Factory method invoked to create a new orphan member but with the right type for
-		/// this collection.
-		/// </summary>
-		/// <returns>A new orphan member.</returns>
-		IElementAlias CreateOrphanMember();
 
 		/// <summary>
 		/// Adds the given orphan instance into this collection.
@@ -147,7 +122,7 @@ namespace Kerosene.ORM.Core
 		/// <summary>
 		/// Whether by default the names of the members in a collection are case sensitive or not.
 		/// </summary>
-		public const bool DEFAULT_CASE_SENSITIVE_NAMES = false;
+		public const bool DEFAULT_CASE_SENSITIVE_NAMES = DataEngine.DEFAULT_CASESENSITIVE_NAMES;
 	}
 }
 // ======================================================== 

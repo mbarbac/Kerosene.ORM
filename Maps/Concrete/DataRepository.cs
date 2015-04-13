@@ -4,10 +4,8 @@ namespace Kerosene.ORM.Maps.Concrete
 	using Kerosene.ORM.Core;
 	using Kerosene.Tools;
 	using System;
-	using System.Collections;
 	using System.Collections.Generic;
 	using System.Linq;
-	using System.Text;
 	using System.Threading;
 
 	// ==================================================== 
@@ -22,23 +20,22 @@ namespace Kerosene.ORM.Maps.Concrete
 		UberMapSet UberMaps { get; }
 
 		/// <summary>
-		/// Returns the map registered to manage the entities of the given type, or if such map
-		/// is not found, tries to create a new one. Returns null if there was no map registered
-		/// and if it was impossible to create a new one.
+		/// Returns the map registeres to manage the entities of the given type or, if such
+		/// map is not found, creates a new one using the table name given or, is such is null,
+		/// tries to automatically locate a suitable table in the database and, if so, creates
+		/// a weak map for that type if weak maps are are enabled. Returns null if finally a
+		/// map cannot be located.
 		/// </summary>
-		/// <param name="type">The type of the entities managed by the map to retrieve.</param>
+		/// <param name="type">The type of the entities of the map to locate.</param>
 		/// <param name="table">A dynamic lambda expression that resolves into the name of the
-		/// master table in the database where to find at least the identity columns of the
-		/// entities.
-		/// <para>If this argument is null then the framework tries to create a new weak map
-		/// probing for its table name a number of suitable candidates based upon the name of
-		/// the entities' type.</para>
-		/// </param>
+		/// primary table where to find, at least, the identity columns associated with the map.
+		/// If this argument is null then a number of pluralization rules are automatically used
+		/// based upon the name of the type.</param>
 		/// <returns>The requested map, or null.</returns>
-		IUberMap RetrieveUberMap(Type type, Func<dynamic, object> table = null);
+		IUberMap LocateUberMap(Type type, Func<dynamic, object> table = null);
 
 		/// <summary>
-		/// The collection of operations registered into this instance.
+		/// The list of pending change operations annotated into this instance.
 		/// </summary>
 		UberOperationList UberOperations { get; }
 
@@ -71,9 +68,9 @@ namespace Kerosene.ORM.Maps.Concrete
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents a view on the state and contents of an underlying database, related to the
-	/// maps associated with this instance, that implements both the Dynamic Repository and the
-	/// Dynamic Unit Of Work patterns.
+	/// Represents a repository for a set of maps between their POCO classes and their related
+	/// primary tables in the underlying database-alike service, implementing both the Dynamic
+	/// Repository and the Dynamic Unit Of Work patterns.
 	/// </summary>
 	public class DataRepository : IDataRepository, IUberRepository
 	{
@@ -81,12 +78,13 @@ namespace Kerosene.ORM.Maps.Concrete
 		ulong _SerialId = 0;
 		IDataLink _Link = null;
 		bool _WeakMapsEnabled = UberHelper.EnableWeakMaps;
+		bool _TrackEntities = UberHelper.TrackEntities;
 		UberMapSet _UberMaps = new UberMapSet();
 		UberOperationList _UberOperations = new UberOperationList();
-		Action<Exception> _OnExecuteChangesError = null;
 		System.Timers.Timer _Timer = null;
 		int _Interval = UberHelper.CollectorInterval;
 		bool _EnableGC = UberHelper.EnableCollectorGC;
+		HashSet<Type> _DiscardedTypes = new HashSet<Type>();
 
 		/// <summary>
 		/// Initializes a new instance.
@@ -99,7 +97,7 @@ namespace Kerosene.ORM.Maps.Concrete
 			_Link = link;
 			_SerialId = ++(UberHelper.RepositoryLastSerial);
 
-			if(UberHelper.EnableCollector) EnableCollector();
+			if (UberHelper.EnableCollector) EnableCollector();
 		}
 
 		/// <summary>
@@ -130,24 +128,19 @@ namespace Kerosene.ORM.Maps.Concrete
 		protected virtual void OnDispose(bool disposing)
 		{
 			if (_Timer != null) { _Timer.Stop(); _Timer.Dispose(); }
-			_Timer = null;
 
 			if (disposing)
 			{
-				if (_UberOperations != null)
-				{
-					lock (_UberOperations.SyncRoot) { _UberOperations.Clear(); }
-				}
-				if (_UberMaps != null)
-				{
-					lock (_UberMaps.SyncRoot) { _UberMaps.Clear(); }
-				}
+				if (_UberOperations != null && !_IsDisposed) DiscardChanges();
+				if (_UberMaps != null && !_IsDisposed) ClearMaps();
+				if (_DiscardedTypes != null && !_IsDisposed) _DiscardedTypes.Clear();
 			}
 
 			_UberOperations = null;
 			_UberMaps = null;
-			_OnExecuteChangesError = null;
 			_Link = null;
+			_Timer = null;
+			_DiscardedTypes = null;
 
 			_IsDisposed = true;
 		}
@@ -167,11 +160,12 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 
 		/// <summary>
-		/// Returns a new repository associated with the given data link that contains a copy
-		/// of the maps that were registered in the original one.
+		/// Returns a new repository associated with the given link containing a copy of the
+		/// original maps and customizations existing in the original one. Cloned maps will not
+		/// be validated and can be modified as needed.
 		/// </summary>
-		/// <param name="link">The link the new repository will use.</param>
-		/// <returns>A new repository.</returns>
+		/// <param name="link">The link the new respository will be associated with.</param>
+		/// <returns>A new respository.</returns>
 		public DataRepository Clone(IDataLink link)
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
@@ -199,18 +193,15 @@ namespace Kerosene.ORM.Maps.Concrete
 				"Cloned instance '{0}' is not a valid '{1}' one."
 				.FormatWith(cloned.Sketch(), typeof(DataRepository).EasyName()));
 
-			lock (UberMaps.SyncRoot)
+			temp.DisableCollector(); lock (_UberMaps.SyncRoot)
 			{
-				var enabled = temp.IsCollectorEnabled; if (enabled) temp.DisableCollector();
-
-				foreach (var map in UberMaps) map.Clone(temp);
+				foreach (var map in _UberMaps) map.Clone(temp);
 				temp._WeakMapsEnabled = _WeakMapsEnabled;
-				temp._OnExecuteChangesError = _OnExecuteChangesError;
+				temp._TrackEntities = _TrackEntities;
 				temp._Interval = _Interval;
 				temp._EnableGC = _EnableGC;
-
-				if (enabled) temp.EnableCollector();
 			}
+			if (_TrackEntities) temp.EnableCollector();
 		}
 
 		/// <summary>
@@ -242,44 +233,25 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 
 		/// <summary>
-		/// The collection of maps registered into this instance.
+		/// The collection of maps registered into this repository.
 		/// </summary>
 		public IEnumerable<IDataMap> Maps
 		{
-			get
-			{
-				if (IsDisposed) throw new ObjectDisposedException(this.ToString());
-				return UberMaps;
-			}
+			get { return UberMaps; }
 		}
 
 		/// <summary>
-		/// Gets the map registered to manage the entities of the given type, or null if no
-		/// such map can be found.
+		/// Clears and disposes all the maps registered into this instance.
 		/// </summary>
-		/// <param name="type">The type of the entities managed by the map to find.</param>
-		/// <returns>The requested map, or null.</returns>
-		public IDataMap GetMap(Type type)
+		public void ClearMaps()
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
-			if (type == null) throw new ArgumentNullException("type", "Type cannot be null.");
-
-			lock (UberMaps.SyncRoot) { return UberMaps.Find(type); }
-		}
-
-		/// <summary>
-		/// Gets the map registered to manage the entities of the given type, or null if no
-		/// such map can be found.
-		/// </summary>
-		/// <typeparam name="T">The type of the entities managed by the map to find.</typeparam>
-		/// <returns>The requested map, or null.</returns>
-		public DataMap<T> GetMap<T>() where T : class
-		{
-			return (DataMap<T>)GetMap(typeof(T));
-		}
-		IDataMap<T> IDataRepository.GetMap<T>()
-		{
-			return this.GetMap<T>();
+			lock (UberMaps.SyncRoot)
+			{
+				var maps = UberMaps.ToArray(); foreach (var map in maps) map.Dispose();
+				Array.Clear(maps, 0, maps.Length); maps = null;
+				UberMaps.Clear();
+			}
 		}
 
 		/// <summary>
@@ -295,31 +267,34 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 
 		/// <summary>
-		/// Returns the map registered to manage the entities of the given type, or if such map
-		/// is not found, tries to create a new one. Returns null if there was no map registered
-		/// and if it was impossible to create a new one.
+		/// Returns the map registeres to manage the entities of the given type or, if such
+		/// map is not found, creates a new one using the table name given or, is such is null,
+		/// tries to automatically locate a suitable table in the database and, if so, creates
+		/// a weak map for that type if weak maps are are enabled. Returns null if finally a
+		/// map cannot be located.
 		/// </summary>
-		/// <param name="type">The type of the entities managed by the map to retrieve.</param>
+		/// <param name="type">The type of the entities of the map to locate.</param>
 		/// <param name="table">A dynamic lambda expression that resolves into the name of the
-		/// master table in the database where to find at least the identity columns of the
-		/// entities.
-		/// <para>If this argument is null then the framework tries to create a new weak map
-		/// probing for its table name a number of suitable candidates based upon the name of
-		/// the entities' type.</para>
-		/// </param>
+		/// primary table where to find, at least, the identity columns associated with the map.
+		/// If this argument is null then a number of pluralization rules are automatically used
+		/// based upon the name of the type.</param>
 		/// <returns>The requested map, or null.</returns>
-		internal IUberMap RetrieveUberMap(Type type, Func<dynamic, object> table = null)
+		internal IUberMap LocateUberMap(Type type, Func<dynamic, object> table = null)
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
 			if (type == null) throw new ArgumentNullException("type", "Type cannot be null.");
-			if (!type.IsClass) throw new InvalidOperationException("Type '{0}' is not a class type.".FormatWith(type.EasyName()));
+			
+			// For performance purposes when auto-maps as there is little control on what types
+			// are passed...
+			if (!type.IsClass) return null;
+			if (_DiscardedTypes.Contains(type)) return null;
 
-			var holder = ProxyGenerator.Holders.FindByExtended(type);
+			var holder = ProxyGenerator.Holders.FindByExtendedType(type);
 			if (holder != null) type = holder.ExtendedType.BaseType;
 
 			IUberMap map = null; lock (UberMaps.SyncRoot)
 			{
-				map = UberMaps.Find(type); if (map == null)
+				map = UberMaps.FindByType(type); if (map == null)
 				{
 					var generic = typeof(DataMap<>);
 					var concrete = generic.MakeGenericType(new Type[] { type });
@@ -328,109 +303,147 @@ namespace Kerosene.ORM.Maps.Concrete
 
 					string name = null; if (table != null)
 					{
+						// If a table is given then the program knows what it wants...
 						name = DynamicInfo.ParseName(table);
 						map = (IUberMap)constructor.Invoke(new object[] { this, name, false });
 					}
 					else if (WeakMapsEnabled)
 					{
+						// Otherwise we implicitly want a weak map, if they are allowed...
 						name = UberHelper.LocateTableName(Link, type.Name);
 						if (name != null)
-						{
 							map = (IUberMap)constructor.Invoke(new object[] { this, name, true });
-						}
 					}
 				}
 			}
+
+			if (map == null) _DiscardedTypes.Add(type);
 			return map;
 		}
-		IUberMap IUberRepository.RetrieveUberMap(Type type, Func<dynamic, object> table)
+		IUberMap IUberRepository.LocateUberMap(Type type, Func<dynamic, object> table)
 		{
-			return this.RetrieveUberMap(type, table);
+			return this.LocateUberMap(type, table);
 		}
 
 		/// <summary>
-		/// Returns the map registered to manage the entities of the given type, or if such map
-		/// is not found, tries to create a new one. Returns null if there was no map registered
-		/// and if it was impossible to create a new one.
+		/// Resets the internal collection of types that have been discarded and will not be
+		/// considered again as candidates to be found in the database.
+		/// <para>This method is mostly provided for debugging purposes only.</para>
 		/// </summary>
-		/// <param name="type">The type of the entities managed by the map to retrieve.</param>
+		public void ResetDiscardedTypes()
+		{
+			if (_DiscardedTypes != null) _DiscardedTypes.Clear();
+		}
+
+		/// <summary>
+		/// Returns the map registeres to manage the entities of the given type or, if such map
+		/// is not found, creates a new one using the table name given or, is such is null, tries
+		/// to automatically locate a suitable table in the database and, if so, creates a weak
+		/// map for that type if weak maps are are enabled. Returns null if finally a map cannot
+		/// be located.
+		/// </summary>
+		/// <param name="type">The type of the entities of the map to locate.</param>
 		/// <param name="table">A dynamic lambda expression that resolves into the name of the
-		/// master table in the database where to find at least the identity columns of the
-		/// entities.
-		/// <para>If this argument is null then the framework tries to create a new weak map
-		/// probing for its table name a number of suitable candidates based upon the name of
-		/// the entities' type.</para>
-		/// </param>
+		/// primary table where to find, at least, the identity columns associated with the map.
+		/// If this argument is null then a number of pluralization rules are automatically used
+		/// based upon the name of the type.</param>
 		/// <returns>The requested map, or null.</returns>
-		public IDataMap RetrieveMap(Type type, Func<dynamic, object> table = null)
+		public IDataMap LocateMap(Type type, Func<dynamic, object> table = null)
 		{
-			return this.RetrieveUberMap(type, table);
+			if (!type.IsClass) throw new InvalidOperationException("Type '{0}' is not a class type.".FormatWith(type.EasyName()));
+			return this.LocateUberMap(type, table);
 		}
 
 		/// <summary>
-		/// Returns the map registered to manage the entities of the given type, or if such map
-		/// is not found, tries to create a new one. Returns null if there was no map registered
-		/// and if it was impossible to create a new one.
+		/// Returns the map registeres to manage the entities of the given type or, if such map
+		/// is not found, creates a new one using the table name given or, is such is null, tries
+		/// to automatically locate a suitable table in the database and, if so, creates a weak
+		/// map for that type if weak maps are are enabled. Returns null if finally a map cannot
+		/// be located.
 		/// </summary>
-		/// <typeparam name="T">The type of the entities managed by the map to retrieve.</typeparam>
+		/// <typeparam name="T">The type of the entities of the map to locate.</typeparam>
 		/// <param name="table">A dynamic lambda expression that resolves into the name of the
-		/// master table in the database where to find at least the identity columns of the
-		/// entities.
-		/// <para>If this argument is null then the framework tries to create a new weak map
-		/// probing for its table name a number of suitable candidates based upon the name of
-		/// the entities' type.</para>
-		/// </param>
+		/// primary table where to find, at least, the identity columns associated with the map.
+		/// If this argument is null then a number of pluralization rules are automatically used
+		/// based upon the name of the type.</param>
 		/// <returns>The requested map, or null.</returns>
-		public DataMap<T> RetrieveMap<T>(Func<dynamic, object> table = null) where T : class
+		public DataMap<T> LocateMap<T>(Func<dynamic, object> table = null) where T : class
 		{
-			return (DataMap<T>)RetrieveMap(typeof(T), table);
+			return (DataMap<T>)LocateMap(typeof(T), table);
 		}
-		IDataMap<T> IDataRepository.RetrieveMap<T>(Func<dynamic, object> table)
+		IDataMap<T> IDataRepository.LocateMap<T>(Func<dynamic, object> table)
 		{
-			return this.RetrieveMap<T>(table);
-		}
-
-		/// <summary>
-		/// Clears and disposes all the maps registered into this instance, making all their
-		/// managed entities to become detached ones.
-		/// </summary>
-		public void ClearMaps()
-		{
-			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
-			lock (UberMaps.SyncRoot) { UberMaps.Clear(); }
+			return this.LocateMap<T>(table);
 		}
 
 		/// <summary>
-		/// Gets the collection of cached entities managed by the maps registered into this
-		/// instance, excluding the collected or invalid ones.
+		/// Whether the maps registered into this instance keep track of the entities they have
+		/// managed in their internal caches, or not. The setter cascades the new value to all
+		/// the registered maps.
 		/// </summary>
-		public IEnumerable<IMetaEntity> MetaEntities
+		public bool TrackEntities
 		{
-			get
+			get { return _TrackEntities; }
+			set
 			{
 				if (IsDisposed) throw new ObjectDisposedException(this.ToString());
 
+				var enabled = IsCollectorEnabled;
+				DisableCollector();
+				
 				lock (UberMaps.SyncRoot)
 				{
-					foreach (var map in UberMaps)
+					foreach (var map in UberMaps) map.TrackChildEntities = value;
+				}
+				if (enabled && value) EnableCollector();
+
+				_TrackEntities = value;
+			}
+		}
+
+		/// <summary>
+		/// The current collection of entities in a valid state tracked by the maps registered
+		/// into this instance, if any.
+		/// </summary>
+		public IEnumerable<IMetaEntity> Entities
+		{
+			get
+			{
+				// There might be maps in this repo that are explicitly tracking their
+				// entities, so we do have to iterate through the maps in this instance...
+
+				if (!IsDisposed)
+				{
+					var enabled = IsCollectorEnabled; DisableCollector();
+
+					IUberMap[] maps = null; lock (UberMaps.SyncRoot) { maps = UberMaps.ToArray(); }
+					foreach (var map in maps)
 					{
-						foreach (var meta in map.MetaEntities) yield return meta;
+						if (map.IsDisposed) continue;
+						if (!map.TrackEntities) continue;
+
+						foreach (var meta in map.Entities) yield return meta;
 					}
+					Array.Clear(maps, 0, maps.Length);
+
+					if (enabled) EnableCollector();
 				}
 			}
 		}
 
 		/// <summary>
-		/// Clears the caches of managed entities of all the maps registered into this instance,
-		/// making them all become detached entities.
+		/// Clears the caches of tracked entities maintained by the maps registered into this
+		/// instance and, optionally, detaches those entities.
 		/// </summary>
-		public void ClearEntities()
+		/// <param name="detach">True to forcibly detach the entities found in the caches.</param>
+		public void ClearEntities(bool detach = true)
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
-
 			lock (UberMaps.SyncRoot)
 			{
-				foreach (var map in UberMaps) map.ClearEntities();
+				var maps = UberMaps.ToArray();
+				foreach (var map in maps) map.ClearEntities(detach);
+				Array.Clear(maps, 0, maps.Length);
 			}
 		}
 
@@ -440,7 +453,9 @@ namespace Kerosene.ORM.Maps.Concrete
 		/// </summary>
 		private DataMap<T> GetValidMap<T>() where T : class
 		{
-			var map = RetrieveMap<T>();
+			// LocateMap() invokes LocateUberMap() that takes care of finding the appropriate base
+			// type of the extended ones when needed...
+			var map = LocateMap<T>();
 			if (map == null) throw new NotFoundException(
 				"Map for type '{0}' cannot be retrieved for this '{1}'."
 				.FormatWith(typeof(T).EasyName(), this));
@@ -462,8 +477,6 @@ namespace Kerosene.ORM.Maps.Concrete
 
 		/// <summary>
 		/// Attaches the given entity into this map.
-		/// <para>Note that the framework supports attaching several entities that share the
-		/// same identity columns, which are treated as a group for the relevant operations.</para>
 		/// </summary>
 		/// <typeparam name="T">The type of the managed entities.</typeparam>
 		/// <param name="entity">The entity to attach into this instance.</param>
@@ -643,7 +656,7 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 
 		/// <summary>
-		/// The collection of operations registered into this instance.
+		/// The list of pending change operations annotated into this instance.
 		/// </summary>
 		internal UberOperationList UberOperations
 		{
@@ -655,64 +668,55 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 
 		/// <summary>
-		/// Executes against the underlying database all pending change operations that may have
-		/// been annotated into this repository.
+		/// Executes the change operations annotated into this instance against the underlying
+		/// database as a single logical operation that either succeeds or fails as a whole.
 		/// </summary>
 		public void ExecuteChanges()
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
 
-			Exception ex = null;
 			bool mapsTaken = false;
 			bool opsTaken = false;
-			int level = DebugEx.IndentLevel;
-
 			try
 			{
-				DebugEx.IndentWriteLine("\n----- Executing changes for '{0}'...".FormatWith(this));
-				Monitor.Enter(UberMaps.SyncRoot, ref mapsTaken); if (!mapsTaken) throw new InvalidOperationException("Cannot obtain an exclusive lock on the list of maps...");
-				Monitor.Enter(UberOperations.SyncRoot, ref opsTaken); if (!opsTaken) throw new InvalidOperationException("Cannot obtain an exclusive lock on the list of operations...");
-
-				Link.Transaction.Start(); foreach (var op in UberOperations)
+				try
 				{
-					try
+					DebugEx.IndentWriteLine("\n--- Executing changes for '{0}'...".FormatWith(this));
+					Monitor.Enter(UberMaps.SyncRoot, ref mapsTaken); if (!mapsTaken) throw new InvalidOperationException("Cannot obtain an exclusive lock on the list of maps...");
+					Monitor.Enter(UberOperations.SyncRoot, ref opsTaken); if (!opsTaken) throw new InvalidOperationException("Cannot obtain an exclusive lock on the list of operations...");
+
+					Link.Transaction.Start(); foreach (var op in UberOperations) op.Execute();
+					Link.Transaction.Commit();
+				}
+				finally { DebugEx.Unindent(); }
+				try
+				{
+					DebugEx.IndentWriteLine("\n--- Clearing structures for '{0}'...".FormatWith(this));
+					while (UberOperations.Count != 0)
 					{
-						DebugEx.IndentWriteLine("\n- Executing '{0}'...", op);
-						op.Execute();
+						var op = UberOperations[UberOperations.Count - 1];
+						var ops = UberOperations.Where(x => object.ReferenceEquals(x.Entity, op.Entity)).ToList();
+						foreach (var temp in ops) UberOperations.Remove(temp);
+
+						if (op is IDataDelete)
+						{
+							op.Map.UberEntities.Remove(op.MetaEntity);
+							op.MetaEntity.Clear();
+						}
 					}
-					finally { DebugEx.Unindent(); }
 				}
-				Link.Transaction.Commit();
-				DebugEx.Unindent();
-
-				DebugEx.IndentWriteLine("\n----- Removing deleted of '{0}'...".FormatWith(this));
-				foreach (var map in UberMaps)
+				finally { DebugEx.Unindent(); }
+				try
 				{
-					var list = map.UberEntities.ToList(x => x.State == MetaState.ToDelete);
-					foreach (var meta in list) meta.Reset();
-					list.Clear(); list = null;
-				}
-				DebugEx.Unindent();
-
-				DebugEx.IndentWriteLine("\n----- Refreshing '{0}'...".FormatWith(this));
-				foreach (var map in UberMaps)
-				{
-					var list = map.UberEntities.ToList(x =>
-						x.Entity != null &&
-						x.UberMap != null &&
-						x.ToRefresh);
-
-					foreach (var meta in list)
+					DebugEx.IndentWriteLine("\n--- Refreshing '{0}'...".FormatWith(this));
+					foreach (var map in UberMaps)
 					{
-						var obj = meta.Entity; if (obj == null) continue;
-						if (meta.UberOperation != null && (meta.UberOperation is IDataDelete)) continue; // Should be now redundant...
-
-						meta.TrackedChilds.Clear();
-						meta.UberMap.RefreshNow(obj);
+						var list = map.UberEntities.Where(x => x.Entity != null && x.ToRefresh).ToList();
+						foreach (var meta in list) if (meta.Entity != null && meta.ToRefresh) map.RefreshNow(meta.Entity);
+						list.Clear(); list = null;
 					}
-					list.Clear(); list = null;
 				}
-				DebugEx.Unindent();
+				finally { DebugEx.Unindent(); }
 			}
 			catch (Exception e)
 			{
@@ -720,40 +724,27 @@ namespace Kerosene.ORM.Maps.Concrete
 				{
 					DebugEx.IndentWriteLine("\n----- Aborting changes for '{0}'...".FormatWith(this));
 					Link.Transaction.Abort();
-					DebugEx.Unindent();
-
-					DebugEx.IndentWriteLine("\n----- Recovering state for '{0}'...".FormatWith(this));
-					DiscardChanges();
-					foreach (var map in UberMaps)
-					{
-						var list = map.UberEntities.ToList(x =>
-							x.Entity != null &&
-							x.Map != null);
-
-						foreach (var meta in list)
-						{
-							var obj = meta.Entity; if (obj == null) continue;
-							meta.UberMap.RefreshNow(obj);
-						}
-						list.Clear(); list = null;
-					}
-					DebugEx.Unindent();
 				}
 				catch { }
+				finally { DebugEx.Unindent(); }
+				try
+				{
+					foreach (var map in UberMaps)
+					{
+						var list = map.UberEntities.Where(x => x.Entity != null && x.ToRefresh).ToList();
+						foreach (var meta in list) if (meta.Entity != null && meta.ToRefresh) map.RefreshNow(meta.Entity);
+						list.Clear(); list = null;
+					}
+				}
+				finally { }
 
-				if (_OnExecuteChangesError != null) ex = e;
-				else throw;
+				throw e;
 			}
 			finally
 			{
 				DiscardChanges();
-
 				if (opsTaken) Monitor.Exit(UberOperations.SyncRoot);
 				if (mapsTaken) Monitor.Exit(UberMaps.SyncRoot);
-
-				DebugEx.IndentLevel = level;
-
-				if (ex != null && _OnExecuteChangesError != null) _OnExecuteChangesError(ex);
 			}
 		}
 
@@ -764,35 +755,26 @@ namespace Kerosene.ORM.Maps.Concrete
 		public void DiscardChanges()
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
-
 			lock (UberMaps.SyncRoot)
 			{
 				lock (UberOperations.SyncRoot)
 				{
-					UberOperations.Clear();
+					var array = UberOperations.ToArray();
+					foreach (var op in array) op.OnDiscard();
+					Array.Clear(array, 0, array.Length);
+					UberOperations.Clear(); // Redundant..
 				}
 				foreach (var map in UberMaps)
 				{
 					lock (map.UberEntities.SyncRoot)
 					{
-						foreach (var meta in map.UberEntities) meta.ToRefresh = false;
+						foreach (var meta in map.UberEntities)
+						{
+							meta.UberOperation = null;
+							meta.ToRefresh = false;
+						}
 					}
 				}
-			}
-		}
-
-		/// <summary>
-		/// Maintains a delegate that, if it is not null, will be invoked to process any exception
-		/// encountered when executing the pending changes at the database. If it is null then the
-		/// exception is thrown.
-		/// </summary>
-		public Action<Exception> OnExecuteChangesError
-		{
-			get { return _OnExecuteChangesError; }
-			set
-			{
-				if (IsDisposed) throw new ObjectDisposedException(this.ToString());
-				_OnExecuteChangesError = value;
 			}
 		}
 
@@ -833,8 +815,8 @@ namespace Kerosene.ORM.Maps.Concrete
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
 
 			if (milliseconds < 0) milliseconds = UberHelper.CollectorInterval;
-			if (milliseconds < UberHelper.CollectorMinInterval)
-				milliseconds = UberHelper.CollectorMinInterval;
+			if (milliseconds < UberHelper.DEFAULT_COLLECTOR_MIN_INTERVAL)
+				milliseconds = UberHelper.DEFAULT_COLLECTOR_MIN_INTERVAL;
 
 			_Interval = milliseconds;
 			_EnableGC = enableGC;
@@ -858,27 +840,30 @@ namespace Kerosene.ORM.Maps.Concrete
 		{
 			if (IsDisposed) return;
 
+			DebugEx.IndentWriteLine("\n- Collector fired for '{0}'...", this);
 			var enabled = IsCollectorEnabled;
 			DisableCollector();
 
 			if (_EnableGC) GC.Collect();
 
-			if (Monitor.TryEnter(UberMaps.SyncRoot))
+			IUberMap[] maps = null; if (Monitor.TryEnter(UberMaps.SyncRoot))
 			{
-				DebugEx.IndentWriteLine("\n- Collector fired for '{0}'...", this);
-				foreach (var map in UberMaps)
-				{
-					if (Monitor.TryEnter(map.UberEntities.SyncRoot))
-					{
-						map.UberEntities.CollectInvalidEntities();
-						Monitor.Exit(map.UberEntities.SyncRoot);
-					}
-				}
+				maps = UberMaps.ToArray();
 				Monitor.Exit(UberMaps.SyncRoot);
-				DebugEx.Unindent();
 			}
+			foreach (var map in maps)
+			{
+				if (map.IsDisposed) continue;
+				if (Monitor.TryEnter(map.UberEntities.SyncRoot))
+				{
+					map.CollectInvalidEntities();
+					Monitor.Exit(map.UberEntities.SyncRoot);
+				}
+			}
+			Array.Clear(maps, 0, maps.Length);
 
 			if (enabled && !IsDisposed) EnableCollector();
+			DebugEx.Unindent();
 		}
 	}
 }

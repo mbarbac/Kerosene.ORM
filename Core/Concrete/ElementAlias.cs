@@ -3,15 +3,12 @@ namespace Kerosene.ORM.Core.Concrete
 {
 	using Kerosene.Tools;
 	using System;
-	using System.Collections;
-	using System.Collections.Generic;
 	using System.Linq;
 	using System.Runtime.Serialization;
-	using System.Text;
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents one alias of an element in a given context.
+	/// Represents the alias associated with a given element in a given context.
 	/// </summary>
 	[Serializable]
 	public class ElementAlias : IElementAlias
@@ -135,12 +132,10 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Returns true if the state of this object can be considered as equivalent to the target
-		/// one, based upon any arbitrary criteria implemented in this method.
+		/// Returns true if this object can be considered as equivalent to the target one given.
 		/// </summary>
-		/// <param name="target">The target instance this one will be tested for equivalence against.</param>
-		/// <returns>True if the state of this instance can be considered as equivalent to the
-		/// target one, or false otherwise.</returns>
+		/// <param name="target">The target object this one will be tested for equivalence.</param>
+		/// <returns>True if this object can be considered as equivalent to the target one given.</returns>
 		public bool EquivalentTo(IElementAlias target)
 		{
 			return OnEquivalentTo(target);

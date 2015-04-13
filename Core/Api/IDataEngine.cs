@@ -7,10 +7,9 @@ namespace Kerosene.ORM.Core
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents an underlying database engine. Maintains its main characteristics and acts
-	/// as a factory to create concrete objects adapted to it.
+	/// Represents the type of an underlying database engine.
 	/// </summary>
-	public interface IDataEngine : ICloneable, IDisposableEx
+	public interface IDataEngine : IDisposableEx, ICloneable
 	{
 		/// <summary>
 		/// Returns a new instance that is a copy of the original one.
@@ -67,10 +66,9 @@ namespace Kerosene.ORM.Core
 		bool SupportsNativeSkipTake { get; }
 
 		/// <summary>
-		/// Factory method to create a new parser adapted to this instance.
+		/// The parser this engine is associated with.
 		/// </summary>
-		/// <returns>A new parser.</returns>
-		IParser CreateParser();
+		IParser Parser { get; }
 
 		/// <summary>
 		/// Factory method to create a new collection of parameters adapted to this instance.
@@ -79,7 +77,8 @@ namespace Kerosene.ORM.Core
 		IParameterCollection CreateParameterCollection();
 
 		/// <summary>
-		/// Factory method to create a new collection of element aliases adapted to this instance.
+		/// Factory method to create a new collection of element aliases adapted to this
+		/// instance.
 		/// </summary>
 		/// <returns>A new collection of element aliases.</returns>
 		IElementAliasCollection CreateElementAliasCollection();
@@ -124,8 +123,8 @@ namespace Kerosene.ORM.Core
 
 		/// <summary>
 		/// Registers into this instance a new transformer for the given type, that will be
-		/// invoked when objects of that type have to be converted into objects that the
-		/// underlying database engine can understand.
+		/// invoked when objects of that type have to be converted into objects understood by
+		/// the underlying database engine.
 		/// </summary>
 		/// <typeparam name="T">The type of the source values to be converted.</typeparam>
 		/// <param name="func">The delegate to invoke to convert the values of its type into
@@ -169,14 +168,15 @@ namespace Kerosene.ORM.Core
 		bool IsTransformerRegistered<T>();
 
 		/// <summary>
-		/// Whether if a value transformer for a given type is not found a value transformer
-		/// for a base type can be used, or not.
+		/// Whether, if a transformer for a given type is not found, a transformer for a base
+		/// type can be used, or not.
 		/// </summary>
 		bool RelaxTransformers { get; set; }
 
 		/// <summary>
-		/// Returns a value that is either the product of the conversion performed by a registered
-		/// transformer for its type, or the original value.
+		/// Returns an object that, if a transformer is registered for the type of the source
+		/// value, is the result of that transformation, or otherwise is the original value
+		/// itself.
 		/// </summary>
 		/// <param name="value">The value to tranform.</param>
 		/// <returns>The value transformed, or the original one.</returns>
@@ -187,8 +187,31 @@ namespace Kerosene.ORM.Core
 	/// <summary>
 	/// Helpers and extensions for working with <see cref="IDataEngine"/> instances.
 	/// </summary>
-	public static class DataEngine
+	public static partial class DataEngine
 	{
+		/// <summary>
+		/// Whether, by default, the identifiers in the database, as table and column names,
+		/// are treated as case sensitive or not.
+		/// </summary>
+		public const bool DEFAULT_CASESENSITIVE_NAMES = false;
+
+		/// <summary>
+		/// The default prefix engines use for the names of the parameters of their commands.
+		/// </summary>
+		public const string DEFAULT_PARAMETER_PREFIX = "#";
+
+		/// <summary>
+		/// Whether, by default, engines treat the parameters of a command by position instead
+		/// of by name.
+		/// </summary>
+		public const bool DEFAULT_POSITIONAL_PARAMETERS = false;
+
+		/// <summary>
+		/// Whether, by default, engines provide a normalized syntax to implement the skip/take
+		/// functionality, or rather it has to be emulated by software.
+		/// </summary>
+		public const bool DEFAULT_SUPPORT_NATIVE_SKIPTAKE = false;
+
 		/// <summary>
 		/// Whether, by default, if a value transformer for a given type is not found a value
 		/// transformer for a base type can be used, or not.
@@ -205,14 +228,14 @@ namespace Kerosene.ORM.Core
 			{
 				while (!_RelaxTransformersCaptured)
 				{
-					var info = Configuration.ORMConfiguration.GetInfo(); if (info == null) break;
-					if (info.Transformers == null) break;
-					if (info.Transformers.Relax == null) break;
+					var info = Configuration.ORMConfiguration.GetInfo();
+					if (info == null ||
+						info.DataEngine == null ||
+						info.DataEngine.RelaxTransformers == null) break;
 
-					_RelaxTransformers = (bool)info.Transformers.Relax;
+					_RelaxTransformers = (bool)info.DataEngine.RelaxTransformers;
 					break;
 				}
-
 				_RelaxTransformersCaptured = true;
 				return _RelaxTransformers;
 			}
@@ -242,7 +265,7 @@ namespace Kerosene.ORM.Core
 		/// <returns>The server version.</returns>
 		public static string ValidateServerVersion(string version)
 		{
-			return version.Validated("Server Version", canbeNull: true);
+			return version.NullIfTrimmedIsEmpty();
 		}
 
 		/// <summary>

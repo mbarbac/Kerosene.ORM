@@ -3,12 +3,14 @@ namespace Kerosene.ORM.Configuration
 {
 	using Kerosene.Tools;
 	using System;
+	using System.Collections;
+	using System.Collections.Generic;
 	using System.Configuration;
-	using System.Text;
+	using System.Linq;
 
 	// ==================================================== 
 	/// <summary>
-	/// The configuration handler for the Kerosene framework.
+	/// The configuration handler for the Kerosene ORM framework.
 	/// </summary>
 	public partial class ORMConfiguration : ConfigurationSection
 	{
@@ -28,97 +30,98 @@ namespace Kerosene.ORM.Configuration
 
 	// ==================================================== 
 	/// <summary>
-	/// The entry that defines the connection string entry to use, if any.
+	/// The entry that defines common options for data engines.
 	/// </summary>
-	public class ConnectionStringElement : ConfigurationElement
+	public class DataEngineElement : ConfigurationElement
 	{
-		public const string ELEMENT_NAME = "connectionString";
-		public const string PROPERTY_NAME = "name";
-
-		/// <summary>
-		/// If not null the name of the connection string entry to use.
-		/// </summary>
-		[ConfigurationProperty(PROPERTY_NAME, IsRequired = true, DefaultValue = null)]
-		public string Name
-		{
-			get { return ((string)this[PROPERTY_NAME]).Validated(canbeNull: true, emptyAsNull: true); }
-			set { this[PROPERTY_NAME] = value; }
-		}
-	}
-
-	public partial class ORMConfiguration
-	{
-		/// <summary>
-		/// The connection string to use, if any.
-		/// </summary>
-		[ConfigurationProperty(ConnectionStringElement.ELEMENT_NAME, IsRequired = false, DefaultValue = null)]
-		public ConnectionStringElement ConnectionString
-		{
-			get { return (ConnectionStringElement)base[ConnectionStringElement.ELEMENT_NAME]; }
-		}
-	}
-
-	// ==================================================== 
-	/// <summary>
-	/// The entry that defines whether complex tags are to be kept or not.
-	/// </summary>
-	public class KeepComplexTagsElement : ConfigurationElement
-	{
-		public const string ELEMENT_NAME = "complexTags";
-		public const string PROPERTY_KEEP = "keep";
-
-		/// <summary>
-		/// If not null whether complex tags are to be kept or not.
-		/// </summary>
-		[ConfigurationProperty(PROPERTY_KEEP, IsRequired = false, DefaultValue = null)]
-		public bool? Keep
-		{
-			get { return (bool?)this[PROPERTY_KEEP]; }
-			set { this[PROPERTY_KEEP] = value; }
-		}
-	}
-
-	public partial class ORMConfiguration
-	{
-		/// <summary>
-		/// Whether complex tags are to be kept or not.
-		/// </summary>
-		[ConfigurationProperty(KeepComplexTagsElement.ELEMENT_NAME, IsRequired = false, DefaultValue = null)]
-		public KeepComplexTagsElement KeepComplexTags
-		{
-			get { return (KeepComplexTagsElement)base[KeepComplexTagsElement.ELEMENT_NAME]; }
-		}
-	}
-
-	// ==================================================== 
-	/// <summary>
-	/// The entry that defines options for the data link transformers.
-	/// </summary>
-	public class DataLinkTransformersElement : ConfigurationElement
-	{
-		public const string ELEMENT_NAME = "transformers";
-		public const string PROPERTY_RELAX = "relax";
+		public const string ELEMENT_NAME = "dataEngine";
+		public const string PROPERTY_RELAX_TRANSFORMERS = "relaxTransformers";
+		public const string PROPERTY_COMPLEX_TAGS = "complexTags";
 
 		/// <summary>
 		/// Whether to relax data link transformers.
 		/// </summary>
-		[ConfigurationProperty(PROPERTY_RELAX, IsRequired = false, DefaultValue = true)]
-		public bool? Relax
+		[ConfigurationProperty(PROPERTY_RELAX_TRANSFORMERS, IsRequired = false, DefaultValue = null)]
+		public bool? RelaxTransformers
 		{
-			get { return (bool?)this[PROPERTY_RELAX]; }
-			set { this[PROPERTY_RELAX] = value; }
+			get { return (bool?)this[PROPERTY_RELAX_TRANSFORMERS]; }
+			set { this[PROPERTY_RELAX_TRANSFORMERS] = value; }
+		}
+
+		/// <summary>
+		/// Whether to keep complex tags or not.
+		/// </summary>
+		[ConfigurationProperty(PROPERTY_COMPLEX_TAGS, IsRequired = false, DefaultValue = null)]
+		public bool? ComplexTags
+		{
+			get { return (bool?)this[PROPERTY_COMPLEX_TAGS]; }
+			set { this[PROPERTY_COMPLEX_TAGS] = value; }
 		}
 	}
 
 	public partial class ORMConfiguration
 	{
 		/// <summary>
-		/// Options for data link transformers.
+		/// Common options for data engines.
 		/// </summary>
-		[ConfigurationProperty(DataLinkTransformersElement.ELEMENT_NAME, IsRequired = false, DefaultValue = null)]
-		public DataLinkTransformersElement Transformers
+		[ConfigurationProperty(DataEngineElement.ELEMENT_NAME, IsRequired = false, DefaultValue = null)]
+		public DataEngineElement DataEngine
 		{
-			get { return (DataLinkTransformersElement)base[DataLinkTransformersElement.ELEMENT_NAME]; }
+			get { return (DataEngineElement)base[DataEngineElement.ELEMENT_NAME]; }
+		}
+	}
+
+	// ==================================================== 
+	/// <summary>
+	/// The entry that defines common options for data links.
+	/// </summary>
+	public class DataLinkElement : ConfigurationElement
+	{
+		public const string ELEMENT_NAME = "dataLink";
+		public const string PROPERTY_CONNECTION_STRING = "connectionString";
+		public const string PROPERTY_RETRIES = "retries";
+		public const string PROPERTY_RETRY_INTERVAL = "retryInterval";
+
+		/// <summary>
+		/// The default connection string to use, if any.
+		/// </summary>
+		[ConfigurationProperty(PROPERTY_CONNECTION_STRING, IsRequired = false, DefaultValue = null)]
+		public string ConnectionString
+		{
+			get { return ((string)this[PROPERTY_CONNECTION_STRING]).NullIfTrimmedIsEmpty(); }
+			set { this[PROPERTY_CONNECTION_STRING] = value; }
+		}
+
+		/// <summary>
+		/// The number of retries to open a link connection.
+		/// </summary>
+		[ConfigurationProperty(PROPERTY_RETRIES, IsRequired = false, DefaultValue = null)]
+		public int? Retries
+		{
+			get { return (int?)this[PROPERTY_RETRIES]; }
+			set { this[PROPERTY_RETRIES] = value; }
+		}
+
+		/// <summary>
+		/// The milliseconds to wait between retries to open a link connection.
+		/// </summary>
+		[ConfigurationProperty(PROPERTY_RETRY_INTERVAL, IsRequired = false, DefaultValue = null)]
+		public int? RetryInterval
+		{
+			get { return (int?)this[PROPERTY_RETRY_INTERVAL]; }
+			set { this[PROPERTY_RETRY_INTERVAL] = value; }
+		}
+	}
+
+	public partial class ORMConfiguration
+	{
+		/// <summary>
+		/// Common options for data links.
+		/// </summary>
+		[ConfigurationProperty(DataLinkElement.ELEMENT_NAME, IsRequired = false, DefaultValue = null)]
+		public DataLinkElement DataLink
+		{
+			get { return (DataLinkElement)base[DataLinkElement.ELEMENT_NAME]; }
 		}
 	}
 
@@ -139,6 +142,17 @@ namespace Kerosene.ORM.Configuration
 		{
 			return ((CustomEngineElement)element).Id;
 		}
+
+		/// <summary>
+		/// The collection of custom engines read from the configuration files.
+		/// </summary>
+		public IEnumerable<CustomEngineElement> Items
+		{
+			get
+			{
+				foreach (CustomEngineElement entry in this) yield return entry;
+			}
+		}
 	}
 
 	public class CustomEngineElement : ConfigurationElement
@@ -154,32 +168,12 @@ namespace Kerosene.ORM.Configuration
 		public const string PROPERTY_SUPPORTSNATIVESKIPTAKE = "supportsNativeSkipTake";
 
 		/// <summary>
-		/// Returns the string representation of this instance.
-		/// </summary>
-		/// <returns>A string containing the string representation of this instance.</returns>
-		public override string ToString()
-		{
-			StringBuilder sb = new StringBuilder();
-
-			sb.AppendFormat("[{0}, Type={1}, Assembly={2}", Id, TypeName, AssemblyName);
-			if (InvarianteName != null) sb.AppendFormat(", Provider={0}", InvarianteName);
-			if (ServerVersion != null) sb.AppendFormat(", ServerVersion={0}", ServerVersion);
-			if (CaseSensitiveNames != null) sb.AppendFormat(", CaseSensitiveNames={0}", CaseSensitiveNames);
-			if (ParameterPrefix != null) sb.AppendFormat(", Prefix={0}", ParameterPrefix);
-			if (PositionalParameters != null) sb.AppendFormat(", PositionalParameters={0}", PositionalParameters);
-			if (SupportsNativeSkipTake != null) sb.AppendFormat(", NativeSkipTake={0}", SupportsNativeSkipTake);
-			sb.Append("]");
-
-			return sb.ToString();
-		}
-
-		/// <summary>
 		/// The unique id of this engine in the configuration section.
 		/// </summary>
 		[ConfigurationProperty(PROPERTY_ID, IsRequired = true)]
 		public string Id
 		{
-			get { return ((string)this[PROPERTY_ID]).Validated(canbeNull: true, emptyAsNull: true); }
+			get { return ((string)this[PROPERTY_ID]).NullIfTrimmedIsEmpty(); }
 			set { this[PROPERTY_ID] = value; }
 		}
 
@@ -189,7 +183,7 @@ namespace Kerosene.ORM.Configuration
 		[ConfigurationProperty(PROPERTY_TYPENAME, IsRequired = true)]
 		public string TypeName
 		{
-			get { return ((string)this[PROPERTY_TYPENAME]).Validated(canbeNull: true, emptyAsNull: true); }
+			get { return ((string)this[PROPERTY_TYPENAME]).NullIfTrimmedIsEmpty(); }
 			set { this[PROPERTY_TYPENAME] = value; }
 		}
 
@@ -199,7 +193,7 @@ namespace Kerosene.ORM.Configuration
 		[ConfigurationProperty(PROPERTY_ASSEMBLYNAME, IsRequired = true)]
 		public string AssemblyName
 		{
-			get { return ((string)this[PROPERTY_ASSEMBLYNAME]).Validated(canbeNull: true, emptyAsNull: true); }
+			get { return ((string)this[PROPERTY_ASSEMBLYNAME]).NullIfTrimmedIsEmpty(); }
 			set { this[PROPERTY_ASSEMBLYNAME] = value; }
 		}
 
@@ -207,9 +201,9 @@ namespace Kerosene.ORM.Configuration
 		/// If not null, overrides the invariant name by which the engine is to be registered.
 		/// </summary>
 		[ConfigurationProperty(PROPERTY_INVARIANTNAME, IsRequired = false, DefaultValue = null)]
-		public string InvarianteName
+		public string InvariantName
 		{
-			get { return ((string)this[PROPERTY_INVARIANTNAME]).Validated(canbeNull: true, emptyAsNull: true); }
+			get { return ((string)this[PROPERTY_INVARIANTNAME]).NullIfTrimmedIsEmpty(); }
 			set { this[PROPERTY_INVARIANTNAME] = value; }
 		}
 
@@ -223,7 +217,7 @@ namespace Kerosene.ORM.Configuration
 		[ConfigurationProperty(PROPERTY_SERVERVERSION, IsRequired = false, DefaultValue = null)]
 		public string ServerVersion
 		{
-			get { return ((string)this[PROPERTY_SERVERVERSION]).Validated(canbeNull: true, emptyAsNull: true); }
+			get { return ((string)this[PROPERTY_SERVERVERSION]).NullIfTrimmedIsEmpty(); }
 			set { this[PROPERTY_SERVERVERSION] = value; }
 		}
 
@@ -245,7 +239,7 @@ namespace Kerosene.ORM.Configuration
 		[ConfigurationProperty(PROPERTY_PARAMETERPREFIX, IsRequired = false, DefaultValue = null)]
 		public string ParameterPrefix
 		{
-			get { return ((string)this[PROPERTY_PARAMETERPREFIX]).Validated(canbeNull: true, emptyAsNull: true); }
+			get { return ((string)this[PROPERTY_PARAMETERPREFIX]).NullIfTrimmedIsEmpty(); }
 			set { this[PROPERTY_PARAMETERPREFIX] = value; }
 		}
 
@@ -288,36 +282,47 @@ namespace Kerosene.ORM.Configuration
 
 	// ==================================================== 
 	/// <summary>
-	/// The entry that defines the options to operate with maps.
+	/// The entry that defines common options for data engines.
 	/// </summary>
-	public class MapsElement : ConfigurationElement
+	public class DataMapElement : ConfigurationElement
 	{
-		public const string ELEMENT_NAME = "maps";
+		public const string ELEMENT_NAME = "dataMap";
+		public const string PROPERTY_ENABLE_WEAKMAPS = "enableWeakMaps";
+		public const string PROPERTY_TRACK_ENTITIES = "trackEntities";
 		public const string PROPERTY_TRACK_CHILD_ENTITIES = "trackChildEntities";
-		public const string PROPERTY_ENABLE_WEAK_MAPS = "enableWeakMaps";
 		public const string PROPERTY_ENABLE_COLLECTOR = "enableCollector";
 		public const string PROPERTY_ENABLE_COLLECTOR_GC = "enableCollectorGC";
 		public const string PROPERTY_COLLECTOR_INTERVAL = "collectorInterval";
-		public const string PROPERTY_COLLECTOR_MIN_INTERVAL = "collectorMinInterval";
 
 		/// <summary>
-		/// Whether to track child entities.
+		/// Whether to relax data link transformers.
 		/// </summary>
-		[ConfigurationProperty(PROPERTY_TRACK_CHILD_ENTITIES, IsRequired = false, DefaultValue = Maps.Concrete.UberHelper.DEFAULT_TRACK_CHILD_ENTITIES)]
+		[ConfigurationProperty(PROPERTY_ENABLE_WEAKMAPS, IsRequired = false, DefaultValue = null)]
+		public bool? EnableWeakMaps
+		{
+			get { return (bool?)this[PROPERTY_ENABLE_WEAKMAPS]; }
+			set { this[PROPERTY_ENABLE_WEAKMAPS] = value; }
+		}
+
+		/// <summary>
+		/// Whether maps track the entities they managed or not.
+		/// </summary>
+		[ConfigurationProperty(PROPERTY_TRACK_ENTITIES, IsRequired = false, DefaultValue = null)]
+		public bool? TrackEntities
+		{
+			get { return (bool?)this[PROPERTY_TRACK_ENTITIES]; }
+			set { this[PROPERTY_TRACK_ENTITIES] = value; }
+		}
+
+		/// <summary>
+		/// Whether entities keep track of their own child ones in order to cascade change
+		/// operations, or not.
+		/// </summary>
+		[ConfigurationProperty(PROPERTY_TRACK_CHILD_ENTITIES, IsRequired = false, DefaultValue = null)]
 		public bool? TrackChildEntities
 		{
 			get { return (bool?)this[PROPERTY_TRACK_CHILD_ENTITIES]; }
 			set { this[PROPERTY_TRACK_CHILD_ENTITIES] = value; }
-		}
-
-		/// <summary>
-		/// Whether to weak maps are enabled or not.
-		/// </summary>
-		[ConfigurationProperty(PROPERTY_ENABLE_WEAK_MAPS, IsRequired = false, DefaultValue = Maps.Concrete.UberHelper.DEFAULT_ENABLE_WEAK_MAPS)]
-		public bool? EnableWeakMaps
-		{
-			get { return (bool?)this[PROPERTY_ENABLE_WEAK_MAPS]; }
-			set { this[PROPERTY_ENABLE_WEAK_MAPS] = value; }
 		}
 
 		/// <summary>
@@ -343,33 +348,23 @@ namespace Kerosene.ORM.Configuration
 		/// <summary>
 		/// The interval at which the internal collector is fired.
 		/// </summary>
-		[ConfigurationProperty(PROPERTY_COLLECTOR_INTERVAL, IsRequired = false, DefaultValue = Maps.Concrete.UberHelper.DEFAULT_COLLECTOR_INTERVAL)]
+		[ConfigurationProperty(PROPERTY_COLLECTOR_INTERVAL, IsRequired = false, DefaultValue = null)]
 		public int? CollectorInterval
 		{
 			get { return (int?)this[PROPERTY_COLLECTOR_INTERVAL]; }
 			set { this[PROPERTY_COLLECTOR_INTERVAL] = value; }
-		}
-
-		/// <summary>
-		/// The minimum interval at which the internal collector is fired.
-		/// </summary>
-		[ConfigurationProperty(PROPERTY_COLLECTOR_MIN_INTERVAL, IsRequired = false, DefaultValue = Maps.Concrete.UberHelper.DEFAULT_COLLECTOR_MIN_INTERVAL)]
-		public int? CollectorMinInterval
-		{
-			get { return (int?)this[PROPERTY_COLLECTOR_MIN_INTERVAL]; }
-			set { this[PROPERTY_COLLECTOR_MIN_INTERVAL] = value; }
 		}
 	}
 
 	public partial class ORMConfiguration
 	{
 		/// <summary>
-		/// Options for maps.
+		/// Common options for data engines.
 		/// </summary>
-		[ConfigurationProperty(MapsElement.ELEMENT_NAME, IsRequired = false, DefaultValue = null)]
-		public MapsElement Maps
+		[ConfigurationProperty(DataMapElement.ELEMENT_NAME, IsRequired = false, DefaultValue = null)]
+		public DataMapElement DataMap
 		{
-			get { return (MapsElement)base[MapsElement.ELEMENT_NAME]; }
+			get { return (DataMapElement)base[DataMapElement.ELEMENT_NAME]; }
 		}
 	}
 }

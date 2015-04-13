@@ -7,7 +7,7 @@ namespace Kerosene.ORM.Core
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents a parameter of a command in an agnostic database-independent way.
+	/// Represents a generic parameter of a command.
 	/// </summary>
 	public interface IParameter : IDisposableEx, ICloneable, ISerializable, IEquivalent<IParameter>
 	{

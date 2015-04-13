@@ -1,14 +1,16 @@
 ﻿// ======================================================== IMapMemberColumnCollection.cs
 namespace Kerosene.ORM.Maps
 {
+	using Kerosene.ORM.Core;
 	using Kerosene.Tools;
 	using System;
 	using System.Collections.Generic;
+	using System.Linq;
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents the collection of columns defined explicitly to support a given member in its
-	/// associated map.
+	/// Represents the collection of columns in the primary table that have been explicitly
+	/// associated with a member of the map.
 	/// </summary>
 	public interface IMapMemberColumnCollection : IEnumerable<IMapMemberColumn>
 	{
@@ -41,11 +43,11 @@ namespace Kerosene.ORM.Maps
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents the collection of columns defined explicitly to support a given member in its
-	/// associated map.
+	/// Represents the collection of columns in the primary table that have been explicitly
+	/// associated with a member of the map.
 	/// </summary>
 	public interface IMapMemberColumnCollection<T>
-		: IEnumerable<IMapMemberColumn<T>>, IMapMemberColumnCollection where T : class
+		: IMapMemberColumnCollection, IEnumerable<IMapMemberColumn<T>> where T : class
 	{
 		/// <summary>
 		/// The member this instance is associated with.

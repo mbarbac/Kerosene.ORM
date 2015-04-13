@@ -1,12 +1,15 @@
 ﻿// ======================================================== IMapMemberColumn.cs
 namespace Kerosene.ORM.Maps
 {
+	using Kerosene.ORM.Core;
 	using Kerosene.Tools;
 	using System;
+	using System.Linq;
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents a column defined explicitly to support a given member in its associated map.
+	/// Represents a column in the primary table that has been explicitly associated with
+	/// a member of the map.
 	/// </summary>
 	public interface IMapMemberColumn
 	{
@@ -75,23 +78,23 @@ namespace Kerosene.ORM.Maps
 		IMapMemberColumn OnLoadEntity(Action<object, object> onLoad);
 
 		/// <summary>
-		/// Identifies the member into which this database column will be mapped, in case that
-		/// no load and write delegates are provided. Members can be both properties and fields
-		/// and either public, protected or private ones.
+		/// Identifies the member into which this database column will be mapped. Members can
+		/// be both properties and fields and either public, protected or private ones.
 		/// <para>
 		/// Note that this member can be a different one than the one this instance depends on,
 		/// in case such scenario is needed.
 		/// </para>
 		/// </summary>
-		/// <param name="member">A dynamic lambda expression that resolves into the name of the
+		/// <param name="element">A dynamic lambda expression that resolves into the name of the
 		/// member of the type into which this database column will be mapped.</param>
 		/// <returns>This instance to permit a fluent chaining syntax.</returns>
-		IMapMemberColumn OnMember(Func<dynamic, object> member);
+		IMapMemberColumn OnElement(Func<dynamic, object> element);
 	}
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents a column defined explicitly to support a given member in its associated map.
+	/// Represents a column in the primary table that has been explicitly associated with
+	/// a member of the map.
 	/// </summary>
 	public interface IMapMemberColumn<T> : IMapMemberColumn where T : class
 	{
@@ -144,18 +147,17 @@ namespace Kerosene.ORM.Maps
 		IMapMemberColumn<T> OnLoadEntity(Action<object, T> onLoad);
 
 		/// <summary>
-		/// Identifies the member into which this database column will be mapped, in case that
-		/// no load and write delegates are provided. Members can be both properties and fields
-		/// and either public, protected or private ones.
+		/// Identifies the member into which this database column will be mapped. Members can
+		/// be both properties and fields and either public, protected or private ones.
 		/// <para>
 		/// Note that this member can be a different one than the one this instance depends on,
 		/// in case such scenario is needed.
 		/// </para>
 		/// </summary>
-		/// <param name="member">A dynamic lambda expression that resolves into the name of the
+		/// <param name="element">A dynamic lambda expression that resolves into the name of the
 		/// member of the type into which this database column will be mapped.</param>
 		/// <returns>This instance to permit a fluent chaining syntax.</returns>
-		new IMapMemberColumn<T> OnMember(Func<dynamic, object> member);
+		new IMapMemberColumn<T> OnElement(Func<dynamic, object> element);
 	}
 }
 // ======================================================== 

@@ -4,7 +4,6 @@ namespace Kerosene.ORM.Maps.Concrete
 	using Kerosene.ORM.Core;
 	using Kerosene.Tools;
 	using System;
-	using System.Collections;
 	using System.Collections.Generic;
 	using System.ComponentModel;
 	using System.Linq;
@@ -17,10 +16,9 @@ namespace Kerosene.ORM.Maps.Concrete
 	internal interface IUberEntity : IMetaEntity
 	{
 		/// <summary>
-		/// Resets the contents and dependencies of this instance making it become a detached
-		/// one again.
+		/// Clears the metadata held by this instance.
 		/// </summary>
-		void Reset(bool removeMap = true);
+		void Clear();
 
 		/// <summary>
 		/// Whether the entity this instance refers to is valid or not.
@@ -28,14 +26,9 @@ namespace Kerosene.ORM.Maps.Concrete
 		bool HasValidEntity { get; }
 
 		/// <summary>
-		/// The entity type of the associated one.
+		/// The entity type this instance was created for.
 		/// </summary>
 		Type EntityType { get; }
-
-		/// <summary>
-		/// The extended type of the associated one, if any.
-		/// </summary>
-		Type ExtendedType { get; }
 
 		/// <summary>
 		/// The proxy holder associated with the entity, if any.
@@ -43,14 +36,14 @@ namespace Kerosene.ORM.Maps.Concrete
 		ProxyHolder ProxyHolder { get; }
 
 		/// <summary>
+		/// The extended type of the associated one, if any.
+		/// </summary>
+		Type ExtendedType { get; }
+
+		/// <summary>
 		/// The map that this instance is managed by, if any.
 		/// </summary>
 		IUberMap UberMap { get; set; }
-
-		/// <summary>
-		/// The pending change operation annotated into this instance, if any.
-		/// </summary>
-		IUberOperation UberOperation { get; set; }
 
 		/// <summary>
 		/// The repository reference held by the associated map, if any.
@@ -58,21 +51,20 @@ namespace Kerosene.ORM.Maps.Concrete
 		DataRepository Repository { get; }
 
 		/// <summary>
-		/// The record associated with this instance, if any.
-		/// <para>The <see cref="IMetaEntity"/> interface does not expose this property on
-		/// purpose to force a explicit cast if there is the need to access to it.</para>
+		/// The last operation annotated into this entity.
 		/// </summary>
-		/// <remarks>
-		/// - The setter disposes any previous instance this property may have hold.
-		/// - The setter resets the value of the <see cref="IdString"/> property.
-		/// </remarks>
+		IUberOperation UberOperation { get; set; }
+
+		/// <summary>
+		/// The record associated with this instance, if any.
+		/// </summary>
 		IRecord Record { get; set; }
 
 		/// <summary>
-		/// Gets a string, based upon the identity columns of the associated record, that can
-		/// be used as a hash for this instance, or null if no record is available.
+		/// Gets a normalized string that represents the identity columns from the record that
+		/// has been associated to this instance, or null.
 		/// </summary>
-		string IdString { get; }
+		string RecordId { get; }
 
 		/// <summary>
 		/// Whether the members defined for the underlying object can be considered as completed
@@ -87,16 +79,15 @@ namespace Kerosene.ORM.Maps.Concrete
 		bool ToRefresh { get; set; }
 
 		/// <summary>
-		/// Maintains the child dependencies of the members of the underlying entity.
+		/// Gets the collection of objects captured as child dependencies organized by the
+		/// property name that holds them.
 		/// </summary>
-		Dictionary<string, HashSet<object>> TrackedChilds { get; }
+		Dictionary<string, HashSet<object>> ChildDependencies { get; }
 	}
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents the metadata that once associated with a given entity permits it to be
-	/// managed by the maps framework. Only instances of class types are considered valid
-	/// entities, any others are not supported.
+	/// Represents the metadata the framework associates with its managed entities.
 	/// </summary>
 	public class MetaEntity : Attribute, IMetaEntity, IUberEntity
 	{
@@ -132,9 +123,8 @@ namespace Kerosene.ORM.Maps.Concrete
 
 					if (type.Assembly.GetName().Name == ProxyGenerator.PROXY_ASSEMBLY_NAME)
 					{
-						meta._ExtendedType = type;
-						meta._EntityType = type.BaseType;
-						meta._ProxyHolder = ProxyGenerator.Holders.FindByExtended(meta._ExtendedType);
+						meta._ProxyHolder = ProxyGenerator.Holders.FindByExtendedType(type);
+						if (meta._ProxyHolder != null) meta._EntityType = type.BaseType;
 					}
 				}
 				return meta;
@@ -143,20 +133,34 @@ namespace Kerosene.ORM.Maps.Concrete
 
 		ulong _SerialId = 0;
 		WeakReference _WeakReference = null;
-		Type _EntityType = null; Type _ExtendedType = null;
+		Type _EntityType = null;
 		ProxyHolder _ProxyHolder = null;
 		IUberMap _UberMap = null;
+		IRecord _Record = null; string _RecordId = null;
 		IUberOperation _UberOperation = null;
-		IRecord _Record = null;
-		string _IdString = null;
 		bool _Completed = false;
 		bool _ToRefresh = false;
-		Dictionary<string, HashSet<object>> _TrackedChilds = new Dictionary<string, HashSet<object>>();
+		Dictionary<string, HashSet<object>> _ChildDependencies = new Dictionary<string, HashSet<object>>();
+
+		private MetaEntity() { }
 
 		/// <summary>
-		/// Used to prevent direct invocation.
+		/// Clears the metadata held by this instance.
 		/// </summary>
-		private MetaEntity() { }
+		internal void Clear()
+		{
+			ChildDependencies.Clear();
+			ToRefresh = false;
+			Completed = false;
+			ToRefresh = false;
+			UberOperation = null;
+			Record = null;
+			UberMap = null;
+		}
+		void IUberEntity.Clear()
+		{
+			this.Clear();
+		}
 
 		/// <summary>
 		/// This hack is needed to force instances of this class to behave as a reference type,
@@ -174,36 +178,6 @@ namespace Kerosene.ORM.Maps.Concrete
 		public override int GetHashCode()
 		{
 			return base.GetHashCode();
-		}
-
-		/// <summary>
-		/// Resets the contents and dependencies of this instance making it become a detached
-		/// one again.
-		/// </summary>
-		internal void Reset(bool removeMap = true)
-		{
-			Completed = false;
-			_ToRefresh = false;
-
-			foreach (var kvp in _TrackedChilds) kvp.Value.Clear(); // Facilitates GC's live...
-			_TrackedChilds.Clear();
-
-			if (_UberOperation != null) _UberOperation.Dispose(); _UberOperation = null;
-
-			if (_UberMap != null)
-			{
-				if (removeMap)
-				{
-					lock (_UberMap.UberEntities) { _UberMap.UberEntities.Remove(this); }
-				}
-				_UberMap = null;
-			}
-
-			Record = null; // Needs to come after Map=null as it resets the IdString property...
-		}
-		void IUberEntity.Reset(bool removeMap)
-		{
-			this.Reset(removeMap);
 		}
 
 		/// <summary>
@@ -259,8 +233,8 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 
 		/// <summary>
-		/// The actual entity this metadata is associated with, or null if it is not available
-		/// (for instance, it is not any longer in use and has been collected by the GC).
+		/// The actual entity this metadata is associated with, or null if it has been collected
+		/// or it is not available for any reasons.
 		/// </summary>
 		public object Entity
 		{
@@ -274,9 +248,10 @@ namespace Kerosene.ORM.Maps.Concrete
 		{
 			get
 			{
-				return (_WeakReference == null || !_WeakReference.IsAlive || _WeakReference.Target == null)
-					? false
-					: true;
+				return (
+					_WeakReference == null ||
+					!_WeakReference.IsAlive ||
+					_WeakReference.Target == null) ? false : true;
 			}
 		}
 		bool IUberEntity.HasValidEntity
@@ -285,27 +260,11 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 
 		/// <summary>
-		/// The entity type of the associated one.
+		/// The entity type this instance was created for.
 		/// </summary>
-		internal Type EntityType
+		public Type EntityType
 		{
 			get { return _EntityType; }
-		}
-		Type IUberEntity.EntityType
-		{
-			get { return this.EntityType; }
-		}
-
-		/// <summary>
-		/// The extended type of the associated one, if any.
-		/// </summary>
-		internal Type ExtendedType
-		{
-			get { return this._ExtendedType; }
-		}
-		Type IUberEntity.ExtendedType
-		{
-			get { return this.ExtendedType; }
 		}
 
 		/// <summary>
@@ -313,7 +272,7 @@ namespace Kerosene.ORM.Maps.Concrete
 		/// </summary>
 		internal ProxyHolder ProxyHolder
 		{
-			get { return this._ProxyHolder; }
+			get { return _ProxyHolder; }
 		}
 		ProxyHolder IUberEntity.ProxyHolder
 		{
@@ -321,26 +280,23 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 
 		/// <summary>
-		/// The state of the underlying entity.
+		/// The extended type of the associated one, if any.
 		/// </summary>
-		public MetaState State
+		internal Type ExtendedType
 		{
-			get
-			{
-				if (!HasValidEntity) return MetaState.Collected;
-				if (_UberMap == null) return MetaState.Detached;
+			get { return _ProxyHolder == null ? null : _ProxyHolder.ExtendedType; }
+		}
+		Type IUberEntity.ExtendedType
+		{
+			get { return this.ExtendedType; }
+		}
 
-				if (_UberOperation != null)
-				{
-					if (_UberOperation is IDataInsert) return MetaState.ToInsert;
-					if (_UberOperation is IDataUpdate) return MetaState.ToUpdate;
-					if (_UberOperation is IDataDelete) return MetaState.ToDelete;
-					throw new InvalidOperationException(
-						"Unknown operation '{0}'.".FormatWith(_UberOperation));
-				}
-
-				return MetaState.Ready;
-			}
+		/// <summary>
+		/// The map that is managing this instance, or null if it is a detached one.
+		/// </summary>
+		public IDataMap Map
+		{
+			get { return _UberMap; }
 		}
 
 		/// <summary>
@@ -362,7 +318,7 @@ namespace Kerosene.ORM.Maps.Concrete
 		/// </summary>
 		internal DataRepository Repository
 		{
-			get { return UberMap == null ? null : UberMap.Repository; }
+			get { return _UberMap == null ? null : _UberMap.Repository; }
 		}
 		DataRepository IUberEntity.Repository
 		{
@@ -370,15 +326,7 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 
 		/// <summary>
-		/// The map that is managing this instance, or null if it is a detached one.
-		/// </summary>
-		public IDataMap Map
-		{
-			get { return _UberMap; }
-		}
-
-		/// <summary>
-		/// The pending change operation annotated into this instance, if any.
+		/// The last operation annotated into this entity.
 		/// </summary>
 		internal IUberOperation UberOperation
 		{
@@ -392,24 +340,41 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 
 		/// <summary>
-		/// The record associated with this instance, if any.
-		/// <para>The <see cref="IMetaEntity"/> interface does not expose this property on
-		/// purpose to force a explicit cast if there is the need to access to it.</para>
+		/// The state of the underlying entity.
 		/// </summary>
-		/// <remarks>
-		/// - The setter disposes any previous instance this property may have hold.
-		/// - The setter resets the value of the <see cref="IdString"/> property.
-		/// </remarks>
-		public IRecord Record
+		public MetaState State
+		{
+			get
+			{
+				if (!HasValidEntity) return MetaState.Collected;
+				if (UberMap == null || UberMap.IsDisposed) return MetaState.Detached;
+
+				if (_UberOperation != null)
+				{
+					if (_UberOperation is IDataInsert) return MetaState.ToInsert;
+					if (_UberOperation is IDataUpdate) return MetaState.ToUpdate;
+					if (_UberOperation is IDataDelete) return MetaState.ToDelete;
+					throw new InvalidOperationException(
+						"Unknown operation '{0}'.".FormatWith(_UberOperation));
+				}
+
+				return MetaState.Ready;
+			}
+		}
+
+		/// <summary>
+		/// The record associated with this instance, if any.
+		/// </summary>
+		internal IRecord Record
 		{
 			get { return _Record; }
-			internal set
+			set
 			{
 				if (object.ReferenceEquals(_Record, value)) return;
 				if (_Record != null) _Record.Dispose();
 
 				_Record = value;
-				_IdString = _Record == null ? null : _Record.GetIdString();
+				_RecordId = _Record == null ? null : UberEntitySet.GetKey(_Record);
 			}
 		}
 		IRecord IUberEntity.Record
@@ -419,16 +384,16 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 
 		/// <summary>
-		/// Gets a string, based upon the identity columns of the associated record, that can
-		/// be used as a hash for this instance, or null if no record is available.
+		/// Gets a normalized string that represents the identity columns from the record that
+		/// has been associated to this instance, or null.
 		/// </summary>
-		internal string IdString
+		internal string RecordId
 		{
-			get { return _IdString; }
+			get { return _RecordId; }
 		}
-		string IUberEntity.IdString
+		string IUberEntity.RecordId
 		{
-			get { return this.IdString; }
+			get { return this.RecordId; }
 		}
 
 		/// <summary>
@@ -476,40 +441,16 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 
 		/// <summary>
-		/// Maintains the child dependencies of the members of the underlying entity.
+		/// Gets the collection of objects captured as child dependencies organized by the
+		/// property name that holds them.
 		/// </summary>
-		internal Dictionary<string, HashSet<object>> TrackedChilds
+		internal Dictionary<string, HashSet<object>> ChildDependencies
 		{
-			get { return _TrackedChilds; }
+			get { return _ChildDependencies; }
 		}
-		Dictionary<string, HashSet<object>> IUberEntity.TrackedChilds
+		Dictionary<string, HashSet<object>> IUberEntity.ChildDependencies
 		{
-			get { return this.TrackedChilds; }
-		}
-	}
-
-	// ==================================================== 
-	/// <summary>
-	/// Helpers and extensions for working with meta-entities.
-	/// </summary>
-	internal static class MetaEntityEx
-	{
-		/// <summary>
-		/// Returns an id string for the given record, based upon the values of its identity
-		/// columns, that can be used as a hash.
-		/// </summary>
-		internal static string GetIdString(this Core.IRecord record)
-		{
-			var list = record.Schema.PrimaryKeyColumns().ToList();
-			if (list.Count == 0) list = record.Schema.UniqueValuedColumns().ToList();
-
-			StringBuilder sb = new StringBuilder(); bool first = true; foreach (var entry in list)
-			{
-				if (first) first = false; else sb.Append("-");
-				sb.Append(record[entry.TableName, entry.ColumnName].Sketch());
-			}
-			list.Clear();
-			return sb.ToString();
+			get { return this.ChildDependencies; }
 		}
 	}
 }

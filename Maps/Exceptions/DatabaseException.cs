@@ -1,12 +1,14 @@
 ﻿// ======================================================== DatabaseException.cs
 namespace Kerosene.ORM.Maps
 {
+	using Kerosene.ORM.Core;
 	using Kerosene.Tools;
 	using System;
+	using System.Linq;
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents a generic error condition detected when executing a command against an
+	/// Represents a generic error that happend in the execution of a command against an
 	/// underlying database.
 	/// </summary>
 	[Serializable]

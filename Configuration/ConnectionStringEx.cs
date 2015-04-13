@@ -7,33 +7,33 @@ namespace Kerosene.ORM.Configuration
 
 	// ==================================================== 
 	/// <summary>
-	/// Helpers and extensions for working with connection string entries in the configuration
-	/// files.
+	/// Helpers and extensions for working with connection strings.
 	/// </summary>
 	public static class ConnectionStringEx
 	{
 		/// <summary>
-		/// Returns the connection string entry whose name is given, or null if such entry cannot
-		/// be found.
+		/// Returns the connection string settings that correspond to the entry name given,
+		/// or null if such entry cannot be found.
 		/// </summary>
-		/// <param name="entry">The name of the connection string entry, or null to find the one
-		/// given by the 'connectionString' element on the 'keroseneORM' configuration section.</param>
-		/// <returns>The requested connection string entry, or null.</returns>
-		public static ConnectionStringSettings Find(string entry = null)
+		/// <param name="entryName">The name of the connection string entry, or null to use
+		/// the one that appears in the default 'connectionString' configuration entry, if any.</param>
+		/// <returns>The requested settings, or null.</returns>
+		public static ConnectionStringSettings Find(string entryName = null)
 		{
-			entry = entry.Validated("Entry Name", canbeNull: true, emptyAsNull: true);
+			entryName = entryName.NullIfTrimmedIsEmpty();
 
-			if (entry == null)
+			if (entryName == null)
 			{
-				var info = ORMConfiguration.GetInfo(); if (info == null) return null;
-				if (info.ConnectionString == null) return null;
-				if (info.ConnectionString.Name == null) return null;
+				var info = ORMConfiguration.GetInfo();
+				if (info == null ||
+					info.DataLink == null ||
+					info.DataLink.ConnectionString == null) return null;
 
-				entry = info.ConnectionString.Name;
+				entryName = info.DataLink.ConnectionString;
 			}
 
 			ConnectionStringSettings cn = null;
-			try { cn = ConfigurationManager.ConnectionStrings[entry]; }
+			try { cn = ConfigurationManager.ConnectionStrings[entryName]; }
 			catch { }
 
 			return cn;

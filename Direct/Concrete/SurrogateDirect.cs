@@ -3,11 +3,9 @@ namespace Kerosene.ORM.Direct.Concrete
 {
 	using Kerosene.Tools;
 	using System;
-	using System.Collections;
 	using System.Collections.Generic;
 	using System.Data;
 	using System.Linq;
-	using System.Text;
 	using System.Transactions;
 
 	// ==================================================== 
@@ -127,7 +125,7 @@ namespace Kerosene.ORM.Direct.Concrete
 		{
 			if (_Command.Parameters.Count == 0) return;
 
-			var nstr = Link.Parser.Parse(null, pc: null, nulls: true);
+			var nstr = Link.Engine.Parser.Parse(null, pc: null, nulls: true);
 			var comp = Link.Engine.CaseSensitiveNames ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
 
 			// Positional parameters...
@@ -290,6 +288,7 @@ namespace Kerosene.ORM.Direct.Concrete
 					string meta = null;
 					object value = null;
 
+					// Intercepting hidden columns, that have cause random failures...
 					bool hidden = false; if (table.Columns.Contains("IsHidden"))
 					{
 						value = row[table.Columns["IsHidden"]];
@@ -301,7 +300,7 @@ namespace Kerosene.ORM.Direct.Concrete
 					{
 						meta = table.Columns[j].ColumnName;
 						value = row[j] is DBNull ? null : row[j];
-						entry[meta] = value;
+						entry.Metadata[meta] = value;
 					}
 
 					if (entry.TableName == null && name != null) entry.TableName = name;
@@ -313,9 +312,9 @@ namespace Kerosene.ORM.Direct.Concrete
 				if (_Schema.Count == 0) throw new InvalidOperationException(
 					"Schema is empty after executing command '{0}'".FormatWith(_Command));
 
-				if (_Command is Core.IElementAliasProvider)
+				if (_Command is Core.IElementAliasCollectionProvider)
 					_Schema.Aliases.AddRange(
-						((Core.IElementAliasProvider)_Command).Aliases,
+						((Core.IElementAliasCollectionProvider)_Command).Aliases,
 						cloneNotOrphans: true);
 			});
 			return _Schema;

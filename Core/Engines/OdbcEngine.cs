@@ -3,25 +3,23 @@ namespace Kerosene.ORM.Core.Concrete
 {
 	using Kerosene.Tools;
 	using System;
-	using System.Collections;
 	using System.Collections.Generic;
 	using System.Linq;
-	using System.Text;
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents a generic ODBC database.
+	/// Represents a generic ODBC database engine.
 	/// </summary>
 	public class OdbcEngine : DataEngine, IDataEngine
 	{
-		const string ODBC_INVARIANT_NAME = "System.Data.Odbc";
-		const bool ODBC_CASE_SENSITIVENAMES = false;
-		const string ODBC_PARAMETER_PREFIX = "?";
-		const bool ODBC_POSITIONAL_PARAMETERS = true;
-		const bool ODBC_SUPPORT_NATIVE_SKIPTAKE = false;
+		public const string ODBC_INVARIANT_NAME = "System.Data.Odbc";
+		public const bool ODBC_CASE_SENSITIVENAMES = false;
+		public const string ODBC_PARAMETER_PREFIX = "?";
+		public const bool ODBC_POSITIONAL_PARAMETERS = true;
+		public const bool ODBC_SUPPORT_NATIVE_SKIPTAKE = false;
 
 		/// <summary>
-		/// Initializes a new engine.
+		/// Initializes a new instance using default values.
 		/// </summary>
 		public OdbcEngine()
 			: base()
@@ -31,6 +29,26 @@ namespace Kerosene.ORM.Core.Concrete
 			ParameterPrefix = ODBC_PARAMETER_PREFIX;
 			PositionalParameters = ODBC_POSITIONAL_PARAMETERS;
 			SupportsNativeSkipTake = ODBC_SUPPORT_NATIVE_SKIPTAKE;
+		}
+
+		/// <summary>
+		/// Initializes a new instance using the values given.
+		/// </summary>
+		/// <param name="invariantName">The invariant name of the engine.</param>
+		/// <param name="serverVersion">The server version, or null.</param>
+		/// <param name="caseSensitiveNames">Whether names in the database are case sensitive or not.</param>
+		/// <param name="parameterPrefix">The default prefix for naming command parameters.</param>
+		/// <param name="positionalParameters">Whether the command parameters are positional or not.</param>
+		/// <param name="supportsSkipTake">Whether the engine supports a normalized way of implementing a skip/take functionality or not.</param>
+		public OdbcEngine(
+			string invariantName,
+			string serverVersion = null,
+			bool caseSensitiveNames = ODBC_CASE_SENSITIVENAMES,
+			string parameterPrefix = ODBC_PARAMETER_PREFIX,
+			bool positionalParameters = ODBC_POSITIONAL_PARAMETERS,
+			bool supportsSkipTake = ODBC_SUPPORT_NATIVE_SKIPTAKE)
+			: base(invariantName, serverVersion, caseSensitiveNames, parameterPrefix, positionalParameters, supportsSkipTake)
+		{
 		}
 
 		/// <summary>

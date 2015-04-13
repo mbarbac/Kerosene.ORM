@@ -3,17 +3,14 @@ namespace Kerosene.ORM.Direct.Concrete
 {
 	using Kerosene.Tools;
 	using System;
-	using System.Collections;
-	using System.Collections.Generic;
 	using System.Data;
 	using System.Linq;
-	using System.Text;
 	using System.Transactions;
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents an abstract nestable transaction, in a direct connection scenario, associated
-	/// with a given <see cref="IDataLink"/>.
+	/// Represents an abstract nestable transaction associated with a given link in a direct
+	/// connection scenario.
 	/// </summary>
 	public class NestableTransaction : Core.Concrete.NestableTransaction, INestableTransaction
 	{

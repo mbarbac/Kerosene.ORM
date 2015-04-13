@@ -12,7 +12,7 @@ namespace Kerosene.ORM.Core
 	/// from the execution of an enumerable command.
 	/// </summary>
 	public interface ISchema
-		: IDisposableEx, ICloneable, ISerializable, IEquivalent<ISchema>, IElementAliasProvider
+		: IDisposableEx, ICloneable, ISerializable, IEquivalent<ISchema>, IElementAliasCollectionProvider
 		, IEnumerable<ISchemaEntry>
 	{
 		/// <summary>
@@ -55,50 +55,36 @@ namespace Kerosene.ORM.Core
 		bool Contains(ISchemaEntry member);
 
 		/// <summary>
-		/// Returns the first member in this instance that matches the conditions given in the
-		/// predicate, or null if not such member can be found.
+		/// Returns the member whose table and column name are given, or null if not such member
+		/// can be found.
 		/// </summary>
-		/// <param name="match">The predicate that defines the conditions of the member to find.</param>
-		/// <returns>The member found, or null.</returns>
-		ISchemaEntry Find(Predicate<ISchemaEntry> match);
-
-		/// <summary>
-		/// Returns the collection of members in this instance that match the conditions given in
-		/// the predicate. This collection might be empty if there were no members that match that
-		/// conditions.
-		/// </summary>
-		/// <param name="match">The predicate that defines the conditions of the members to find.</param>
-		/// <returns>A collection with the members found.</returns>
-		IEnumerable<ISchemaEntry> FindAll(Predicate<ISchemaEntry> match);
-
-		/// <summary>
-		/// Gets the member whose table and column name are given, or null if not such member can
-		/// be found.
-		/// </summary>
-		/// <param name="table">The table name of the member to find, or null to refer to the
+		/// <param name="tableName">The table name of the member to find, or null to refer to the
 		/// default one in this context.</param>
-		/// <param name="column">The column name.</param>
+		/// <param name="columnName">The column name.</param>
 		/// <returns>The member found, or null.</returns>
-		ISchemaEntry FindEntry(string table, string column);
+		ISchemaEntry FindEntry(string tableName, string columnName);
 
 		/// <summary>
-		/// Gets the unique member whose column name is given, or null if not such member can be
-		/// found. If several members are found sharing the same column name then an exception is
-		/// thrown.
+		/// Returns the unique member whose column name is given, or null if no such member can
+		/// be found. If the collection contains several members with the same column name, even
+		/// if they belong to different tables, an exception is thrown by default.
 		/// </summary>
-		/// <param name="column">The column name.</param>
+		/// <param name="columnName">The column name.</param>
+		/// <param name="raise">True to raise an exception if several columns are found sharing
+		/// the same name. If false then null is returned in that case.</param>
 		/// <returns>The member found, or null.</returns>
-		ISchemaEntry FindEntry(string column);
+		ISchemaEntry FindEntry(string columnName, bool raise = true);
 
 		/// <summary>
 		/// Gets the member whose table and colum name are obtained parsing the given dynamic
 		/// lambda expression, using either the 'x => x.Table.Column' or 'x => x.Column' forms,
-		/// or null if no such member can be found. In the later case, if several members are
-		/// found sharing the same column name for different tables then an exception is thrown.
+		/// or null if no such member can be found. In the later case, if the collection contains
+		/// several members with the same column name, even if they belong to different tables, an
+		/// exception is thrown.
 		/// </summary>
 		/// <param name="spec">A dynamic lambda expressin that resolves into the specification
 		/// of the entry to find.</param>
-		/// <returns></returns>
+		/// <returns>The member found, or null.</returns>
 		ISchemaEntry FindEntry(Func<dynamic, object> spec);
 
 		/// <summary>
@@ -127,13 +113,6 @@ namespace Kerosene.ORM.Core
 		/// </summary>
 		/// <returns>The requested collection.</returns>
 		IEnumerable<ISchemaEntry> UniqueValuedColumns();
-
-		/// <summary>
-		/// Factory method invoked to create a new orphan member but with the right type for
-		/// this collection.
-		/// </summary>
-		/// <returns>A new orphan member.</returns>
-		ISchemaEntry CreateOrphanMember();
 
 		/// <summary>
 		/// Adds the given orphan instance into this collection.
@@ -191,7 +170,7 @@ namespace Kerosene.ORM.Core
 		/// Whether by default the table and column names of the members in a schema are case
 		/// sensitive or not.
 		/// </summary>
-		public const bool DEFAULT_CASE_SENSITIVE_NAMES = false;
+		public const bool DEFAULT_CASESENSITIVE_NAMES = DataEngine.DEFAULT_CASESENSITIVE_NAMES;
 	}
 }
 // ======================================================== 

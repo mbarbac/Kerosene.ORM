@@ -3,23 +3,19 @@ namespace Kerosene.ORM.Core.Concrete
 {
 	using Kerosene.Tools;
 	using System;
-	using System.Collections;
-	using System.Collections.Generic;
 	using System.Linq;
-	using System.Text;
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents an abstract connection against an underlying database-alike service.
+	/// Represents an agnostic connection with a database-alike service.
 	/// </summary>
-	public abstract partial class DataLink : IDataLink
+	public abstract class DataLink : IDataLink
 	{
 		static ulong _LastSerialId = 0;
 
 		bool _IsDisposed = false;
 		ulong _SerialId = 0;
 		IDataEngine _Engine = null;
-		IParser _Parser = null;
 		INestableTransaction _Transaction = null;
 		NestableTransactionMode _DefaultTransactionMode = NestableTransactionMode.Database;
 
@@ -79,11 +75,9 @@ namespace Kerosene.ORM.Core.Concrete
 					}
 				}
 				if (IsOpen) Close();
-
-				if (_Parser != null && !_Parser.IsDisposed) _Parser.Dispose();
 			}
+
 			_Engine = null;
-			_Parser = null;
 			_Transaction = null;
 
 			_IsDisposed = true;
@@ -104,8 +98,7 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Invoked to obtain a string with identification of this string for representation
-		/// purposes.
+		/// Invoked to obtain the string type for string representation purposes.
 		/// </summary>
 		protected virtual string ToStringType()
 		{
@@ -113,14 +106,17 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
+		/// The serial id assigned to this instance.
+		/// </summary>
+		public ulong SerialId
+		{
+			get { return _SerialId; }
+		}
+
+		/// <summary>
 		/// Returns a new instance that is a copy of the original one.
 		/// </summary>
 		/// <returns>A new instance.</returns>
-		public DataLink Clone()
-		{
-			throw new NotSupportedException(
-				"Abstract IDataLink::{0}.Clone() invoked.".FormatWith(GetType().EasyName()));
-		}
 		IDataLink IDataLink.Clone()
 		{
 			throw new NotSupportedException(
@@ -149,14 +145,6 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// The serial id assigned to this instance.
-		/// </summary>
-		public ulong SerialId
-		{
-			get { return _SerialId; }
-		}
-
-		/// <summary>
 		/// The engine this link is associated with.
 		/// </summary>
 		public IDataEngine Engine
@@ -165,42 +153,19 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// The parser instance this link maintains.
-		/// <para>The value held by this property is generated on demand when the previous one
-		/// was null or disposed.</para>
-		/// </summary>
-		public IParser Parser
-		{
-			get
-			{
-				if (IsDisposed) return null;
-
-				if (_Parser == null || _Parser.IsDisposed)
-				{
-					if ((_Parser = _Engine.CreateParser()) == null)
-						throw new CannotCreateException(
-							"Cannot create a new parser for this instance '{0}'.".FormatWith(this));
-				}
-				return _Parser;
-			}
-		}
-
-		/// <summary>
-		/// The abstract nestable transaction this instance maintains. If the reference this
-		/// property maintains is null, or if it is is disposed, the getter generates a new
-		/// instance on demand. This property can return null if the link is disposed.
+		/// The nestable transaction this instance maintains, created on-demand if needed (for
+		/// instance if the previous reference is disposed).
 		/// </summary>
 		public INestableTransaction Transaction
 		{
 			get
 			{
-				if (IsDisposed) return null;
-
-				if (_Transaction == null || _Transaction.IsDisposed)
+				if (!IsDisposed && (_Transaction == null || _Transaction.IsDisposed))
 				{
 					if ((_Transaction = CreateTransaction()) == null)
 						throw new CannotCreateException(
-							"Cannot create a new transaction for this instance '{0}'.".FormatWith(this));
+							"Cannot create a new transaction for this instance '{0}'."
+							.FormatWith(this));
 				}
 				return _Transaction;
 			}
@@ -216,57 +181,29 @@ namespace Kerosene.ORM.Core.Concrete
 		/// for this instance.
 		/// <para>The setter may also fail if the mode is not supported by the concrete instance.</para>
 		/// </summary>
-		public NestableTransactionMode DefaultTransactionMode
+		public virtual NestableTransactionMode DefaultTransactionMode
 		{
 			get { return _DefaultTransactionMode; }
 			set { _DefaultTransactionMode = value; }
 		}
 
 		/// <summary>
-		/// Opens the connection against the underlying database-alike service.
-		/// <para>Note that this method is called automatically by the framework when needed.</para>
-		/// <para>Invoking this method on an open link may generate an exception.</para>
+		/// Opens the connection against the database-alike service.
+		/// <para>The framework invokes this method automatically when needed.</para>
+		/// <para>Invoking this method in an opened link may throw an exception.</para>
 		/// </summary>
 		public abstract void Open();
 
 		/// <summary>
-		/// Closes the connection that might be opened against the underlying database-alike
-		/// service.
-		/// <para>Note that this method is called automatically by the framework when needed.</para>
-		/// <para>Invoking this method on an already closed connection has no effects.</para>
+		/// Closes the connection that might be opened against the database-alike service.
+		/// <para>The framework invokes this method automatically when needed.</para>
 		/// </summary>
 		public abstract void Close();
 
 		/// <summary>
-		/// Whether the connection against the underlying database-alike service can be considered
-		/// to be opened or not.
+		/// Whether this connection can be considered opened or not.
 		/// </summary>
 		public abstract bool IsOpen { get; }
-
-		/// <summary>
-		/// Factory method invoked to create an enumerator to execute the given enumerable
-		/// command.
-		/// </summary>
-		/// <param name="command">The command to execute.</param>
-		/// <returns>An enumerator able to execute de command.</returns>
-		IEnumerableExecutor IDataLink.CreateEnumerableExecutor(IEnumerableCommand command)
-		{
-			throw new NotSupportedException(
-				"Abstract IDataLink::{0}.CreateEnumerableExecutor(command) invoked."
-				.FormatWith(GetType().EasyName()));
-		}
-
-		/// <summary>
-		/// Factory method invoked to create an executor to execute the given scalar command.
-		/// </summary>
-		/// <param name="command">The command to execute.</param>
-		/// <returns>An executor able to execute de command.</returns>
-		IScalarExecutor IDataLink.CreateScalarExecutor(IScalarCommand command)
-		{
-			throw new NotSupportedException(
-				"Abstract IDataLink::{0}.CreateScalarExecutor(command) invoked."
-				.FormatWith(GetType().EasyName()));
-		}
 
 		/// <summary>
 		/// Creates a new raw command for this link.
@@ -382,6 +319,31 @@ namespace Kerosene.ORM.Core.Concrete
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
 			return Engine.CreateUpdateCommand(this, table);
+		}
+
+		/// <summary>
+		/// Factory method invoked to create an enumerator to execute the given enumerable
+		/// command.
+		/// </summary>
+		/// <param name="command">The command to execute.</param>
+		/// <returns>An enumerator able to execute de command.</returns>
+		IEnumerableExecutor IDataLink.CreateEnumerableExecutor(IEnumerableCommand command)
+		{
+			throw new NotSupportedException(
+				"Abstract IDataLink::{0}.CreateEnumerableExecutor(command) invoked."
+				.FormatWith(GetType().EasyName()));
+		}
+
+		/// <summary>
+		/// Factory method invoked to create an executor to execute the given scalar command.
+		/// </summary>
+		/// <param name="command">The command to execute.</param>
+		/// <returns>An executor able to execute de command.</returns>
+		IScalarExecutor IDataLink.CreateScalarExecutor(IScalarCommand command)
+		{
+			throw new NotSupportedException(
+				"Abstract IDataLink::{0}.CreateScalarExecutor(command) invoked."
+				.FormatWith(GetType().EasyName()));
 		}
 	}
 }

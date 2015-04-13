@@ -1,15 +1,16 @@
 ﻿// ======================================================== IMetaCommand.cs
 namespace Kerosene.ORM.Maps
 {
+	using Kerosene.ORM.Core;
 	using Kerosene.Tools;
 	using System;
+	using System.Linq;
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents a command that can be executed for the entities managed by the map this
-	/// instance is associated with.
+	/// Represents a command related to the entities managed by the map it is associated with.
 	/// </summary>
-	public interface IMetaCommand : Core.ICoreCommandProvider
+	public interface IMetaCommand : IDisposableEx, ICoreCommandProvider
 	{
 		/// <summary>
 		/// The map this command is associated with.
@@ -33,8 +34,7 @@ namespace Kerosene.ORM.Maps
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents a command that can be executed for the entities managed by the map this
-	/// instance is associated with.
+	/// Represents a command related to the entities managed by the map it is associated with.
 	/// </summary>
 	public interface IMetaCommand<T> : IMetaCommand where T : class
 	{

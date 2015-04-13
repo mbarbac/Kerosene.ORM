@@ -7,10 +7,9 @@ namespace Kerosene.ORM.Core
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents one alias of an element in a given context.
+	/// Represents the alias associated with a given element in a given context.
 	/// </summary>
-	public interface IElementAlias
-		: IDisposableEx, ICloneable, ISerializable, IEquivalent<IElementAlias>
+	public interface IElementAlias : IDisposableEx, ICloneable, ISerializable, IEquivalent<IElementAlias>
 	{
 		/// <summary>
 		/// Returns a new instance that otherwise is a copy of the original one.
@@ -50,7 +49,7 @@ namespace Kerosene.ORM.Core
 		/// <returns>The validated element name.</returns>
 		public static string ValidateElement(string element)
 		{
-			return element.Validated("Element", canbeNull: true);
+			return element.NullIfTrimmedIsEmpty();
 		}
 
 		/// <summary>

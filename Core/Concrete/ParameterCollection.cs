@@ -11,8 +11,7 @@ namespace Kerosene.ORM.Core.Concrete
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents the collection of generic parameters captured for a command, typically, but
-	/// also potentially or for any other element.
+	/// Represents the collection of parameters of a command.
 	/// </summary>
 	[Serializable]
 	public class ParameterCollection : IParameterCollection
@@ -155,12 +154,10 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Returns true if the state of this object can be considered as equivalent to the target
-		/// one, based upon any arbitrary criteria implemented in this method.
+		/// Returns true if this object can be considered as equivalent to the target one given.
 		/// </summary>
-		/// <param name="target">The target instance this one will be tested for equivalence against.</param>
-		/// <returns>True if the state of this instance can be considered as equivalent to the
-		/// target one, or false otherwise.</returns>
+		/// <param name="target">The target object this one will be tested for equivalence.</param>
+		/// <returns>True if this object can be considered as equivalent to the target one given.</returns>
 		public bool EquivalentTo(IParameterCollection target)
 		{
 			return OnEquivalentTo(target);
@@ -276,33 +273,6 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 
 		/// <summary>
-		/// Returns the first member in this instance that matches the conditions given in the
-		/// predicate, or null if not such member can be found.
-		/// </summary>
-		/// <param name="match">The predicate that defines the conditions of the member to find.</param>
-		/// <returns>The member found, or null.</returns>
-		public IParameter Find(Predicate<IParameter> match)
-		{
-			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
-			if (match == null) throw new ArgumentNullException("match", "Predicate cannot be null.");
-			return _Members.Find(match);
-		}
-
-		/// <summary>
-		/// Returns the collection of members in this instance that match the conditions given in
-		/// the predicate. This collection might be empty if there were no members that match that
-		/// conditions.
-		/// </summary>
-		/// <param name="match">The predicate that defines the conditions of the members to find.</param>
-		/// <returns>A collection with the members found.</returns>
-		public IEnumerable<IParameter> FindAll(Predicate<IParameter> match)
-		{
-			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
-			if (match == null) throw new ArgumentNullException("match", "Predicate cannot be null.");
-			return _Members.FindAll(match);
-		}
-
-		/// <summary>
 		/// Gets the member whose name is given, or null if not such member can be found.
 		/// </summary>
 		/// <param name="name">The name of the member to find.</param>
@@ -313,16 +283,6 @@ namespace Kerosene.ORM.Core.Concrete
 			name = Core.Parameter.ValidateName(name);
 
 			return _Members.Find(x => string.Compare(x.Name, name, !CaseSensitiveNames) == 0);
-		}
-
-		/// <summary>
-		/// Factory method invoked to create a new orphan member but with the right type for
-		/// this collection.
-		/// </summary>
-		/// <returns>A new orphan member.</returns>
-		public virtual IParameter CreateOrphanMember()
-		{
-			return new Parameter();
 		}
 
 		/// <summary>
@@ -350,6 +310,16 @@ namespace Kerosene.ORM.Core.Concrete
 
 			_Members.Add(member); // To intercept re-entrant operation...
 			member.Owner = this;
+		}
+
+		/// <summary>
+		/// Factory method invoked to create a new orphan member but with the right type for
+		/// this collection.
+		/// </summary>
+		/// <returns>A new orphan member.</returns>
+		public virtual IParameter CreateOrphanMember()
+		{
+			return new Parameter();
 		}
 
 		/// <summary>

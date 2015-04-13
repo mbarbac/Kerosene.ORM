@@ -5,11 +5,11 @@ namespace Kerosene.ORM.Direct
 	using System;
 	using System.Collections.Generic;
 	using System.Data.Common;
+	using System.Linq;
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents an underlying database engine in a direct connection scenario. Maintains its
-	/// main characteristics and acts as a factory to create concrete objects adapted to it.
+	/// Represents the type of an underlying database engine in a direct connection scenario.
 	/// </summary>
 	public interface IDataEngine : Core.IDataEngine
 	{

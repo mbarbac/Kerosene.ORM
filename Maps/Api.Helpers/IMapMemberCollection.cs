@@ -1,14 +1,16 @@
 ﻿// ======================================================== IMapMemberCollection.cs
 namespace Kerosene.ORM.Maps
 {
+	using Kerosene.ORM.Core;
 	using Kerosene.Tools;
 	using System;
 	using System.Collections.Generic;
+	using System.Linq;
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents the collection of members that have been explicitly defined for its
-	/// associated map.
+	/// Represents the collection of members in the type that have been explicitly associated
+	/// with the map.
 	/// </summary>
 	public interface IMapMemberCollection : IEnumerable<IMapMember>
 	{
@@ -41,10 +43,11 @@ namespace Kerosene.ORM.Maps
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents the collection of members that have been explicitly defined for its
-	/// associated map.
+	/// Represents the collection of members in the type that have been explicitly associated
+	/// with the map.
 	/// </summary>
-	public interface IMapMemberCollection<T> : IEnumerable<IMapMember<T>>, IMapMemberCollection where T : class
+	public interface IMapMemberCollection<T>
+		: IMapMemberCollection, IEnumerable<IMapMember<T>> where T : class
 	{
 		/// <summary>
 		/// The map this instance is associated with.

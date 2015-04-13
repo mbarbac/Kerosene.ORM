@@ -3,30 +3,50 @@ namespace Kerosene.ORM.Direct.Concrete
 {
 	using Kerosene.Tools;
 	using System;
-	using System.Collections;
 	using System.Collections.Generic;
 	using System.Data.Common;
 	using System.Linq;
-	using System.Text;
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents a generic ORACLE database in a direct connection scenario.
+	/// Represents a generic ORACLE database engine for a direct connection scenario.
 	/// </summary>
 	public class OracleEngine : Core.Concrete.OracleEngine, IDataEngine
 	{
 		/// <summary>
-		/// Initializes a new engine.
+		/// Initializes a new instance using default values.
 		/// </summary>
-		public OracleEngine() : base() { }
+		public OracleEngine()
+			: base()
+		{
+		}
 
 		/// <summary>
-		/// Invoked to obtain a string with identification of this string for representation
-		/// purposes.
+		/// Initializes a new instance using the values given.
+		/// </summary>
+		/// <param name="invariantName">The invariant name of the engine.</param>
+		/// <param name="serverVersion">The server version, or null.</param>
+		/// <param name="caseSensitiveNames">Whether names in the database are case sensitive or not.</param>
+		/// <param name="parameterPrefix">The default prefix for naming command parameters.</param>
+		/// <param name="positionalParameters">Whether the command parameters are positional or not.</param>
+		/// <param name="supportsSkipTake">Whether the engine supports a normalized way of implementing a skip/take functionality or not.</param>
+		public OracleEngine(
+			string invariantName,
+			string serverVersion = null,
+			bool caseSensitiveNames = ORACLE_CASE_SENSITIVENAMES,
+			string parameterPrefix = ORACLE_PARAMETER_PREFIX,
+			bool positionalParameters = ORACLE_POSITIONAL_PARAMETERS,
+			bool supportsSkipTake = ORACLE_SUPPORT_NATIVE_SKIPTAKE)
+			: base(invariantName, serverVersion, caseSensitiveNames, parameterPrefix, positionalParameters, supportsSkipTake)
+		{
+		}
+
+		/// <summary>
+		/// Invoked to obtain the type name for string representation purposes.
 		/// </summary>
 		protected override string ToStringType()
 		{
-			return "Direct" + base.ToStringType();
+			return GetType().EasyName();
 		}
 
 		/// <summary>

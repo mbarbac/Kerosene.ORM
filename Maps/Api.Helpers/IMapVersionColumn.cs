@@ -1,13 +1,15 @@
 ﻿// ======================================================== IMapVersionColumn.cs
 namespace Kerosene.ORM.Maps
 {
+	using Kerosene.ORM.Core;
 	using Kerosene.Tools;
 	using System;
+	using System.Linq;
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents the column in the primary table in the database that will be used for row
-	/// version control, if any.
+	/// If this instance is not empty represents the column in the primary table that will be
+	/// used for row version control purposes.
 	/// </summary>
 	public interface IMapVersionColumn
 	{
@@ -19,7 +21,7 @@ namespace Kerosene.ORM.Maps
 		/// <summary>
 		/// The name of the column to be used for row version control, if any.
 		/// </summary>
-		string Name { get; }
+		string Name { get; set; }
 
 		/// <summary>
 		/// Sets the name of the database column. If this value is null the row version control is
@@ -50,8 +52,8 @@ namespace Kerosene.ORM.Maps
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents the column in the primary table in the database that will be used for row
-	/// version control, if any.
+	/// If this instance is not empty represents the column in the primary table that will be
+	/// used for row version control purposes.
 	/// </summary>
 	public interface IMapVersionColumn<T> : IMapVersionColumn where T : class
 	{

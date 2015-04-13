@@ -4,10 +4,11 @@ namespace Kerosene.ORM.Direct
 	using Kerosene.Tools;
 	using System;
 	using System.Data;
+	using System.Linq;
 
 	// ==================================================== 
 	/// <summary>
-	/// Represents an abstract direct connection against an underlying database-alike service.
+	/// Represents an agnostic direct connection with an underlying database.
 	/// </summary>
 	public interface IDataLink : Core.IDataLink
 	{
@@ -23,9 +24,8 @@ namespace Kerosene.ORM.Direct
 		new IDataEngine Engine { get; }
 
 		/// <summary>
-		/// The abstract nestable transaction this instance maintains. If the reference this
-		/// property maintains is null, or if it is is disposed, the getter generates a new
-		/// instance on demand. This property can return null if the link is disposed.
+		/// The nestable transaction this instance maintains, created on-demand if needed (for
+		/// instance if the previous reference is disposed).
 		/// </summary>
 		new INestableTransaction Transaction { get; }
 
