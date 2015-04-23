@@ -1,5 +1,4 @@
-﻿// ======================================================== DataRepository.cs
-namespace Kerosene.ORM.Maps.Concrete
+﻿namespace Kerosene.ORM.Maps.Concrete
 {
 	using Kerosene.ORM.Core;
 	using Kerosene.Tools;
@@ -283,7 +282,7 @@ namespace Kerosene.ORM.Maps.Concrete
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
 			if (type == null) throw new ArgumentNullException("type", "Type cannot be null.");
-			
+
 			// For performance purposes when auto-maps as there is little control on what types
 			// are passed...
 			if (!type.IsClass) return null;
@@ -390,7 +389,7 @@ namespace Kerosene.ORM.Maps.Concrete
 
 				var enabled = IsCollectorEnabled;
 				DisableCollector();
-				
+
 				lock (UberMaps.SyncRoot)
 				{
 					foreach (var map in UberMaps) map.TrackChildEntities = value;
@@ -867,4 +866,3 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 	}
 }
-// ======================================================== 

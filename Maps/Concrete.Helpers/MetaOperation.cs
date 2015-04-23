@@ -1,5 +1,4 @@
-﻿// ======================================================== MetaOperation.cs
-namespace Kerosene.ORM.Maps.Concrete
+﻿namespace Kerosene.ORM.Maps.Concrete
 {
 	using Kerosene.ORM.Core;
 	using Kerosene.Tools;
@@ -443,7 +442,7 @@ namespace Kerosene.ORM.Maps.Concrete
 
 			return false;
 		}
-		
+
 		/// <summary>
 		/// Validates that the row version captured in the meta-entity is the same as the current
 		/// one in the database, throwing an exception if a change is detected.
@@ -544,4 +543,3 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 	}
 }
-// ======================================================== 

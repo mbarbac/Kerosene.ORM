@@ -1,5 +1,4 @@
-﻿// ======================================================== UpdateCommand.cs
-namespace Kerosene.ORM.Core.Concrete
+﻿namespace Kerosene.ORM.Core.Concrete
 {
 	using Kerosene.Tools;
 	using System;
@@ -252,4 +251,3 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 	}
 }
-// ======================================================== 

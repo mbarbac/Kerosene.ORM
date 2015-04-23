@@ -1,5 +1,4 @@
-﻿// ======================================================== ConnectionStringEx.cs
-namespace Kerosene.ORM.Configuration
+﻿namespace Kerosene.ORM.Configuration
 {
 	using Kerosene.Tools;
 	using System;
@@ -40,4 +39,3 @@ namespace Kerosene.ORM.Configuration
 		}
 	}
 }
-// ======================================================== 

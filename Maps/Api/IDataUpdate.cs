@@ -1,5 +1,4 @@
-﻿// ======================================================== IDataUpdate.cs
-namespace Kerosene.ORM.Maps
+﻿namespace Kerosene.ORM.Maps
 {
 	using Kerosene.ORM.Core;
 	using Kerosene.Tools;
@@ -18,4 +17,3 @@ namespace Kerosene.ORM.Maps
 	/// </summary>
 	public interface IDataUpdate<T> : IMetaOperation<T>, IDataUpdate where T : class { }
 }
-// ======================================================== 

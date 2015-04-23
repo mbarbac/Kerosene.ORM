@@ -1,11 +1,10 @@
-﻿// ======================================================== IDataEngine.cs
-namespace Kerosene.ORM.Core
+﻿namespace Kerosene.ORM.Core
 {
 	using Kerosene.Tools;
 	using System;
 	using System.Collections.Generic;
 
-	// ==================================================== 
+	// ====================================================
 	/// <summary>
 	/// Represents the type of an underlying database engine.
 	/// </summary>
@@ -183,7 +182,7 @@ namespace Kerosene.ORM.Core
 		object TryTransform(object value);
 	}
 
-	// ==================================================== 
+	// ====================================================
 	/// <summary>
 	/// Helpers and extensions for working with <see cref="IDataEngine"/> instances.
 	/// </summary>
@@ -279,4 +278,3 @@ namespace Kerosene.ORM.Core
 		}
 	}
 }
-// ======================================================== 

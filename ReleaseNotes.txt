@@ -4,6 +4,9 @@ Copyright (c) Moises Barba Cebeira 2008-2015. All rights reserved.
 ====================================================================================
 VERSION 7.2.0:
 -------------------
+-	General code refactoring.
+VERSION 7.0.5:
+-------------------
 -	Factories are deprecated in this version and their functionality is moved into
 	the core api classes that represent them. For intance, the 'EngineFactory'
 	functionality is moved into the 'DataEngine' class, and so on.

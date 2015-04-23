@@ -1,5 +1,4 @@
-﻿// ======================================================== IMetaEntity.cs
-namespace Kerosene.ORM.Maps
+﻿namespace Kerosene.ORM.Maps
 {
 	using Kerosene.ORM.Core;
 	using Kerosene.Tools;
@@ -65,7 +64,6 @@ namespace Kerosene.ORM.Maps
 		/// <summary>
 		/// The state of the underlying entity.
 		/// </summary>
-		MetaState State { get; }	
+		MetaState State { get; }
 	}
 }
-// ======================================================== 

@@ -1,5 +1,4 @@
-﻿// ======================================================== IEnumerableExecutor.cs
-namespace Kerosene.ORM.Direct
+﻿namespace Kerosene.ORM.Direct
 {
 	using Kerosene.Tools;
 	using System;
@@ -21,4 +20,3 @@ namespace Kerosene.ORM.Direct
 		new IEnumerableExecutor GetEnumerator();
 	}
 }
-// ======================================================== 

@@ -1,12 +1,11 @@
-﻿// ======================================================== MapColumn.cs
-namespace Kerosene.ORM.Maps.Concrete
+﻿namespace Kerosene.ORM.Maps.Concrete
 {
 	using Kerosene.ORM.Core;
 	using Kerosene.Tools;
 	using System;
 	using System.Linq;
 	using System.Text;
-	
+
 	// ==================================================== 
 	/// <summary>
 	/// Extends the <see cref="IMapColumn"/> interface.
@@ -426,4 +425,3 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 	}
 }
-// ======================================================== 

@@ -1,5 +1,4 @@
-﻿// ======================================================== IEnumerableExecutor.cs
-namespace Kerosene.ORM.Core
+﻿namespace Kerosene.ORM.Core
 {
 	using Kerosene.Tools;
 	using System;
@@ -79,4 +78,3 @@ namespace Kerosene.ORM.Core
 		object Last();
 	}
 }
-// ======================================================== 

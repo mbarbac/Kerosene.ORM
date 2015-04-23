@@ -1,5 +1,4 @@
-﻿// ======================================================== ProxyGenerator.cs
-namespace Kerosene.ORM.Maps.Concrete
+﻿namespace Kerosene.ORM.Maps.Concrete
 {
 	using Kerosene.ORM.Core;
 	using Kerosene.Tools;
@@ -93,7 +92,7 @@ namespace Kerosene.ORM.Maps.Concrete
 			if (list == null || list.Count == 0) return null;
 
 			var type = typeof(T);
-			var name = type.EasyName(depth: int.MaxValue);
+			var name = type.EasyName(chain: true);
 
 			foreach (var entry in list) name = string.Format("{0}_{1}", name, entry.Name);
 			if (name.Length > MAX_PROXY_NAME_LENGTH)
@@ -507,4 +506,3 @@ namespace Kerosene.ORM.Maps.Concrete
 		internal MethodInfo SourceBackSetter { get; set; }
 	}
 }
-// ======================================================== 

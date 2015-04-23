@@ -1,10 +1,9 @@
-﻿// ======================================================== OleDbEngine.cs
-namespace Kerosene.ORM.Core.Concrete
+﻿namespace Kerosene.ORM.Core.Concrete
 {
 	using Kerosene.Tools;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+	using System;
+	using System.Collections.Generic;
+	using System.Linq;
 
 	// ==================================================== 
 	/// <summary>
@@ -87,4 +86,3 @@ using System.Linq;
 		}
 	}
 }
-// ======================================================== 

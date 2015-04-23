@@ -1,5 +1,4 @@
-﻿// ======================================================== IMapMemberColumn.cs
-namespace Kerosene.ORM.Maps
+﻿namespace Kerosene.ORM.Maps
 {
 	using Kerosene.ORM.Core;
 	using Kerosene.Tools;
@@ -160,4 +159,3 @@ namespace Kerosene.ORM.Maps
 		new IMapMemberColumn<T> OnElement(Func<dynamic, object> element);
 	}
 }
-// ======================================================== 

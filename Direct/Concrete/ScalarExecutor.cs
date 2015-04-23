@@ -1,5 +1,4 @@
-﻿// ======================================================== ScalarExecutor.cs
-namespace Kerosene.ORM.Direct.Concrete
+﻿namespace Kerosene.ORM.Direct.Concrete
 {
 	using Kerosene.Tools;
 	using System;
@@ -49,4 +48,3 @@ namespace Kerosene.ORM.Direct.Concrete
 		}
 	}
 }
-// ======================================================== 

@@ -1,5 +1,4 @@
-﻿// ======================================================== DataEngine.cs
-namespace Kerosene.ORM.Direct
+﻿namespace Kerosene.ORM.Direct
 {
 	using Kerosene.Tools;
 	using System;
@@ -11,7 +10,7 @@ namespace Kerosene.ORM.Direct
 	/// Factory class to register and locate <see cref="IDataEngine"/> instances adapted to
 	/// direct connection scenarios.
 	/// </summary>
-	public static partial class DataEngine /*DataEngine*/
+	public static partial class DataEngine
 	{
 		/// <summary>
 		/// Initializes the list of registered engines with the default ones and those that are
@@ -89,4 +88,3 @@ namespace Kerosene.ORM.Direct
 		}
 	}
 }
-// ======================================================== 

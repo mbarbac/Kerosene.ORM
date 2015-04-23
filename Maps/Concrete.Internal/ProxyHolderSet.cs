@@ -1,5 +1,4 @@
-﻿// ======================================================== ProxyHolderSet.cs
-namespace Kerosene.ORM.Maps.Concrete
+﻿namespace Kerosene.ORM.Maps.Concrete
 {
 	using Kerosene.ORM.Core;
 	using Kerosene.Tools;
@@ -120,4 +119,3 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 	}
 }
-// ======================================================== 

@@ -1,5 +1,4 @@
-﻿// ======================================================== ISchema.cs
-namespace Kerosene.ORM.Core
+﻿namespace Kerosene.ORM.Core
 {
 	using Kerosene.Tools;
 	using System;
@@ -173,4 +172,3 @@ namespace Kerosene.ORM.Core
 		public const bool DEFAULT_CASESENSITIVE_NAMES = DataEngine.DEFAULT_CASESENSITIVE_NAMES;
 	}
 }
-// ======================================================== 

@@ -1,5 +1,4 @@
-﻿// ======================================================== Schema.cs
-namespace Kerosene.ORM.Core.Concrete
+﻿namespace Kerosene.ORM.Core.Concrete
 {
 	using Kerosene.Tools;
 	using System;
@@ -137,7 +136,7 @@ namespace Kerosene.ORM.Core.Concrete
 				count++;
 			}
 			info.AddValue("MembersCount", count);
-#endif 
+#endif
 		}
 
 		/// <summary>
@@ -608,4 +607,3 @@ namespace Kerosene.ORM.Core.Concrete
 		}
 	}
 }
-// ======================================================== 

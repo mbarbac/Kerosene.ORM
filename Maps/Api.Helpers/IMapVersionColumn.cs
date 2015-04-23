@@ -1,5 +1,4 @@
-﻿// ======================================================== IMapVersionColumn.cs
-namespace Kerosene.ORM.Maps
+﻿namespace Kerosene.ORM.Maps
 {
 	using Kerosene.ORM.Core;
 	using Kerosene.Tools;
@@ -82,4 +81,3 @@ namespace Kerosene.ORM.Maps
 		new IMapVersionColumn<T> OnValueToString(Func<object, string> func);
 	}
 }
-// ======================================================== 

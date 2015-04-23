@@ -1,5 +1,4 @@
-﻿// ======================================================== IMapMember.cs
-namespace Kerosene.ORM.Maps
+﻿namespace Kerosene.ORM.Maps
 {
 	using Kerosene.ORM.Core;
 	using Kerosene.Tools;
@@ -153,6 +152,4 @@ namespace Kerosene.ORM.Maps
 		/// <returns>This instance to permit a fluent chaining syntax.</returns>
 		IMapMember<T> WithColumn(Func<dynamic, object> name, Action<IMapMemberColumn<T>> onCreate = null);
 	}
-
 }
-// ======================================================== 

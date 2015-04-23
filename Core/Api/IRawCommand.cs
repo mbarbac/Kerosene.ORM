@@ -1,5 +1,4 @@
-﻿// ======================================================== IRawCommand.cs
-namespace Kerosene.ORM.Core
+﻿namespace Kerosene.ORM.Core
 {
 	using Kerosene.Tools;
 	using System;
@@ -62,4 +61,3 @@ namespace Kerosene.ORM.Core
 		IRawCommand Append(Func<dynamic, object> spec);
 	}
 }
-// ======================================================== 
