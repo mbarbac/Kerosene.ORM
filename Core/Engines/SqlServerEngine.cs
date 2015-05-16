@@ -11,10 +11,15 @@ namespace Kerosene.ORM.Core.Concrete
 	/// </summary>
 	public class SqlServerEngine : DataEngine, IDataEngine
 	{
+		/// <summary></summary>
 		public const string SQLSERVER_INVARIANT_NAME = "System.Data.SqlClient";
+		/// <summary></summary>
 		public const bool SQLSERVER_CASE_SENSITIVENAMES = false;
+		/// <summary></summary>
 		public const string SQLSERVER_PARAMETER_PREFIX = "@";
+		/// <summary></summary>
 		public const bool SQLSERVER_POSITIONAL_PARAMETERS = false;
+		/// <summary></summary>
 		public const bool SQLSERVER_SUPPORT_NATIVE_SKIPTAKE = false;
 
 		/// <summary>

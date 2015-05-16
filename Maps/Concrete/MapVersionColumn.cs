@@ -57,6 +57,7 @@ namespace Kerosene.ORM.Maps.Concrete
 			_ValueToString = null;
 		}
 
+		/// <summary></summary>
 		~MapVersionColumn()
 		{
 			if (!IsDisposed) OnDispose();

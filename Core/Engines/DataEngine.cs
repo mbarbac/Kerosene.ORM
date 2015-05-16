@@ -77,6 +77,7 @@ namespace Kerosene.ORM.Core.Concrete
 			if (!IsDisposed) { OnDispose(true); GC.SuppressFinalize(this); }
 		}
 
+		/// <summary></summary>
 		~DataEngine()
 		{
 			if (!IsDisposed) OnDispose(false);
@@ -141,7 +142,7 @@ namespace Kerosene.ORM.Core.Concrete
 		/// </summary>
 		/// <param name="settings">A dictionary containing the names and values of the properties
 		/// that has to be changed with respect to the original ones, or null if these changes
-		/// are not needed.
+		/// are not needed.</param>
 		/// <returns>A new instance.</returns>
 		public DataEngine Clone(IDictionary<string, object> settings)
 		{
@@ -158,6 +159,7 @@ namespace Kerosene.ORM.Core.Concrete
 		/// chain.
 		/// </summary>
 		/// <param name="cloned">The cloned object.</param>
+		/// <param name="settings">If not null a dictionary containing the entries to modify.</param>
 		protected virtual void OnClone(object cloned, IDictionary<string, object> settings)
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());

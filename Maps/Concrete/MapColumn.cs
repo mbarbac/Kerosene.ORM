@@ -74,6 +74,7 @@ namespace Kerosene.ORM.Maps.Concrete
 			_LoadEntity = null;
 		}
 
+		/// <summary></summary>
 		~MapColumn()
 		{
 			if (!IsDisposed) OnDispose();
@@ -451,7 +452,7 @@ namespace Kerosene.ORM.Maps.Concrete
 		/// Sets the delegate to invoke with (value, entity) arguments to load into the
 		/// entity the value from the database record for this column.
 		/// </summary>
-		/// <param name="onWrite">The delegate to invoke, or null.</param>
+		/// <param name="onLoad">The delegate to invoke, or null.</param>
 		/// <returns>This instance to permit a fluent chaining syntax.</returns>
 		public MapColumn<T> OnLoadEntity(Action<object, T> onLoad)
 		{

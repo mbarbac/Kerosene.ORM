@@ -74,6 +74,7 @@ namespace Kerosene.ORM.Maps.Concrete
 			_Map = null;
 		}
 
+		/// <summary></summary>
 		~MapMemberCollection()
 		{
 			if (!IsDisposed) OnDispose();
@@ -126,6 +127,7 @@ namespace Kerosene.ORM.Maps.Concrete
 		/// chain.
 		/// </summary>
 		/// <param name="cloned">The cloned object.</param>
+		/// <param name="cloneList">True to clone the source items that were not orphans.</param>
 		protected virtual void OnClone(object cloned, bool cloneList = true)
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());

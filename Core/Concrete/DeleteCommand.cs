@@ -12,6 +12,8 @@ namespace Kerosene.ORM.Core.Concrete
 	public class DeleteCommand : CommandEnumSca, IDeleteCommand
 	{
 		string _TableName = null;
+
+		/// <summary></summary>
 		protected string TheWhereData = null;
 
 		/// <summary>

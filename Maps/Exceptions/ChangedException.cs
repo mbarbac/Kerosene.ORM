@@ -10,8 +10,13 @@ namespace Kerosene.ORM.Maps
 	[Serializable]
 	public class ChangedException : Exception
 	{
+		/// <summary></summary>
 		public ChangedException() { }
+
+		/// <summary></summary>
 		public ChangedException(string message) : base(message) { }
+
+		/// <summary></summary>
 		public ChangedException(string message, Exception inner) : base(message, inner) { }
 	}
 }

@@ -156,7 +156,7 @@ namespace Kerosene.ORM.Maps
 		/// contents of its WHERE clause.
 		/// </summary>
 		/// <param name="where">The dynamic lambda expression that resolves into the contents of
-		/// this clause.
+		/// this clause.</param>
 		/// <returns>A new query command.</returns>
 		IDataQuery Where(Func<dynamic, object> where);
 
@@ -277,7 +277,7 @@ namespace Kerosene.ORM.Maps
 		/// contents of its WHERE clause.
 		/// </summary>
 		/// <param name="where">The dynamic lambda expression that resolves into the contents of
-		/// this clause.
+		/// this clause.</param>
 		/// <returns>A new query command.</returns>
 		new IDataQuery<T> Where(Func<dynamic, object> where);
 

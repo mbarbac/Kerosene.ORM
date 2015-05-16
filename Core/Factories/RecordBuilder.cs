@@ -57,6 +57,7 @@ namespace Kerosene.ORM.Core
 			if (!IsDisposed) { OnDispose(true); GC.SuppressFinalize(this); }
 		}
 
+		/// <summary></summary>
 		~RecordBuilder()
 		{
 			if (!IsDisposed) OnDispose(false);
@@ -240,7 +241,7 @@ namespace Kerosene.ORM.Core
 		/// same column name for different tables then an exception is thrown.
 		/// <para>The setter creates dynamically an entry for the given column specification.</para>
 		/// </summary>
-		/// <param name="column">The column name.</param>
+		/// <param name="spec">A dynamic lambda expression that resolves into the column name.</param>
 		/// <returns>The value held by the requested entry.</returns>
 		public object this[Func<dynamic, object> spec]
 		{

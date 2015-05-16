@@ -120,8 +120,8 @@ namespace Kerosene.ORM.Maps.Concrete
 		IUberOperation _UberOperation = null;
 		IRecord _Record = null;
 		string _IdentityString = null;
-		Dictionary<string, HashSet<object>> _ChildDependencies = new Dictionary<string, HashSet<object>>();
 		bool _Completed = false;
+		Dictionary<string, HashSet<object>> _ChildDependencies = new Dictionary<string, HashSet<object>>();
 
 		private MetaEntity() { }
 
@@ -215,7 +215,11 @@ namespace Kerosene.ORM.Maps.Concrete
 		/// </summary>
 		internal bool HasValidEntity
 		{
-			get { return (_WeakReference == null || !_WeakReference.IsAlive || _WeakReference.Target == null) ? false : true; }
+			get
+			{
+				bool invalid = _WeakReference == null || !_WeakReference.IsAlive || _WeakReference.Target == null;
+				return !invalid;
+			}
 		}
 		bool IUberEntity.HasValidEntity
 		{
@@ -375,19 +379,6 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 
 		/// <summary>
-		/// The collection of objects, if any, captured as child dependencies of the underlying
-		/// instance, organized by the name of the property that holds them.
-		/// </summary>
-		internal Dictionary<string, HashSet<object>> ChildDependencies
-		{
-			get { return this._ChildDependencies; }
-		}
-		Dictionary<string, HashSet<object>> IUberEntity.ChildDependencies
-		{
-			get { return this.ChildDependencies; }
-		}
-
-		/// <summary>
 		/// Whether the members defined for the underlying object can be considered as completed
 		/// or not.
 		/// </summary>
@@ -414,6 +405,19 @@ namespace Kerosene.ORM.Maps.Concrete
 		{
 			get { return this.Completed; }
 			set { this.Completed = value; }
+		}
+
+		/// <summary>
+		/// The collection of objects, if any, captured as child dependencies of the underlying
+		/// instance, organized by the name of the property that holds them.
+		/// </summary>
+		internal Dictionary<string, HashSet<object>> ChildDependencies
+		{
+			get { return this._ChildDependencies; }
+		}
+		Dictionary<string, HashSet<object>> IUberEntity.ChildDependencies
+		{
+			get { return this.ChildDependencies; }
 		}
 	}
 }

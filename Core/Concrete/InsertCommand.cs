@@ -13,7 +13,10 @@ namespace Kerosene.ORM.Core.Concrete
 	public class InsertCommand : CommandEnumSca, IInsertCommand
 	{
 		string _TableName = null;
+
+		/// <summary></summary>
 		protected string TheDataColumns = null;
+		/// <summary></summary>
 		protected string TheDataValues = null;
 
 		/// <summary>

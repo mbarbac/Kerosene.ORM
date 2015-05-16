@@ -166,12 +166,7 @@ namespace Kerosene.ORM.Maps.Concrete
 		/// <summary>
 		/// Whether the entities' GC collector is enabled or not by default.
 		/// </summary>
-		internal const bool DEFAULT_ENABLE_COLLECTOR_CG =
-#if DEBUG
-		true;
-#else
-		false;
-#endif
+		internal const bool DEFAULT_ENABLE_COLLECTOR_CG = true;
 
 		/// <summary>
 		/// Whether the entities' GC collector is enabled or not.
@@ -211,9 +206,9 @@ namespace Kerosene.ORM.Maps.Concrete
 		/// </summary>
 		internal const int DEFAULT_COLLECTOR_INTERVAL =
 #if DEBUG
-		8 * (1000); // seconds
+		3 * (1000); // seconds
 #else
-		5 * (60 * 1000); /// minutes
+		3 * (60 * 1000); /// minutes
 #endif
 
 		/// <summary>
@@ -252,6 +247,6 @@ namespace Kerosene.ORM.Maps.Concrete
 		/// <summary>
 		/// The default minimum interval at which the internal collector is fired.
 		/// </summary>
-		internal const int DEFAULT_COLLECTOR_MIN_INTERVAL = 2000;
+		internal const int DEFAULT_COLLECTOR_MIN_INTERVAL = 1000;
 	}
 }

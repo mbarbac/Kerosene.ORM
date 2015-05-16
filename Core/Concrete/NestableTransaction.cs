@@ -48,6 +48,7 @@ namespace Kerosene.ORM.Core.Concrete
 			if (!IsDisposed) { OnDispose(true); GC.SuppressFinalize(this); }
 		}
 
+		/// <summary></summary>
 		~NestableTransaction()
 		{
 			if (!IsDisposed) OnDispose(false);

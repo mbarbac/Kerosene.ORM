@@ -52,6 +52,7 @@ namespace Kerosene.ORM.Core.Concrete
 			if (!IsDisposed) { OnDispose(true); GC.SuppressFinalize(this); }
 		}
 
+		/// <summary></summary>
 		~DataLink()
 		{
 			if (!IsDisposed) OnDispose(false);
@@ -235,7 +236,7 @@ namespace Kerosene.ORM.Core.Concrete
 		/// <param name="spec">A dynamic lambda expression that resolves into the logic of this
 		/// command. Embedded arguments are extracted and captured automatically in order to
 		/// avoid injection attacks.</param>
-		/// <returns><The new command.</returns>
+		/// <returns>The new command.</returns>
 		public IRawCommand Raw(Func<dynamic, object> spec)
 		{
 			return Raw().Set(spec);

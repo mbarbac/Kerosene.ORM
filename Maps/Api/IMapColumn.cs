@@ -102,7 +102,7 @@ namespace Kerosene.ORM.Maps
 		/// Sets the delegate to invoke with (value, entity) arguments to load into the
 		/// entity the value from the database record for this column.
 		/// </summary>
-		/// <param name="onWrite">The delegate to invoke, or null.</param>
+		/// <param name="onLoad">The delegate to invoke, or null.</param>
 		/// <returns>This instance to permit a fluent chaining syntax.</returns>
 		IMapColumn OnLoadEntity(Action<object, object> onLoad);
 	}
@@ -172,7 +172,7 @@ namespace Kerosene.ORM.Maps
 		/// Sets the delegate to invoke with (value, entity) arguments to load into the
 		/// entity the value from the database record for this column.
 		/// </summary>
-		/// <param name="onWrite">The delegate to invoke, or null.</param>
+		/// <param name="onLoad">The delegate to invoke, or null.</param>
 		/// <returns>This instance to permit a fluent chaining syntax.</returns>
 		IMapColumn<T> OnLoadEntity(Action<object, T> onLoad);
 	}

@@ -60,6 +60,7 @@ namespace Kerosene.ORM.Core.Concrete
 			if (!IsDisposed) { OnDispose(true); GC.SuppressFinalize(this); }
 		}
 
+		/// <summary></summary>
 		~Schema()
 		{
 			if (!IsDisposed) OnDispose(false);
@@ -299,9 +300,9 @@ namespace Kerosene.ORM.Core.Concrete
 		/// Returns the member whose table and column name are given, or null if not such member
 		/// can be found.
 		/// </summary>
-		/// <param name="tableName">The table name of the member to find, or null to refer to the
+		/// <param name="table">The table name of the member to find, or null to refer to the
 		/// default one in this context.</param>
-		/// <param name="columnName">The column name.</param>
+		/// <param name="column">The column name.</param>
 		/// <returns>The member found, or null.</returns>
 		public ISchemaEntry FindEntry(string table, string column)
 		{
@@ -320,7 +321,7 @@ namespace Kerosene.ORM.Core.Concrete
 		/// be found. If the collection contains several members with the same column name, even
 		/// if they belong to different tables, an exception is thrown by default.
 		/// </summary>
-		/// <param name="columnName">The column name.</param>
+		/// <param name="column">The column name.</param>
 		/// <param name="raise">True to raise an exception if several columns are found sharing
 		/// the same name. If false then null is returned in that case.</param>
 		/// <returns>The member found, or null.</returns>

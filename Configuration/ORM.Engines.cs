@@ -13,8 +13,11 @@ namespace Kerosene.ORM.Configuration
 	/// </summary>
 	public class DataEngineElement : ConfigurationElement
 	{
+		/// <summary></summary>
 		public const string ELEMENT_NAME = "dataEngine";
+		/// <summary></summary>
 		public const string PROPERTY_RELAX_TRANSFORMERS = "relaxTransformers";
+		/// <summary></summary>
 		public const string PROPERTY_COMPLEX_TAGS = "complexTags";
 
 		/// <summary>
@@ -56,13 +59,18 @@ namespace Kerosene.ORM.Configuration
 	/// </summary>
 	public class CustomEngineCollection : ConfigurationElementCollection
 	{
+		/// <summary>
+		/// The name of the element.
+		/// </summary>
 		public const string COLLECTION_NAME = "customEngines";
 
+		/// <summary></summary>
 		protected override ConfigurationElement CreateNewElement()
 		{
 			return new CustomEngineElement();
 		}
 
+		/// <summary></summary>
 		protected override object GetElementKey(ConfigurationElement element)
 		{
 			return ((CustomEngineElement)element).Id;
@@ -80,16 +88,26 @@ namespace Kerosene.ORM.Configuration
 		}
 	}
 
+	/// <summary></summary>
 	public class CustomEngineElement : ConfigurationElement
 	{
+		/// <summary></summary>
 		public const string PROPERTY_ID = "id";
+		/// <summary></summary>
 		public const string PROPERTY_TYPENAME = "type";
+		/// <summary></summary>
 		public const string PROPERTY_ASSEMBLYNAME = "assembly";
+		/// <summary></summary>
 		public const string PROPERTY_INVARIANTNAME = "invariantName";
+		/// <summary></summary>
 		public const string PROPERTY_SERVERVERSION = "serverVersion";
+		/// <summary></summary>
 		public const string PROPERTY_CASESENSITIVENAMES = "caseSensitiveNames";
+		/// <summary></summary>
 		public const string PROPERTY_PARAMETERPREFIX = "parameterPrefix";
+		/// <summary></summary>
 		public const string PROPERTY_POSITIONALPARAMETERS = "positionalParameters";
+		/// <summary></summary>
 		public const string PROPERTY_SUPPORTSNATIVESKIPTAKE = "supportsNativeSkipTake";
 
 		/// <summary>

@@ -13,6 +13,7 @@ namespace Kerosene.ORM.Core.Concrete
 	/// </summary>
 	public class RawCommand : CommandEnumSca, IRawCommand
 	{
+		/// <summary></summary>
 		protected string TheTextData = null;
 
 		/// <summary>

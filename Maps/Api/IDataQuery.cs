@@ -138,6 +138,7 @@ namespace Kerosene.ORM.Maps
 		/// specified using the 'x => x(jointype).Table...' syntax, where the orphan invocation
 		/// must be the first one in the chain, and whose parameter is a string containing the
 		/// join clause to use.</para>
+		/// </param>
 		/// <returns>A self-reference to permit a fluent syntax chaining.</returns>
 		IDataQuery Join(Func<dynamic, object> join);
 
@@ -298,6 +299,7 @@ namespace Kerosene.ORM.Maps
 		/// specified using the 'x => x(jointype).Table...' syntax, where the orphan invocation
 		/// must be the first one in the chain, and whose parameter is a string containing the
 		/// join clause to use.</para>
+		/// </param>
 		/// <returns>A self-reference to permit a fluent syntax chaining.</returns>
 		new IDataQuery<T> Join(Func<dynamic, object> join);
 

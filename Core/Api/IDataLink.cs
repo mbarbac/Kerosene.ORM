@@ -75,7 +75,7 @@ namespace Kerosene.ORM.Core
 		/// <param name="spec">A dynamic lambda expression that resolves into the logic of this
 		/// command. Embedded arguments are extracted and captured automatically in order to
 		/// avoid injection attacks.</param>
-		/// <returns><The new command.</returns>
+		/// <returns>The new command.</returns>
 		IRawCommand Raw(Func<dynamic, object> spec);
 
 		/// <summary>

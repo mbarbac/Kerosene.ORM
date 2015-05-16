@@ -21,7 +21,7 @@ namespace Kerosene.ORM.Core
 		/// </summary>
 		/// <param name="settings">A dictionary containing the names and values of the properties
 		/// that has to be changed with respect to the original ones, or null if these changes
-		/// are not needed.
+		/// are not needed.</param>
 		/// <returns>A new instance.</returns>
 		IDataEngine Clone(IDictionary<string, object> settings);
 

@@ -12,16 +12,28 @@ namespace Kerosene.ORM.Core.Concrete
 	public class QueryCommand : CommandEnum, IQueryCommand
 	{
 		IElementAliasCollection _Aliases = null;
+
+		/// <summary></summary>
 		protected string TheSelectData = null;
+		/// <summary></summary>
 		protected bool TheDistinctData = false;
+		/// <summary></summary>
 		protected int TheTopData = 0;
+		/// <summary></summary>
 		protected string TheFromData = null;
+		/// <summary></summary>
 		protected string TheWhereData = null;
+		/// <summary></summary>
 		protected string TheJoinData = null;
+		/// <summary></summary>
 		protected string TheGroupByData = null;
+		/// <summary></summary>
 		protected string TheHavingData = null;
+		/// <summary></summary>
 		protected string TheOrderByData = null;
+		/// <summary></summary>
 		protected int TheSkipData = 0;
+		/// <summary></summary>
 		protected int TheTakeData = 0;
 
 		/// <summary>
@@ -662,6 +674,7 @@ namespace Kerosene.ORM.Core.Concrete
 		/// specified using the 'x => x(jointype).Table...' syntax, where the orphan invocation
 		/// must be the first one in the chain, and whose parameter is a string containing the
 		/// join clause to use.</para>
+		/// </param>
 		/// <returns>A self-reference to permit a fluent syntax chaining.</returns>
 		public IQueryCommand Join(Func<dynamic, object> join)
 		{

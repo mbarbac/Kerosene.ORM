@@ -13,6 +13,7 @@ namespace Kerosene.ORM.Configuration
 	/// </summary>
 	public partial class ORMConfiguration : ConfigurationSection
 	{
+		/// <summary></summary>
 		public const string SECTION_NAME = "keroseneORM";
 
 		/// <summary>
@@ -33,9 +34,13 @@ namespace Kerosene.ORM.Configuration
 	/// </summary>
 	public class DataLinkElement : ConfigurationElement
 	{
+		/// <summary></summary>
 		public const string ELEMENT_NAME = "dataLink";
+		/// <summary></summary>
 		public const string PROPERTY_CONNECTION_STRING = "connectionString";
+		/// <summary></summary>
 		public const string PROPERTY_RETRIES = "retries";
+		/// <summary></summary>
 		public const string PROPERTY_RETRY_INTERVAL = "retryInterval";
 
 		/// <summary>

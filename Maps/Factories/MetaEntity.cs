@@ -5,6 +5,9 @@ using System;
 namespace Kerosene.ORM.Maps
 {
 	// ====================================================
+	/// <summary>
+	/// Helpers and extensions for working with meta entity objects.
+	/// </summary>
 	public static class MetaEntity
 	{
 		/// <summary>

@@ -60,6 +60,7 @@ namespace Kerosene.ORM.Maps.Concrete
 			if (!IsDisposed) { OnDispose(true); GC.SuppressFinalize(this); }
 		}
 
+		/// <summary></summary>
 		~DataRepository()
 		{
 			if (!IsDisposed) OnDispose(false);
@@ -380,6 +381,18 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 
 		/// <summary>
+		/// The total count of entities in the cache.
+		/// </summary>
+		internal int MetaEntitiesCount
+		{
+			get
+			{
+				int r = 0; foreach (var map in UberMaps.Items) r += map.MetaEntities.Count;
+				return r;
+			}
+		}
+
+		/// <summary>
 		/// Gets or creates a valid map for the given type of entities, or throws an exception
 		/// if such map cannot be found.
 		/// </summary>
@@ -449,7 +462,7 @@ namespace Kerosene.ORM.Maps.Concrete
 		/// </summary>
 		/// <typeparam name="T">The type of the managed entities.</typeparam>
 		/// <param name="where">The dynamic lambda expression that resolves into the contents of
-		/// this clause.
+		/// this clause.</param>
 		/// <returns>A new query command.</returns>
 		public DataQuery<T> Where<T>(Func<dynamic, object> where) where T : class
 		{
@@ -770,9 +783,20 @@ namespace Kerosene.ORM.Maps.Concrete
 		{
 			if (IsDisposed) return;
 
-			DebugEx.IndentWriteLine("\n- Collector fired for '{0}'...", this);
+			DebugEx.IndentWriteLine("\n- Collector fired for '{0}'...'{1}'...", this, MetaEntitiesCount);
 			var enabled = IsCollectorEnabled; if (enabled) DisableCollector();
-			if (_EnableGC) GC.Collect();
+
+			// Looks like that .NET 4.x does not collect unreachable objects in debug mode...
+			if (_EnableGC)
+			{
+				long mem = GC.GetTotalMemory(false);
+				GC.AddMemoryPressure(mem);
+
+				GC.Collect();
+				GC.WaitForPendingFinalizers();
+				GC.WaitForFullGCComplete();
+				GC.Collect();
+			}
 
 			lock (MasterLock)
 			{

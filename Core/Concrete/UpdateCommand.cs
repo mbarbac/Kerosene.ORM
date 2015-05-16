@@ -13,7 +13,10 @@ namespace Kerosene.ORM.Core.Concrete
 	public class UpdateCommand : CommandEnumSca, IUpdateCommand
 	{
 		string _TableName = null;
+
+		/// <summary></summary>
 		protected string TheWhereData = null;
+		/// <summary></summary>
 		protected string TheDataColumns = null;
 
 		/// <summary>

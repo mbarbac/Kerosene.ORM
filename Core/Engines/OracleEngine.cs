@@ -11,10 +11,15 @@ namespace Kerosene.ORM.Core.Concrete
 	/// </summary>
 	public class OracleEngine : DataEngine, IDataEngine
 	{
+		/// <summary></summary>
 		public const string ORACLE_INVARIANT_NAME = "System.Data.OracleClient";
+		/// <summary></summary>
 		public const bool ORACLE_CASE_SENSITIVENAMES = true;
+		/// <summary></summary>
 		public const string ORACLE_PARAMETER_PREFIX = ":";
+		/// <summary></summary>
 		public const bool ORACLE_POSITIONAL_PARAMETERS = false;
+		/// <summary></summary>
 		public const bool ORACLE_SUPPORT_NATIVE_SKIPTAKE = false;
 
 		/// <summary>

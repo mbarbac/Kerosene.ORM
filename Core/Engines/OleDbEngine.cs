@@ -11,10 +11,15 @@ namespace Kerosene.ORM.Core.Concrete
 	/// </summary>
 	public class OleDbEngine : DataEngine, IDataEngine
 	{
+		/// <summary></summary>
 		public const string OLEDB_INVARIANT_NAME = "System.Data.OleDb";
+		/// <summary></summary>
 		public const bool OLEDB_CASE_SENSITIVENAMES = false;
+		/// <summary></summary>
 		public const string OLEDB_PARAMETER_PREFIX = "?";
+		/// <summary></summary>
 		public const bool OLEDB_POSITIONAL_PARAMETERS = true;
+		/// <summary></summary>
 		public const bool OLEDB_SUPPORT_NATIVE_SKIPTAKE = false;
 
 		/// <summary>

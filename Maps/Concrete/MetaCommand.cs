@@ -49,6 +49,7 @@ namespace Kerosene.ORM.Maps.Concrete
 			if (!IsDisposed) { OnDispose(true); GC.SuppressFinalize(this); }
 		}
 
+		/// <summary></summary>
 		~MetaCommand()
 		{
 			if (!IsDisposed) OnDispose(false);

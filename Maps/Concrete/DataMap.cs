@@ -260,6 +260,7 @@ namespace Kerosene.ORM.Maps.Concrete
 			if (!IsDisposed) { OnDispose(true); GC.SuppressFinalize(this); }
 		}
 
+		/// <summary></summary>
 		~DataMap()
 		{
 			if (!IsDisposed) OnDispose(false);
@@ -993,7 +994,8 @@ namespace Kerosene.ORM.Maps.Concrete
 		{
 			lock (MasterLock)
 			{
-				var metas = _MetaEntities.Items.Where(x => !x.HasValidEntity).ToArray();
+				var metas = new List<MetaEntity>();
+				foreach (var meta in _MetaEntities.Items) if (!meta.HasValidEntity) metas.Add(meta);
 				foreach (var meta in metas)
 				{
 					DebugEx.IndentWriteLine("\n- Collecting '{0}'...", meta);
@@ -1011,7 +1013,7 @@ namespace Kerosene.ORM.Maps.Concrete
 
 					DebugEx.Unindent();
 				}
-				Array.Clear(metas, 0, metas.Length); metas = null;
+				metas.Clear(); metas = null;
 			}
 		}
 		void IUberMap.CollectInvalidEntities()
@@ -1142,7 +1144,7 @@ namespace Kerosene.ORM.Maps.Concrete
 		/// contents of its WHERE clause.
 		/// </summary>
 		/// <param name="where">The dynamic lambda expression that resolves into the contents of
-		/// this clause.
+		/// this clause.</param>
 		/// <returns>A new query command.</returns>
 		public DataQuery<T> Where(Func<dynamic, object> where)
 		{

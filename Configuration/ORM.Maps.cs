@@ -13,12 +13,19 @@ namespace Kerosene.ORM.Configuration
 	/// </summary>
 	public class DataMapElement : ConfigurationElement
 	{
+		/// <summary></summary>
 		public const string ELEMENT_NAME = "dataMap";
+		/// <summary></summary>
 		public const string PROPERTY_ENABLE_WEAKMAPS = "enableWeakMaps";
+		/// <summary></summary>
 		public const string PROPERTY_TRACK_ENTITIES = "trackEntities";
+		/// <summary></summary>
 		public const string PROPERTY_TRACK_CHILD_ENTITIES = "trackChildEntities";
+		/// <summary></summary>
 		public const string PROPERTY_ENABLE_COLLECTOR = "enableCollector";
+		/// <summary></summary>
 		public const string PROPERTY_ENABLE_COLLECTOR_GC = "enableCollectorGC";
+		/// <summary></summary>
 		public const string PROPERTY_COLLECTOR_INTERVAL = "collectorInterval";
 
 		/// <summary>

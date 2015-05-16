@@ -233,7 +233,10 @@ namespace Kerosene.ORM.Direct.Concrete
 		}
 		int _Retries = -1;
 		int _RetryInterval = -1;
+		
+		/// <summary></summary>
 		public const int MIN_RETRIES = 3;
+		/// <summary></summary>
 		public const int MIN_RETRY_INTERVAL = 50;
 
 		/// <summary>

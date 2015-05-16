@@ -46,6 +46,7 @@ namespace Kerosene.ORM.Core.Concrete
 			if (!IsDisposed) { OnDispose(true); GC.SuppressFinalize(this); }
 		}
 
+		/// <summary></summary>
 		~ElementAliasCollection()
 		{
 			if (!IsDisposed) OnDispose(false);

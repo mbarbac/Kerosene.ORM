@@ -11,10 +11,15 @@ namespace Kerosene.ORM.Core.Concrete
 	/// </summary>
 	public class OdbcEngine : DataEngine, IDataEngine
 	{
+		/// <summary></summary>
 		public const string ODBC_INVARIANT_NAME = "System.Data.Odbc";
+		/// <summary></summary>
 		public const bool ODBC_CASE_SENSITIVENAMES = false;
+		/// <summary></summary>
 		public const string ODBC_PARAMETER_PREFIX = "?";
+		/// <summary></summary>
 		public const bool ODBC_POSITIONAL_PARAMETERS = true;
+		/// <summary></summary>
 		public const bool ODBC_SUPPORT_NATIVE_SKIPTAKE = false;
 
 		/// <summary>

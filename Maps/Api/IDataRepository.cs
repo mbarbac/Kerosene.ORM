@@ -124,7 +124,7 @@ namespace Kerosene.ORM.Maps
 		/// </summary>
 		/// <typeparam name="T">The type of the managed entities.</typeparam>
 		/// <param name="where">The dynamic lambda expression that resolves into the contents of
-		/// this clause.
+		/// this clause.</param>
 		/// <returns>A new query command.</returns>
 		IDataQuery<T> Where<T>(Func<dynamic, object> where) where T : class;
 
