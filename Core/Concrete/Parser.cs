@@ -1,12 +1,12 @@
-﻿namespace Kerosene.ORM.Core.Concrete
-{
-	using Kerosene.Tools;
-	using System;
-	using System.Collections;
-	using System.Linq;
-	using System.Linq.Expressions;
-	using System.Text;
+﻿using Kerosene.Tools;
+using System;
+using System.Collections;
+using System.Linq;
+using System.Linq.Expressions;
+using System.Text;
 
+namespace Kerosene.ORM.Core.Concrete
+{
 	// ==================================================== 
 	/// <summary>
 	/// Represents the ability of parsing any arbitrary object, including null references and

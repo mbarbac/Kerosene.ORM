@@ -1,13 +1,14 @@
-﻿namespace Kerosene.ORM.Maps.Concrete
-{
-	using Kerosene.ORM.Core;
-	using Kerosene.Tools;
-	using System;
-	using System.Collections;
-	using System.Collections.Generic;
-	using System.Linq;
+﻿using Kerosene.ORM.Core;
+using Kerosene.Tools;
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 
-	// ==================================================== 
+namespace Kerosene.ORM.Maps.Concrete
+{
+	// ====================================================
 	/// <summary>
 	/// Represents a query command for the entities of the associated map.
 	/// </summary>
@@ -23,9 +24,9 @@
 		public DataQuery(DataMap<T> map)
 			: base(map)
 		{
-			_Template = map.Link.Query(); if (_Template == null)
-				throw new CannotCreateException(
-					"Cannot create a template query for this '{0}'.".FormatWith(this));
+			_Template = map.Link.Query();
+			if (_Template == null) throw new CannotCreateException(
+				"Cannot create a template query for this '{0}'.".FormatWith(this));
 		}
 
 		/// <summary>
@@ -44,11 +45,37 @@
 		}
 
 		/// <summary>
+		/// Creates a new object able to execute this command.
+		/// </summary>
+		/// <returns>A new enumerator.</returns>
+		public DataQueryEnumerator<T> GetEnumerator()
+		{
+			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
+			return new DataQueryEnumerator<T>(this);
+		}
+		IDataQueryEnumerator<T> IDataQuery<T>.GetEnumerator()
+		{
+			return this.GetEnumerator();
+		}
+		IDataQueryEnumerator IDataQuery.GetEnumerator()
+		{
+			return this.GetEnumerator();
+		}
+		IEnumerator<T> IEnumerable<T>.GetEnumerator()
+		{
+			return this.GetEnumerator();
+		}
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return this.GetEnumerator();
+		}
+
+		/// <summary>
 		/// Returns a new core command that when executed materializes the operation this instance
 		/// refers to, or null if that command cannot be generated for any reasons.
 		/// </summary>
 		/// <returns>A new core command, or null.</returns>
-		internal IQueryCommand GenerateCoreCommand()
+		public IQueryCommand GenerateCoreCommand()
 		{
 			var cmd = _Template == null ? null : _Template.Clone(); if (cmd != null)
 			{
@@ -182,32 +209,6 @@
 				MasterVisitor(host, temp.Target);
 				return;
 			}
-		}
-
-		/// <summary>
-		/// Creates a new object able to execute this command.
-		/// </summary>
-		/// <returns>A new enumerator.</returns>
-		public DataQueryEnumerator<T> GetEnumerator()
-		{
-			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
-			return new DataQueryEnumerator<T>(this);
-		}
-		IDataQueryEnumerator<T> IDataQuery<T>.GetEnumerator()
-		{
-			return this.GetEnumerator();
-		}
-		IDataQueryEnumerator IDataQuery.GetEnumerator()
-		{
-			return this.GetEnumerator();
-		}
-		IEnumerator<T> IEnumerable<T>.GetEnumerator()
-		{
-			return this.GetEnumerator();
-		}
-		IEnumerator IEnumerable.GetEnumerator()
-		{
-			return this.GetEnumerator();
 		}
 
 		/// <summary>

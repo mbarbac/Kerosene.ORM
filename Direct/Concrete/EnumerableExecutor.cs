@@ -1,9 +1,9 @@
-﻿namespace Kerosene.ORM.Direct.Concrete
-{
-	using Kerosene.Tools;
-	using System;
-	using System.Linq;
+﻿using Kerosene.Tools;
+using System;
+using System.Linq;
 
+namespace Kerosene.ORM.Direct.Concrete
+{
 	// ==================================================== 
 	/// <summary>
 	/// Represents an object able to execute an enumerable command, in a direct connection

@@ -1,9 +1,9 @@
-﻿namespace Kerosene.ORM.Core
-{
-	using Kerosene.Tools;
-	using System;
-	using System.Collections.Generic;
+﻿using Kerosene.Tools;
+using System;
+using System.Collections.Generic;
 
+namespace Kerosene.ORM.Core
+{
 	// ====================================================
 	/// <summary>
 	/// Represents the type of an underlying database engine.

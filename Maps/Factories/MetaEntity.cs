@@ -1,25 +1,20 @@
-﻿namespace Kerosene.ORM.Maps
-{
-	using Kerosene.ORM.Core;
-	using Kerosene.Tools;
-	using System;
-	using System.Linq;
+﻿using Kerosene.ORM.Core;
+using Kerosene.Tools;
+using System;
 
-	// ==================================================== 
-	/// <summary>
-	/// Helpers and extensions for working with <see cref="IMetaEntity"/> instances.
-	/// </summary>
-	public static partial class MetaEntity
+namespace Kerosene.ORM.Maps
+{
+	// ====================================================
+	public static class MetaEntity
 	{
 		/// <summary>
-		/// Returns the meta entity that carries the metadata associated with the given entity.
+		/// Returns the meta entity associated with the given object.
 		/// </summary>
-		/// <typeparam name="T">The type of the entity.</typeparam>
-		/// <param name="entity">The entity to obtain its meta entity from.</param>
-		/// <returns>The requested meta entity.</returns>
-		public static IMetaEntity Locate<T>(T entity) where T : class
+		/// <param name="entity">The meta entity to locate its meta entity.</param>
+		/// <returns>The meta entity associated with the given entity.</returns>
+		public static IMetaEntity Locate(object entity)
 		{
-			return Concrete.MetaEntity.Locate(entity, create: true);
+			return Concrete.MetaEntity.Locate(entity);
 		}
 	}
 }

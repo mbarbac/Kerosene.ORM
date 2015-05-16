@@ -1,9 +1,9 @@
-﻿namespace Kerosene.ORM.Core.Concrete
-{
-	using Kerosene.Tools;
-	using System;
-	using System.Linq;
+﻿using Kerosene.Tools;
+using System;
+using System.Linq;
 
+namespace Kerosene.ORM.Core.Concrete
+{
 	// ==================================================== 
 	/// <summary>
 	/// Represents an agnostic connection with a database-alike service.
@@ -136,7 +136,7 @@
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
 			var temp = cloned as DataLink;
-			if (cloned == null) throw new InvalidCastException(
+			if (temp == null) throw new InvalidCastException(
 				"Cloned instance '{0}' is not a valid '{1}' one."
 				.FormatWith(cloned.Sketch(), typeof(DataLink).EasyName()));
 

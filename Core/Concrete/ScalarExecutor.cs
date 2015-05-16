@@ -1,9 +1,9 @@
-﻿namespace Kerosene.ORM.Core.Concrete
-{
-	using Kerosene.Tools;
-	using System;
-	using System.Linq;
+﻿using Kerosene.Tools;
+using System;
+using System.Linq;
 
+namespace Kerosene.ORM.Core.Concrete
+{
 	// ==================================================== 
 	/// <summary>
 	/// Represents an object able to execute a scalar command and to produce the integer

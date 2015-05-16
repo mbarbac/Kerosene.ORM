@@ -1,15 +1,15 @@
-﻿namespace Kerosene.ORM.Core
-{
-	using Kerosene.Tools;
-	using System;
-	using System.Collections;
-	using System.Collections.Generic;
-	using System.Dynamic;
-	using System.IO;
-	using System.Linq.Expressions;
-	using System.Runtime.Serialization;
-	using System.Runtime.Serialization.Formatters.Binary;
+﻿using Kerosene.Tools;
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Dynamic;
+using System.IO;
+using System.Linq.Expressions;
+using System.Runtime.Serialization;
+using System.Runtime.Serialization.Formatters.Binary;
 
+namespace Kerosene.ORM.Core
+{
 	// ==================================================== 
 	/// <summary>
 	/// Represents a record on the database, typically obtained by the execution of an enumarable

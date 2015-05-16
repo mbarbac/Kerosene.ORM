@@ -1,13 +1,13 @@
-﻿namespace Kerosene.ORM.Core.Concrete
-{
-	using Kerosene.Tools;
-	using System;
-	using System.Collections;
-	using System.Dynamic;
-	using System.Linq;
-	using System.Runtime.Serialization;
-	using System.Text;
+﻿using Kerosene.Tools;
+using System;
+using System.Collections;
+using System.Dynamic;
+using System.Linq;
+using System.Runtime.Serialization;
+using System.Text;
 
+namespace Kerosene.ORM.Core.Concrete
+{
 	// ==================================================== 
 	/// <summary>
 	/// Represents a record on the database, typically obtained by the execution of an enumarable
@@ -196,7 +196,7 @@
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
 			var temp = cloned as Record;
-			if (cloned == null) throw new InvalidCastException(
+			if (temp == null) throw new InvalidCastException(
 				"Cloned instance '{0}' is not a valid '{1}' one."
 				.FormatWith(cloned.Sketch(), typeof(Record).EasyName()));
 

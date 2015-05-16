@@ -1,13 +1,13 @@
-﻿namespace Kerosene.ORM.Core.Concrete
-{
-	using Kerosene.Tools;
-	using System;
-	using System.Collections;
-	using System.Collections.Generic;
-	using System.Linq;
-	using System.Runtime.Serialization;
-	using System.Text;
+﻿using Kerosene.Tools;
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.Serialization;
+using System.Text;
 
+namespace Kerosene.ORM.Core.Concrete
+{
 	// ==================================================== 
 	/// <summary>
 	/// Represents the schema that describes the metadata and structure of the records returned
@@ -17,11 +17,7 @@
 	public partial class Schema : ISchema
 	{
 		bool _IsDisposed = false;
-#if OLD_702
-		List<ISchemaEntry> _Members = new List<ISchemaEntry>();
-#else
 		EntryList _Members = null;
-#endif
 		bool _CaseSensitiveNames = Core.Schema.DEFAULT_CASESENSITIVE_NAMES;
 		IElementAliasCollection _Aliases = null;
 
@@ -36,11 +32,8 @@
 			_CaseSensitiveNames = caseSensitiveNames;
 			if ((_Aliases = CreateAliasCollection()) == null)
 				throw new CannotCreateException("Cannot create a collection of aliases.");
-#if OLD_702
-			List<ISchemaEntry> _Members = new List<ISchemaEntry>();
-#else
+
 			_Members = new EntryList(caseSensitiveNames);
-#endif
 		}
 
 		/// <summary>
@@ -127,16 +120,12 @@
 			info.AddValue("CaseSensitiveNames", _CaseSensitiveNames);
 			info.AddExtended("Aliases", _Aliases);
 
-#if OLD_702
-			info.AddExtended("List", _Members);
-#else
 			int count = 0; foreach (var member in _Members)
 			{
 				info.AddExtended("Member" + count, member);
 				count++;
 			}
 			info.AddValue("MembersCount", count);
-#endif
 		}
 
 		/// <summary>
@@ -147,9 +136,6 @@
 			_CaseSensitiveNames = info.GetBoolean("CaseSensitiveNames");
 			_Aliases = info.GetExtended<IElementAliasCollection>("Aliases");
 
-#if OLD_702
-			_Members = info.GetExtended<List<ISchemaEntry>>("List");
-#else
 			_Members = new EntryList(_CaseSensitiveNames);
 			int count = (int)info.GetValue("MembersCount", typeof(int));
 			for (int i = 0; i < count; i++)
@@ -157,7 +143,6 @@
 				var member = info.GetExtended<ISchemaEntry>("Member" + i);
 				_Members.Add(member);
 			}
-#endif
 		}
 
 		/// <summary>
@@ -187,7 +172,7 @@
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
 			var temp = cloned as Schema;
-			if (cloned == null) throw new InvalidCastException(
+			if (temp == null) throw new InvalidCastException(
 				"Cloned instance '{0}' is not a valid '{1}' one."
 				.FormatWith(cloned.Sketch(), typeof(Schema).EasyName()));
 
@@ -327,13 +312,7 @@
 			var alias = (IElementAlias)(table == null ? null : Aliases.FindAlias(table));
 			if (alias != null) table = alias.Element;
 
-#if OLD_702
-			var name = Core.SchemaEntry.NormalizedName(table, column);
-			return _Members.Find(x =>
-				string.Compare(Core.SchemaEntry.NormalizedName(x.TableName, x.ColumnName), name, !CaseSensitiveNames) == 0);
-#else
 			return _Members.FindEntry(table, column);
-#endif
 		}
 
 		/// <summary>
@@ -350,11 +329,7 @@
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
 			column = Core.SchemaEntry.ValidateColumn(column);
 
-#if OLD_702
-			var list = _Members.FindAll(x => string.Compare(x.ColumnName, column, !CaseSensitiveNames) == 0);
-#else
 			var list = _Members.FindColumn(column);
-#endif
 			if (list.Count == 0) return null;
 			if (list.Count == 1) return list[0];
 
@@ -403,11 +378,7 @@
 			var alias = (IElementAlias)(table == null ? null : Aliases.FindAlias(table));
 			if (alias != null) table = alias.Element;
 
-#if OLD_702
-			return _Members.FindAll(x => string.Compare(x.TableName, table, !CaseSensitiveNames) == 0);
-#else
 			return _Members.FindTable(table);
-#endif
 		}
 
 		/// <summary>
@@ -420,11 +391,7 @@
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
 			column = Core.SchemaEntry.ValidateColumn(column);
 
-#if OLD_702
-			return _Members.FindAll(x => string.Compare(x.ColumnName, column, !CaseSensitiveNames) == 0);
-#else
 			return _Members.FindColumn(column);
-#endif
 		}
 
 		/// <summary>
@@ -435,11 +402,7 @@
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
 
-#if OLD_702
-			return _Members.FindAll(x => x.IsPrimaryKeyColumn);
-#else
 			return _Members.Where(x => x.IsPrimaryKeyColumn);
-#endif
 		}
 
 		/// <summary>
@@ -450,11 +413,7 @@
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
 
-#if OLD_702
-			return _Members.FindAll(x => x.IsUniqueValuedColumn);
-#else
 			return _Members.Where(x => x.IsUniqueValuedColumn);
-#endif
 		}
 
 		/// <summary>

@@ -1,30 +1,27 @@
-﻿namespace Kerosene.ORM.Maps
-{
-	using Kerosene.ORM.Core;
-	using Kerosene.Tools;
-	using System;
-	using System.Collections.Generic;
-	using System.Linq;
+﻿using Kerosene.ORM.Core;
+using Kerosene.Tools;
+using System;
+using System.Collections.Generic;
 
-	// ==================================================== 
+namespace Kerosene.ORM.Maps
+{
+	// ====================================================
 	/// <summary>
-	/// Represents a repository for a set of maps between their POCO classes and their related
+	/// Represents a repository for a set of maps between POCO classes and their associated
 	/// primary tables in the underlying database-alike service, implementing both the Dynamic
-	/// Repository and the Dynamic Unit Of Work patterns.
+	/// Repository and Dynamic Unit of Work patterns.
 	/// </summary>
 	public interface IDataRepository : IDisposableEx
 	{
 		/// <summary>
-		/// Returns a new repository associated with the given link containing a copy of the
-		/// original maps and customizations existing in the original one. Cloned maps will not
-		/// be validated and can be modified as needed.
+		/// Returns a new instance that is associated with the new given link and that contains
+		/// a copy of the maps and customizations of the original one.
 		/// </summary>
-		/// <param name="link">The link the new respository will be associated with.</param>
-		/// <returns>A new respository.</returns>
+		/// <returns>A new instance.</returns>
 		IDataRepository Clone(IDataLink link);
 
 		/// <summary>
-		/// The database-alike service link this instance is associated with.
+		/// The link with the underlying database-alike service this instance is associated with.
 		/// </summary>
 		IDataLink Link { get; }
 
@@ -34,66 +31,59 @@
 		IEnumerable<IDataMap> Maps { get; }
 
 		/// <summary>
-		/// Clears and disposes all the maps registered into this instance.
+		/// Clears and disposes all the maps registered into this instance, and reverts its
+		/// managed entities, if any is tracked, to a detached state.
 		/// </summary>
 		void ClearMaps();
 
 		/// <summary>
-		/// Whether weak maps are enabled or not for this instance.
-		/// <para>Weak maps are created automatically when an entity type is referenced by any
-		/// map operation and there was no registered map for that type. Weak maps are disposed
-		/// if a regular non-weak map is registered (created) explicitly.</para>
+		/// Whether weak maps are enabled for this instance or not.
 		/// </summary>
 		bool WeakMapsEnabled { get; set; }
 
 		/// <summary>
-		/// Returns the map registeres to manage the entities of the given type or, if such map
-		/// is not found, creates a new one using the table name given or, is such is null, tries
-		/// to automatically locate a suitable table in the database and, if so, creates a weak
-		/// map for that type if weak maps are are enabled. Returns null if finally a map cannot
-		/// be located.
+		/// Locates the map registered to manage the entities of the given type, or tries to
+		/// create a new weak map otherwise if possible. Returns null if no map is found and
+		/// no weak map can be created.
 		/// </summary>
-		/// <param name="type">The type of the entities of the map to locate.</param>
+		/// <param name="type">The type of the entities managed by the map to locate.</param>
 		/// <param name="table">A dynamic lambda expression that resolves into the name of the
-		/// primary table where to find, at least, the identity columns associated with the map.
-		/// If this argument is null then a number of pluralization rules are automatically used
-		/// based upon the name of the type.</param>
+		/// primary table, used when creating a weak map. If null the a number of suitable
+		/// names are tried based upon the name of the type.</param>
 		/// <returns>The requested map, or null.</returns>
 		IDataMap LocateMap(Type type, Func<dynamic, object> table = null);
 
 		/// <summary>
-		/// Returns the map registeres to manage the entities of the given type or, if such map
-		/// is not found, creates a new one using the table name given or, is such is null, tries
-		/// to automatically locate a suitable table in the database and, if so, creates a weak
-		/// map for that type if weak maps are are enabled. Returns null if finally a map cannot
-		/// be located.
+		/// Locates the map registered to manage the entities of the given type, or tries to
+		/// create a new weak map otherwise if possible. Returns null if no map is found and
+		/// no weak map can be created.
 		/// </summary>
-		/// <typeparam name="T">The type of the entities of the map to locate.</typeparam>
+		/// <typeparam name="T">The type of the entities managed by the map to locate.</typeparam>
 		/// <param name="table">A dynamic lambda expression that resolves into the name of the
-		/// primary table where to find, at least, the identity columns associated with the map.
-		/// If this argument is null then a number of pluralization rules are automatically used
-		/// based upon the name of the type.</param>
+		/// primary table, used when creating a weak map. If null the a number of suitable
+		/// names are tried based upon the name of the type.</param>
 		/// <returns>The requested map, or null.</returns>
 		IDataMap<T> LocateMap<T>(Func<dynamic, object> table = null) where T : class;
 
 		/// <summary>
-		/// Whether the maps registered into this instance keep track of the entities they have
-		/// managed in their internal caches, or not. The setter cascades the new value to all
-		/// the registered maps.
+		/// Whether tracking of entities is enabled or disabled, in principle, for the maps that
+		/// are registered into this instance. The setter cascades the new value into all the
+		/// maps registered at the moment when the new value is set.
 		/// </summary>
 		bool TrackEntities { get; set; }
 
 		/// <summary>
-		/// The current collection of entities in a valid state tracked by the maps registered
-		/// into this instance, if any.
+		/// The collection of entities in a valid state tracked by the maps registered into
+		/// this instance.
 		/// </summary>
 		IEnumerable<IMetaEntity> Entities { get; }
 
 		/// <summary>
-		/// Clears the caches of tracked entities maintained by the maps registered into this
-		/// instance and, optionally, detaches those entities.
+		/// Clears the caches of all the maps registered into this instance and, optionally,
+		/// detaches the entities that were tracked.
 		/// </summary>
-		/// <param name="detach">True to forcibly detach the entities found in the caches.</param>
+		/// <param name="detach">True to also detach the entities removed from the caches of
+		/// the maps.</param>
 		void ClearEntities(bool detach = true);
 
 		/// <summary>

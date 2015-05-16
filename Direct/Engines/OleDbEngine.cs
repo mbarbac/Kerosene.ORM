@@ -1,12 +1,12 @@
-﻿namespace Kerosene.ORM.Direct.Concrete
-{
-	using Kerosene.Tools;
-	using System;
-	using System.Collections.Generic;
-	using System.Data.Common;
-	using System.Data.OleDb;
-	using System.Linq;
+﻿using Kerosene.Tools;
+using System;
+using System.Collections.Generic;
+using System.Data.Common;
+using System.Data.OleDb;
+using System.Linq;
 
+namespace Kerosene.ORM.Direct.Concrete
+{
 	// ==================================================== 
 	/// <summary>
 	/// Represents a generic OLEDB database engine for a direct connection scenario.

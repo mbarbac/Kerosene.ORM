@@ -1,13 +1,13 @@
-﻿namespace Kerosene.ORM.Core.Concrete
-{
-	using Kerosene.Tools;
-	using System;
-	using System.Collections;
-	using System.Collections.Generic;
-	using System.Linq;
-	using System.Runtime.Serialization;
-	using System.Text;
+﻿using Kerosene.Tools;
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.Serialization;
+using System.Text;
 
+namespace Kerosene.ORM.Core.Concrete
+{
 	// ==================================================== 
 	/// <summary>
 	/// Represents the metadata associated with a given table and column combination on a given
@@ -94,9 +94,9 @@
 			StringBuilder sb = new StringBuilder();
 			sb.Append("[");
 			sb.Append(Core.SchemaEntry.NormalizedName(TableName, ColumnName));
-			if (Metadata.Contains(Tags.IsPrimaryKeyColumnTag)) sb.AppendFormat(", PrimaryKey:{0}", IsPrimaryKeyColumn);
-			if (Metadata.Contains(Tags.IsUniqueValuedColumnTag)) sb.AppendFormat(", UniqueValued:{0}", IsUniqueValuedColumn);
-			if (Metadata.Contains(Tags.IsReadOnlyColumnTag)) sb.AppendFormat(", ReadOnly:{0}", IsReadOnlyColumn);
+			if (Metadata.Contains(Tags.IsPrimaryKeyColumnTag) && IsPrimaryKeyColumn) sb.AppendFormat(", PrimaryKey:{0}", IsPrimaryKeyColumn);
+			if (Metadata.Contains(Tags.IsUniqueValuedColumnTag) && IsUniqueValuedColumn) sb.AppendFormat(", UniqueValued:{0}", IsUniqueValuedColumn);
+			if (Metadata.Contains(Tags.IsReadOnlyColumnTag) && IsReadOnlyColumn) sb.AppendFormat(", ReadOnly:{0}", IsReadOnlyColumn);
 			sb.Append("]");
 			return sb.ToString();
 		}
@@ -229,7 +229,7 @@
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
 			var temp = cloned as SchemaEntry;
-			if (cloned == null) throw new InvalidCastException(
+			if (temp == null) throw new InvalidCastException(
 				"Cloned instance '{0}' is not a valid '{1}' one."
 				.FormatWith(cloned.Sketch(), typeof(SchemaEntry).EasyName()));
 

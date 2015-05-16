@@ -1,9 +1,9 @@
-﻿namespace Kerosene.ORM.Core
-{
-	using Kerosene.Tools;
-	using System;
-	using System.Linq;
+﻿using Kerosene.Tools;
+using System;
+using System.Linq;
 
+namespace Kerosene.ORM.Core
+{
 	// ==================================================== 
 	/// <summary>
 	/// Represents a command whose contents can be set explicitly as needed.

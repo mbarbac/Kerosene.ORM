@@ -1,11 +1,11 @@
-﻿namespace Kerosene.ORM.Direct.Concrete
-{
-	using Kerosene.Tools;
-	using System;
-	using System.Data;
-	using System.Linq;
-	using System.Transactions;
+﻿using Kerosene.Tools;
+using System;
+using System.Data;
+using System.Linq;
+using System.Transactions;
 
+namespace Kerosene.ORM.Direct.Concrete
+{
 	// ==================================================== 
 	/// <summary>
 	/// Represents an abstract nestable transaction associated with a given link in a direct

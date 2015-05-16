@@ -1,92 +1,80 @@
-﻿namespace Kerosene.ORM.Maps.Concrete
-{
-	using Kerosene.ORM.Core;
-	using Kerosene.Tools;
-	using System;
-	using System.Collections.Generic;
-	using System.ComponentModel;
-	using System.Linq;
-	using System.Text;
+﻿using Kerosene.ORM.Core;
+using Kerosene.Tools;
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Linq;
+using System.Text;
 
-	// ==================================================== 
-	/// <summary>
-	/// Extends the <see cref="IMetaEntity"/> interface.
-	/// </summary>
+namespace Kerosene.ORM.Maps.Concrete
+{
+	// ====================================================
 	internal interface IUberEntity : IMetaEntity
 	{
-		/// <summary>
-		/// Clears the metadata held by this instance.
-		/// </summary>
-		void Clear();
-
 		/// <summary>
 		/// Whether the entity this instance refers to is valid or not.
 		/// </summary>
 		bool HasValidEntity { get; }
 
 		/// <summary>
-		/// The entity type this instance was created for.
+		/// The type of the underlying entity, or null.
 		/// </summary>
 		Type EntityType { get; }
 
 		/// <summary>
-		/// The proxy holder associated with the entity, if any.
+		/// The proxy type of the underlying entity, or null.
+		/// </summary>
+		Type ProxyType { get; }
+
+		/// <summary>
+		/// The proxy holder associated with the type of the underlying entity, or null.
 		/// </summary>
 		ProxyHolder ProxyHolder { get; }
 
 		/// <summary>
-		/// The extended type of the associated one, if any.
-		/// </summary>
-		Type ExtendedType { get; }
-
-		/// <summary>
-		/// The map that this instance is managed by, if any.
+		/// The map that is managing the underlying entity, or null if it is a detached one.
 		/// </summary>
 		IUberMap UberMap { get; set; }
 
 		/// <summary>
-		/// The repository reference held by the associated map, if any.
+		/// The repository associated with this entity, if any.
 		/// </summary>
 		DataRepository Repository { get; }
 
 		/// <summary>
-		/// The last operation annotated into this entity.
+		/// The last operation annotated for this entity.
 		/// </summary>
 		IUberOperation UberOperation { get; set; }
 
 		/// <summary>
 		/// The record associated with this instance, if any.
+		/// <para>The setter flags this instance to capture the record's identity string again.</para>
 		/// </summary>
 		IRecord Record { get; set; }
 
 		/// <summary>
-		/// Gets a normalized string that represents the identity columns from the record that
-		/// has been associated to this instance, or null.
+		/// Returns the identity string associated with the current record of this instance,
+		/// or null.
 		/// </summary>
-		string RecordId { get; }
+		string IdentityString { get; }
+
+		/// <summary>
+		/// The collection of objects, if any, captured as child dependencies of the underlying
+		/// instance, organized by the name of the property that holds them.
+		/// </summary>
+		Dictionary<string, HashSet<object>> ChildDependencies { get; }
 
 		/// <summary>
 		/// Whether the members defined for the underlying object can be considered as completed
 		/// or not.
 		/// </summary>
 		bool Completed { get; set; }
-
-		/// <summary>
-		/// Whether the underlying entity has been marked to be refreshed as the consequence of
-		/// a change operation on any of its dependencies, or not.
-		/// </summary>
-		bool ToRefresh { get; set; }
-
-		/// <summary>
-		/// Gets the collection of objects captured as child dependencies organized by the
-		/// property name that holds them.
-		/// </summary>
-		Dictionary<string, HashSet<object>> ChildDependencies { get; }
 	}
 
-	// ==================================================== 
+	// ====================================================
 	/// <summary>
-	/// Represents the metadata the framework associates with its managed entities.
+	/// Represents the metadata associated with a managed entity.
 	/// </summary>
 	public class MetaEntity : Attribute, IMetaEntity, IUberEntity
 	{
@@ -105,7 +93,7 @@
 			if (!type.IsClass) throw new InvalidOperationException(
 				"Entity '{0}' of type '{1}' is not a class.".FormatWith(entity.Sketch(), type.EasyName()));
 
-			lock (entity)
+			lock (entity) // Yes, I know... but I don't want to use a global lock!
 			{
 				AttributeCollection list = TypeDescriptor.GetAttributes(entity);
 				MetaEntity meta = list.OfType<MetaEntity>().FirstOrDefault();
@@ -113,18 +101,12 @@
 				if (meta == null && create)
 				{
 					meta = new MetaEntity(); TypeDescriptor.AddAttributes(entity, meta);
-					meta._SerialId = ++UberHelper.MetaEntityLastSerial;
+					meta._SerialId = ++Uber.MetaEntityLastSerial;
+					meta._EntityType = type;
 				}
 				if (meta != null && !meta.HasValidEntity)
 				{
 					meta._WeakReference = new WeakReference(entity);
-					meta._EntityType = type;
-
-					if (type.Assembly.GetName().Name == ProxyGenerator.PROXY_ASSEMBLY_NAME)
-					{
-						meta._ProxyHolder = ProxyGenerator.Holders.FindByExtendedType(type);
-						if (meta._ProxyHolder != null) meta._EntityType = type.BaseType;
-					}
 				}
 				return meta;
 			}
@@ -133,51 +115,15 @@
 		ulong _SerialId = 0;
 		WeakReference _WeakReference = null;
 		Type _EntityType = null;
-		ProxyHolder _ProxyHolder = null;
+		ProxyHolder _ProxyHolder = null; bool _ProxyCaptured = false;
 		IUberMap _UberMap = null;
-		IRecord _Record = null; string _RecordId = null;
 		IUberOperation _UberOperation = null;
-		bool _Completed = false;
-		bool _ToRefresh = false;
+		IRecord _Record = null;
+		string _IdentityString = null;
 		Dictionary<string, HashSet<object>> _ChildDependencies = new Dictionary<string, HashSet<object>>();
+		bool _Completed = false;
 
 		private MetaEntity() { }
-
-		/// <summary>
-		/// Clears the metadata held by this instance.
-		/// </summary>
-		internal void Clear()
-		{
-			ChildDependencies.Clear();
-			ToRefresh = false;
-			Completed = false;
-			ToRefresh = false;
-			UberOperation = null;
-			Record = null;
-			UberMap = null;
-		}
-		void IUberEntity.Clear()
-		{
-			this.Clear();
-		}
-
-		/// <summary>
-		/// This hack is needed to force instances of this class to behave as a reference type,
-		/// instead of a value type, for IndexOf() and Remove() purposes.
-		/// </summary>
-		public override bool Equals(object obj)
-		{
-			return object.ReferenceEquals(this, obj);
-		}
-
-		/// <summary>
-		/// This hack is needed to force instances of this class to behave as a reference type,
-		/// instead of a value type, for IndexOf() and Remove() purposes.
-		/// </summary>
-		public override int GetHashCode()
-		{
-			return base.GetHashCode();
-		}
 
 		/// <summary>
 		/// Returns the string representation of this instance.
@@ -185,42 +131,66 @@
 		/// <returns>A string containing the standard representation of this instance.</returns>
 		public override string ToString()
 		{
-			return string.Format("{0}:{1}:{2}:{3}",
+			return string.Format("{0}:{1}:{2}({3})",
 				SerialId,
+				ToStringState(),
 				ToStringType(),
-				State,
 				ToStringData());
 		}
-		private string ToStringType()
+		string ToStringState()
 		{
-			return string.Format("{0}{1}",
-				EntityType.EasyName(),
-				ProxyHolder != null ? ":Proxy" : string.Empty);
+			return State.ToString();
 		}
-		private string ToStringData()
+		string ToStringType()
+		{
+			var type = EntityType;
+			var str = type == null ? "-" : type.EasyName();
+
+			var proxy = ProxyHolder;
+			if (proxy != null) str += ":Proxy";
+
+			return str;
+		}
+		string ToStringData()
 		{
 			StringBuilder sb = new StringBuilder();
-			sb.Append("[");
 
-			if (_Record != null && !_Record.IsDisposed && _Record.Count != 0)
+			if (Record != null && !Record.IsDisposed)
 			{
-				bool disposed = _Record.Schema == null || _Record.Schema.IsDisposed;
-				bool first = true; for (int i = 0; i < _Record.Count; i++)
+				bool disposed = Record.Schema == null || Record.Schema.IsDisposed;
+				sb.Append("["); for (int i = 0; i < Record.Count; i++)
 				{
-					object value = _Record[i];
-					string name =
-						disposed || Record.Schema[i].IsDisposed
+					var value = Record[i];
+					var name = disposed || Record.Schema[i].IsDisposed
 						? "#{0}".FormatWith(i)
 						: Record.Schema[i].ColumnName.Sketch();
 
-					if (first) first = false; else sb.Append(", ");
+					if (i != 0) sb.Append(", ");
 					sb.AppendFormat("{0}={1}", name, value.Sketch());
 				}
+				sb.Append("]");
 			}
 			else if (HasValidEntity) sb.Append(Entity.Sketch());
 
-			sb.Append("]");
 			return sb.ToString();
+		}
+
+		/// <summary>
+		/// This hack is needed to force instances of this class to behave with reference type
+		/// semantics for IndexOf() and Remove() purposes.
+		/// </summary>
+		public override bool Equals(object obj)
+		{
+			return object.ReferenceEquals(this, obj);
+		}
+
+		/// <summary>
+		/// This hack is needed to force instances of this class to behave with reference type
+		/// semantics for IndexOf() and Remove() purposes.
+		/// </summary>
+		public override int GetHashCode()
+		{
+			return base.GetHashCode();
 		}
 
 		/// <summary>
@@ -233,7 +203,7 @@
 
 		/// <summary>
 		/// The actual entity this metadata is associated with, or null if it has been collected
-		/// or it is not available for any reasons.
+		/// or if it is not available.
 		/// </summary>
 		public object Entity
 		{
@@ -245,13 +215,7 @@
 		/// </summary>
 		internal bool HasValidEntity
 		{
-			get
-			{
-				return (
-					_WeakReference == null ||
-					!_WeakReference.IsAlive ||
-					_WeakReference.Target == null) ? false : true;
-			}
+			get { return (_WeakReference == null || !_WeakReference.IsAlive || _WeakReference.Target == null) ? false : true; }
 		}
 		bool IUberEntity.HasValidEntity
 		{
@@ -259,19 +223,44 @@
 		}
 
 		/// <summary>
-		/// The entity type this instance was created for.
+		/// The type of the underlying entity, or null.
 		/// </summary>
 		public Type EntityType
 		{
-			get { return _EntityType; }
+			get { CaptureProxy(); return _EntityType; }
 		}
 
 		/// <summary>
-		/// The proxy holder associated with the entity, if any.
+		/// The proxy type of the underlying entity, or null.
+		/// </summary>
+		internal Type ProxyType
+		{
+			get { CaptureProxy(); return _ProxyHolder == null ? null : _ProxyHolder.ProxyType; }
+		}
+		Type IUberEntity.ProxyType
+		{
+			get { return this.ProxyType; }
+		}
+
+		/// <summary>
+		/// Captures the proxy holder associated with this instance.
+		/// </summary>
+		void CaptureProxy()
+		{
+			if (!_ProxyCaptured)
+			{
+				_ProxyHolder = ProxyGenerator.ProxyHolders.Find(_EntityType);
+				_ProxyCaptured = true;
+				if (_ProxyHolder != null) _EntityType = _ProxyHolder.ProxyType.BaseType;
+			}
+		}
+
+		/// <summary>
+		/// The proxy holder associated with the type of the underlying entity, or null.
 		/// </summary>
 		internal ProxyHolder ProxyHolder
 		{
-			get { return _ProxyHolder; }
+			get { CaptureProxy(); return _ProxyHolder; }
 		}
 		ProxyHolder IUberEntity.ProxyHolder
 		{
@@ -279,27 +268,15 @@
 		}
 
 		/// <summary>
-		/// The extended type of the associated one, if any.
-		/// </summary>
-		internal Type ExtendedType
-		{
-			get { return _ProxyHolder == null ? null : _ProxyHolder.ExtendedType; }
-		}
-		Type IUberEntity.ExtendedType
-		{
-			get { return this.ExtendedType; }
-		}
-
-		/// <summary>
-		/// The map that is managing this instance, or null if it is a detached one.
+		/// The map that is managing the underlying entity, or null if it is a detached one.
 		/// </summary>
 		public IDataMap Map
 		{
-			get { return _UberMap; }
+			get { return this.UberMap; }
 		}
 
 		/// <summary>
-		/// The map that this instance is managed by, if any.
+		/// The map that is managing the underlying entity, or null if it is a detached one.
 		/// </summary>
 		internal IUberMap UberMap
 		{
@@ -313,11 +290,11 @@
 		}
 
 		/// <summary>
-		/// The repository reference held by the associated map, if any.
+		/// The repository associated with this entity, if any.
 		/// </summary>
 		internal DataRepository Repository
 		{
-			get { return _UberMap == null ? null : _UberMap.Repository; }
+			get { return UberMap == null ? null : UberMap.Repository; }
 		}
 		DataRepository IUberEntity.Repository
 		{
@@ -325,12 +302,12 @@
 		}
 
 		/// <summary>
-		/// The last operation annotated into this entity.
+		/// The last operation annotated for this entity.
 		/// </summary>
 		internal IUberOperation UberOperation
 		{
 			get { return _UberOperation; }
-			set { _UberOperation = value; }
+			set { _UberOperation = null; }
 		}
 		IUberOperation IUberEntity.UberOperation
 		{
@@ -341,20 +318,21 @@
 		/// <summary>
 		/// The state of the underlying entity.
 		/// </summary>
-		public MetaState State
+		public MetaState State 
 		{
 			get
 			{
 				if (!HasValidEntity) return MetaState.Collected;
-				if (UberMap == null || UberMap.IsDisposed) return MetaState.Detached;
+				if (UberMap == null) return MetaState.Detached;
 
-				if (_UberOperation != null)
+				if (UberOperation != null)
 				{
-					if (_UberOperation is IDataInsert) return MetaState.ToInsert;
-					if (_UberOperation is IDataUpdate) return MetaState.ToUpdate;
-					if (_UberOperation is IDataDelete) return MetaState.ToDelete;
-					throw new InvalidOperationException(
-						"Unknown operation '{0}'.".FormatWith(_UberOperation));
+					if (UberOperation is IDataDelete) return MetaState.ToDelete;
+					if (UberOperation is IDataInsert) return MetaState.ToInsert;
+					if (UberOperation is IDataUpdate) return MetaState.ToUpdate;
+
+					throw new InvalidCastException(
+						"Unknown operation type for '{0}'.".FormatWith(UberOperation));
 				}
 
 				return MetaState.Ready;
@@ -363,6 +341,7 @@
 
 		/// <summary>
 		/// The record associated with this instance, if any.
+		/// <para>The setter flags this instance to capture the record's identity string again.</para>
 		/// </summary>
 		internal IRecord Record
 		{
@@ -373,7 +352,7 @@
 				if (_Record != null) _Record.Dispose();
 
 				_Record = value;
-				_RecordId = _Record == null ? null : UberEntitySet.GetKey(_Record);
+				_IdentityString = _Record == null ? null : _Record.IdentityString();
 			}
 		}
 		IRecord IUberEntity.Record
@@ -383,16 +362,29 @@
 		}
 
 		/// <summary>
-		/// Gets a normalized string that represents the identity columns from the record that
-		/// has been associated to this instance, or null.
+		/// Returns the identity string associated with the current record of this instance,
+		/// or null.
 		/// </summary>
-		internal string RecordId
+		internal string IdentityString
 		{
-			get { return _RecordId; }
+			get { return _IdentityString; }
 		}
-		string IUberEntity.RecordId
+		string IUberEntity.IdentityString
 		{
-			get { return this.RecordId; }
+			get { return this.IdentityString; }
+		}
+
+		/// <summary>
+		/// The collection of objects, if any, captured as child dependencies of the underlying
+		/// instance, organized by the name of the property that holds them.
+		/// </summary>
+		internal Dictionary<string, HashSet<object>> ChildDependencies
+		{
+			get { return this._ChildDependencies; }
+		}
+		Dictionary<string, HashSet<object>> IUberEntity.ChildDependencies
+		{
+			get { return this.ChildDependencies; }
 		}
 
 		/// <summary>
@@ -409,7 +401,7 @@
 				{
 					if (value == false && ProxyHolder != null)
 					{
-						foreach (var lazy in ProxyHolder.LazyProperties)
+						foreach (var lazy in ProxyHolder.LazyProperties.Items)
 						{
 							lazy.LazyCompletedFlag.SetValue(entity, false);
 						}
@@ -422,34 +414,6 @@
 		{
 			get { return this.Completed; }
 			set { this.Completed = value; }
-		}
-
-		/// <summary>
-		/// Whether the underlying entity has been marked to be refreshed as the consequence of
-		/// a change operation on any of its dependencies, or not.
-		/// </summary>
-		internal bool ToRefresh
-		{
-			get { return _ToRefresh; }
-			set { _ToRefresh = value; }
-		}
-		bool IUberEntity.ToRefresh
-		{
-			get { return this.ToRefresh; }
-			set { this.ToRefresh = value; }
-		}
-
-		/// <summary>
-		/// Gets the collection of objects captured as child dependencies organized by the
-		/// property name that holds them.
-		/// </summary>
-		internal Dictionary<string, HashSet<object>> ChildDependencies
-		{
-			get { return _ChildDependencies; }
-		}
-		Dictionary<string, HashSet<object>> IUberEntity.ChildDependencies
-		{
-			get { return this.ChildDependencies; }
 		}
 	}
 }

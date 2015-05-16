@@ -1,11 +1,10 @@
-﻿namespace Kerosene.ORM.Maps
-{
-	using Kerosene.ORM.Core;
-	using Kerosene.Tools;
-	using System;
-	using System.Linq;
+﻿using Kerosene.ORM.Core;
+using Kerosene.Tools;
+using System;
 
-	// ==================================================== 
+namespace Kerosene.ORM.Maps
+{
+	// ====================================================
 	/// <summary>
 	/// Represents a delete operation for its associated entity.
 	/// </summary>

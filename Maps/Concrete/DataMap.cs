@@ -1,19 +1,18 @@
-﻿namespace Kerosene.ORM.Maps.Concrete
-{
-	using Kerosene.ORM.Core;
-	using Kerosene.Tools;
-	using System;
-	using System.Collections;
-	using System.Collections.Generic;
-	using System.Linq;
-	using System.Linq.Expressions;
-	using System.Reflection;
-	using System.Runtime.Serialization;
+﻿using Kerosene.ORM.Core;
+using Kerosene.Tools;
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using System.Linq.Expressions;
+using System.Reflection;
+using System.Runtime.Serialization;
+using System.Text;
+using System.Threading;
 
-	// ==================================================== 
-	/// <summary>
-	/// Extends the <see cref="IDataMap"/> interface.
-	/// </summary>
+namespace Kerosene.ORM.Maps.Concrete
+{
+	// ====================================================
 	internal interface IUberMap : IDataMap
 	{
 		/// <summary>
@@ -22,28 +21,45 @@
 		new DataRepository Repository { get; }
 
 		/// <summary>
+		/// The object that can be used to synchronize operations on this map.
+		/// </summary>
+		object MasterLock { get; }
+
+		/// <summary>
 		/// The link reference held by the associated repository, if any.
 		/// </summary>
 		IDataLink Link { get; }
 
 		/// <summary>
-		/// The collection of members that have been explicitly defined for this map.
+		/// Wheter this map is considered a weak one or not.
+		/// </summary>
+		new bool IsWeakMap { get; set; }
+
+		/// <summary>
+		/// Whether tracking of child entities for dependency properties is enabled for this
+		/// map or not.
+		/// </summary>
+		bool TrackChildEntities { get; set; }
+
+		/// <summary>
+		/// The collection of members of the type for which either a dependency and/or a
+		/// completion method has been defined.
 		/// </summary>
 		new IUberMemberCollection Members { get; }
 
 		/// <summary>
-		/// The collection of columns to take into consideration for the operations of this map.
+		/// The collection of columns in the database associated with this map.
 		/// </summary>
 		new IUberColumnCollection Columns { get; }
 
 		/// <summary>
-		/// The instance that represents the database column to be used for row version control
-		/// if its name property is not null.
+		/// Represents the column to be used for row version control, if any.
 		/// </summary>
 		new IUberVersionColumn VersionColumn { get; }
 
 		/// <summary>
-		/// The proxy holder created to manage the entities of this map, if any.
+		/// The proxy holder created for the type of the entities managed by this instance,
+		/// or null.
 		/// </summary>
 		ProxyHolder ProxyHolder { get; }
 
@@ -63,27 +79,32 @@
 		ISchema SchemaId { get; }
 
 		/// <summary>
-		/// Writes into the record the values obtained from the entity.
-		/// <para>Only the columns in the target record are taken into consideration.</para>
+		/// The collection of entities in this map.
 		/// </summary>
-		/// <param name="entity">The source entity.</param>
-		/// <param name="record">The target record.</param>
+		MetaEntityCollection MetaEntities { get; }
+
+		/// <summary>
+		/// Collects and removes the invalid entities in the cache of this map, if any.
+		/// </summary>
+		void CollectInvalidEntities();
+
+		/// <summary>
+		/// Writes into the target record the contents from the source entity. Only the existing
+		/// columns in the target record are taken into consideration.
+		/// </summary>
 		void WriteRecord(object entity, IRecord record);
 
 		/// <summary>
-		/// Loads into the entity the values obtained from the record.
-		/// <para>Only the columns in the source record are taken into consideration.</para>
+		/// Loads into the target entity the contents from the source record. Only the existing
+		/// columns in the source record are taken into consideration.
 		/// </summary>
-		/// <param name="record">The source record.</param>
-		/// <param name="entity">The target entity.</param>
 		void LoadEntity(IRecord record, object entity);
 
 		/// <summary>
-		/// Completes the members of the given meta-entity.
-		/// <para>Only the non-lazy members are processed by this method, as they are processed
-		/// by their overriden getters when needed.</para>
+		/// Completes the members of the given meta-entity. Only the non-lazy members are
+		/// processed by this method, as they are processed by their overriden getters when
+		/// needed.
 		/// </summary>
-		/// <param name="meta">The meta-entity whose members are to be completed.</param>
 		void CompleteMembers(MetaEntity meta);
 
 		/// <summary>
@@ -94,145 +115,133 @@
 		IRecord ExtractId(IRecord source);
 
 		/// <summary>
-		/// The collection of entities managed by this map, if it is tracking entities.
+		/// Removes the given entity from this map, making it become a detached one. Returns true
+		/// if the entity has been removed, or false otherwise.
 		/// </summary>
-		UberEntitySet UberEntities { get; }
-
-		/// <summary>
-		/// Collects and removes the invalid entities in the cache of this map, if any.
-		/// </summary>
-		void CollectInvalidEntities();
-
-		/// <summary>
-		/// Whether to track or not the child entities of the members defined.
-		/// </summary>
-		bool TrackChildEntities { get; set; }
+		bool Detach(MetaEntity meta);
 	}
 
-	// ==================================================== 
+	// ====================================================
 	/// <summary>
-	/// Represents a map between the type of the entities it is associated with and their
-	/// database representation.
+	/// Represents a map between entities of a POCO class and a primary table in an underlying
+	/// database-alike service.
 	/// </summary>
 	public class DataMap<T> : IDataMap<T>, IUberMap where T : class
 	{
 		bool _IsDisposed = false;
 		ulong _SerialId = 0;
 		DataRepository _Repository = null;
-		bool _IsValidated = false;
-		ISchema _Schema = null;
-		ISchema _SchemaId = null;
-		ProxyHolder _ProxyHolder = null;
-		ConstructorInfo _ConstructorInfo = null;
-		bool _TrackEntities = UberHelper.TrackEntities;
-		bool _TrackChildEntities = UberHelper.TrackChildEntities;
-		UberEntitySet _UberEntities = new UberEntitySet();
-
-		string _Table = null;
+		object _MasterLock = null;
 		bool _IsWeakMap = false;
+		string _Table = null;
 		Func<dynamic, object> _Discriminator = null;
 		MapDiscoveryMode _DiscoveryMode = MapDiscoveryMode.Auto;
-		MapMemberCollection<T> _Members = null;
-		MapColumnCollection<T> _Columns = null;
-		MapVersionColumn<T> _VersionColumn = null;
+		internal MapMemberCollection<T> _Members = null;
+		internal MapColumnCollection<T> _Columns = null;
+		internal MapVersionColumn<T> _VersionColumn = null;
+		bool _TrackEntities = Uber.TrackEntities;
+		bool _TrackChildEntities = Uber.TrackChildEntities;
+		bool _IsValidated = false;
+		ProxyHolder _ProxyHolder = null;
+		ISchema _Schema = null;
+		ISchema _SchemaId = null;
+		ConstructorInfo _Constructor = null;
+		MetaEntityCollection _MetaEntities = new MetaEntityCollection();
 
 		/// <summary>
 		/// Invoked when initializing this instance.
 		/// </summary>
-		void OnInitialize(DataRepository repo, string table, bool weak)
+		protected virtual void OnInitialize(DataRepository repo, string table)
 		{
 			if (repo == null) throw new ArgumentNullException("repo", "Repository cannot be null.");
 			if (repo.IsDisposed) throw new ObjectDisposedException(repo.ToString());
-			if (repo.Link.IsDisposed) throw new ObjectDisposedException(repo.Link.ToString());
-			table = table.Validated("Table Name");
 
-			lock (repo.UberMaps.SyncRoot)
+			if (!EntityType.IsClass && !EntityType.IsInterface) throw new InvalidOperationException(
+				"Type '{0}' is not a class or an interface."
+				.FormatWith(EntityType.EasyName()));
+
+			lock (repo.MasterLock)
 			{
-				var temp = repo.UberMaps.FindByType(EntityType);
-				if (temp != null)
+				var temp = repo.UberMaps.Find(EntityType); if (temp != null)
 				{
-					if (temp.IsWeakMap && !weak && UberHelper.EnableWeakMaps)
-					{
-						temp.Dispose();
-						repo.UberMaps.Add(this);
-					}
+					if (temp.IsWeakMap) temp.Dispose();
 					else throw new DuplicateException(
 						"A map for type '{0}' is already registered in '{1}'."
 						.FormatWith(EntityType.EasyName(), repo));
 				}
-				else repo.UberMaps.Add(this);
 
+				_SerialId = ++Uber.DataMapLastSerial;
 				_Repository = repo;
-				_Table = table;
-				_IsWeakMap = weak;
-				_TrackEntities = repo.TrackEntities;
-				_SerialId = ++UberHelper.DataMapLastSerial;
+				_MasterLock = repo.MasterLock;
+				_TrackEntities = _Repository.TrackEntities;
+				Table = table;
 
 				_Members = new MapMemberCollection<T>(this);
 				_Columns = new MapColumnCollection<T>(this);
 				_VersionColumn = new MapVersionColumn<T>(this);
+				
+				repo.UberMaps.Add(this);
 			}
 		}
 
 		/// <summary>
 		/// Initializes a new instance.
 		/// </summary>
-		/// <param name="repo">The repository this map will be registered into.</param>
+		/// <param name="repo">The repository where this map will be registered into.</param>
 		/// <param name="table">The name of the primary table for this map.</param>
-		/// <param name="weak">Whether this map shall be considered a weak map or not.</param>
-		public DataMap(DataRepository repo, string table, bool weak = false)
+		public DataMap(DataRepository repo, string table)
 		{
-			OnInitialize(repo, table, weak);
+			OnInitialize(repo, table);
 		}
 
 		/// <summary>
 		/// Initializes a new instance.
 		/// </summary>
-		/// <param name="repo">The repository this map will be registered into.</param>
+		/// <param name="repo">The repository where this map will be registered into.</param>
+		/// <param name="table">A dynamic lambda expression that resolves into the name of the
+		/// primary table for this map.</param>
+		public DataMap(DataRepository repo, Func<dynamic, object> table)
+		{
+			if (table == null) throw new ArgumentNullException("table", "Table specification cannot be null.");
+			var name = DynamicInfo.ParseName(table);
+
+			OnInitialize(repo, name);
+		}
+
+		/// <summary>
+		/// Initializes a new instance.
+		/// </summary>
+		/// <param name="repo">The repository where this map will be registered into.</param>
 		/// <param name="table">The name of the primary table for this map.</param>
-		/// <param name="weak">Whether this map shall be considered a weak map or not.</param>
-		public DataMap(IDataRepository repo, string table, bool weak = false)
+		public DataMap(IDataRepository repo, string table)
 		{
 			if (repo == null) throw new ArgumentNullException("repo", "Repository cannot be null.");
 			var temp = repo as DataRepository;
 			if (temp == null) throw new InvalidCastException(
-				"Repository '{0}' is not a valid 'DataRepository' instance.".FormatWith(repo.Sketch()));
+				"Repository '{0}' is not a valid '{1}' instance."
+				.FormatWith(repo.Sketch(), typeof(DataRepository).EasyName()));
 
-			OnInitialize(temp, table, weak);
+			OnInitialize(temp, table);
 		}
 
 		/// <summary>
 		/// Initializes a new instance.
 		/// </summary>
-		/// <param name="repo">The repository this map will be registered into.</param>
+		/// <param name="repo">The repository where this map will be registered into.</param>
 		/// <param name="table">A dynamic lambda expression that resolves into the name of the
 		/// primary table for this map.</param>
-		/// <param name="weak">Whether this map shall be considered a weak map or not.</param>
-		public DataMap(DataRepository repo, Func<dynamic, object> table, bool weak = false)
-		{
-			if (table == null) throw new ArgumentNullException("table", "Table specification cannot be null.");
-			var name = DynamicInfo.ParseName(table);
-			OnInitialize(repo, name, weak);
-		}
-
-		/// <summary>
-		/// Initializes a new instance.
-		/// </summary>
-		/// <param name="repo">The repository this map will be registered into.</param>
-		/// <param name="table">A dynamic lambda expression that resolves into the name of the
-		/// primary table for this map.</param>
-		/// <param name="weak">Whether this map shall be considered a weak map or not.</param>
-		public DataMap(IDataRepository repo, Func<dynamic, object> table, bool weak = false)
+		public DataMap(IDataRepository repo, Func<dynamic, object> table)
 		{
 			if (repo == null) throw new ArgumentNullException("repo", "Repository cannot be null.");
 			var temp = repo as DataRepository;
 			if (temp == null) throw new InvalidCastException(
-				"Repository '{0}' is not a valid 'DataRepository' instance.".FormatWith(repo.Sketch()));
+				"Repository '{0}' is not a valid '{1}' instance."
+				.FormatWith(repo.Sketch(), typeof(DataRepository).EasyName()));
 
 			if (table == null) throw new ArgumentNullException("table", "Table specification cannot be null.");
 			var name = DynamicInfo.ParseName(table);
 
-			OnInitialize(temp, name, weak);
+			OnInitialize(temp, name);
 		}
 
 		/// <summary>
@@ -264,43 +273,31 @@
 		{
 			if (disposing)
 			{
-				if (_UberEntities != null)
-				{
-					lock (_UberEntities.SyncRoot)
-					{
-						foreach (var meta in _UberEntities) meta.Clear();
-						_UberEntities.Clear();
-					}
-				}
+				if (_MasterLock != null) Monitor.Enter(_MasterLock);
 
-				if (_Repository != null && !_Repository.IsDisposed)
-				{
-					_Repository.DiscardChanges();
+				if (_MetaEntities != null) ClearEntities(detach: true);
+				if (_Repository != null && !_Repository.IsDisposed) _Repository.UberMaps.Remove(this);
+				if (_Members != null) _Members.OnDispose();
+				if (_Columns != null) _Columns.OnDispose();
+				if (_VersionColumn != null) _VersionColumn.OnDispose();
 
-					lock (_Repository.UberMaps.SyncRoot)
-					{
-						_Repository.UberMaps.Remove(this);
-					}
-				}
-
-				if (_Members != null) _Members.Dispose();
-				if (_Columns != null) _Columns.Dispose();
-				if (_VersionColumn != null) _VersionColumn.Dispose();
+				if (_MasterLock != null) Monitor.Exit(_MasterLock);
 			}
 
+			_Repository = null;
+			_MasterLock = null;
+			_Discriminator = null;
 			_Members = null;
 			_Columns = null;
 			_VersionColumn = null;
+			_MetaEntities = null;
 
-			_Discriminator = null;
 			_IsValidated = false;
-			_ConstructorInfo = null;
+			_ProxyHolder = null;
+			_MetaEntities = null;
 			_Schema = null;
 			_SchemaId = null;
-			_ProxyHolder = null;
-
-			_UberEntities = null;
-			_Repository = null;
+			_Constructor = null;
 
 			_IsDisposed = true;
 		}
@@ -311,60 +308,51 @@
 		/// <returns>A string containing the standard representation of this instance.</returns>
 		public override string ToString()
 		{
-			var str = string.Format("{0}:{1}[{2}{3} => {4}{5}({6})]",
-				SerialId,
-				GetType().EasyName(),
-				EntityType.EasyName(),
-				ProxyHolder == null ? string.Empty : ":Proxy",
-				IsWeakMap ? "Weak:" : string.Empty,
-				Table ?? string.Empty,
-				Repository.Sketch());
+			StringBuilder sb = new StringBuilder();
 
+			sb.AppendFormat("{0}:{1}({2}", SerialId, GetType().EasyName(), EntityType.EasyName());
+			if (ProxyHolder != null) sb.Append(":Proxy");
+			if (IsWeakMap) sb.Append(":Weak");
+			sb.AppendFormat(" => {0}:{1}", Table ?? "-", _Repository.Sketch());
+			sb.Append(")");
+
+			var str = sb.ToString();
 			return IsDisposed ? "disposed::{0}".FormatWith(str) : str;
 		}
 
 		/// <summary>
-		/// Returns a new map that is associated with the repository given, and that contains
-		/// a copy of the structure and rules of the original one. Maps created using this
-		/// method are not considered weak ones.
+		/// Returns a new instance that is associated with the new given repository and that
+		/// contains a copy of the customizations of the original one.
 		/// </summary>
-		/// <param name="repo">The repository the new map will be associated with.</param>
-		/// <returns>A new map.</returns>
+		/// <returns>A new instance.</returns>
 		public DataMap<T> Clone(DataRepository repo)
 		{
-			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
-			if (repo == null) throw new ArgumentNullException("repo", "Repository cannot be null.");
-			if (repo.IsDisposed) throw new ObjectDisposedException(repo.ToString());
-
-			var cloned = new DataMap<T>(repo, Table, IsWeakMap);
-			OnClone(cloned); return cloned;
+			var cloned = new DataMap<T>(repo, x => Table); OnClone(cloned);
+			return cloned;
 		}
+
+		/// <summary>
+		/// Returns a new instance that is associated with the new given repository and that
+		/// contains a copy of the customizations of the original one.
+		/// </summary>
+		/// <returns>A new instance.</returns>
 		public DataMap<T> Clone(IDataRepository repo)
 		{
-			if (repo == null) throw new ArgumentNullException("repo", "Repository cannot be null");
-			var temp = repo as DataRepository; if (temp == null)
-				throw new InvalidCastException(
-				"Repository '{0}' is not a valid 'DataRepository' instance.".FormatWith(repo.Sketch()));
+			if (repo == null) throw new ArgumentNullException("repo", "Repository cannot be null.");
+			var temp = repo as DataRepository;
+			if (temp == null) throw new InvalidCastException(
+				"Repository '{0}' is not a valid '{1}' instance."
+				.FormatWith(repo.Sketch(), typeof(DataRepository).EasyName()));
 
-			return this.Clone(temp);
+			return Clone(temp);
 		}
 		IDataMap<T> IDataMap<T>.Clone(IDataRepository repo)
 		{
-			if (repo == null) throw new ArgumentNullException("repo", "Repository cannot be null");
-			var temp = repo as DataRepository; if (temp == null)
-				throw new InvalidCastException(
-				"Repository '{0}' is not a valid 'DataRepository' instance.".FormatWith(repo.Sketch()));
-
-			return this.Clone(temp);
+			return this.Clone(repo);
 		}
 		IDataMap IDataMap.Clone(IDataRepository repo)
 		{
-			if (repo == null) throw new ArgumentNullException("repo", "Repository cannot be null");
-			var temp = repo as DataRepository; if (temp == null)
-				throw new InvalidCastException(
-				"Repository '{0}' is not a valid 'DataRepository' instance.".FormatWith(repo.Sketch()));
-
-			return this.Clone(temp);
+			return this.Clone(repo);
 		}
 
 		/// <summary>
@@ -375,18 +363,19 @@
 		protected virtual void OnClone(object cloned)
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
+
 			var temp = cloned as DataMap<T>;
 			if (cloned == null) throw new InvalidCastException(
 				"Cloned instance '{0}' is not a valid '{1}' one."
 				.FormatWith(cloned.Sketch(), typeof(DataMap<T>).EasyName()));
 
-			// _TrackEntities / _TrackChildEntities: not cloned, values inherited from the
-			// state of the repo where the map is being cloned...
-
 			temp._Discriminator = _Discriminator;
 			temp._DiscoveryMode = _DiscoveryMode;
+			temp._TrackEntities = _TrackEntities;
+			temp._TrackChildEntities = _TrackChildEntities;
+
+			temp._Columns = _Columns.Clone(temp); // Must come first...
 			temp._Members = _Members.Clone(temp);
-			temp._Columns = _Columns.Clone(temp);
 			temp._VersionColumn = _VersionColumn.Clone(temp);
 		}
 
@@ -396,17 +385,6 @@
 		public ulong SerialId
 		{
 			get { return _SerialId; }
-		}
-
-		/// <summary>
-		/// Whether this map is considered a weak map or not.
-		/// <para>Weak maps are created automatically when an entity type is referenced by any
-		/// map operation and there was no registered map for that type. Weak maps are disposed
-		/// if a regular non-weak map is registered (created) explicitly.</para>
-		/// </summary>
-		public bool IsWeakMap
-		{
-			get { return _IsWeakMap; }
 		}
 
 		/// <summary>
@@ -422,19 +400,23 @@
 		}
 
 		/// <summary>
+		/// The object that can be used to synchronize operations on this map.
+		/// </summary>
+		internal object MasterLock
+		{
+			get { return _MasterLock; }
+		}
+		object IUberMap.MasterLock
+		{
+			get { return this.MasterLock; }
+		}
+
+		/// <summary>
 		/// The link reference held by the associated repository, if any.
 		/// </summary>
 		public IDataLink Link
 		{
 			get { return Repository == null ? null : Repository.Link; }
-		}
-
-		/// <summary>
-		/// The type of the entities managed by this map.
-		/// </summary>
-		public Type EntityType
-		{
-			get { return typeof(T); }
 		}
 
 		/// <summary>
@@ -444,6 +426,13 @@
 		public string Table
 		{
 			get { return _Table; }
+			set
+			{
+				if (IsDisposed) throw new ObjectDisposedException(this.ToString());
+				if (IsValidated) throw new InvalidOperationException("This map '{0}' is validated.".FormatWith(this));
+				
+				_Table = value.Validated("Table Name");
+			}
 		}
 
 		/// <summary>
@@ -464,6 +453,20 @@
 		}
 
 		/// <summary>
+		/// Wheter this map is considered a weak one or not.
+		/// </summary>
+		public bool IsWeakMap
+		{
+			get { return _IsWeakMap; }
+			internal set { _IsWeakMap = value; }
+		}
+		bool IUberMap.IsWeakMap
+		{
+			get { return this.IsWeakMap; }
+			set { this.IsWeakMap = value; }
+		}
+
+		/// <summary>
 		/// How the map will discover the columns in the database that will be associated with
 		/// the type.
 		/// </summary>
@@ -480,8 +483,16 @@
 		}
 
 		/// <summary>
-		/// The collection of members in the type that have been explicitly associated with
-		/// the map.
+		/// The type of the entities managed by this map.
+		/// </summary>
+		public Type EntityType
+		{
+			get { return typeof(T); }
+		}
+
+		/// <summary>
+		/// The collection of members of the type for which either a dependency and/or a
+		/// completion method has been defined.
 		/// </summary>
 		public MapMemberCollection<T> Members
 		{
@@ -501,8 +512,7 @@
 		}
 
 		/// <summary>
-		/// The collection of columns in the primary table that have been explicitly associated
-		/// with the map.
+		/// The collection of columns in the database associated with this map.
 		/// </summary>
 		public MapColumnCollection<T> Columns
 		{
@@ -522,8 +532,7 @@
 		}
 
 		/// <summary>
-		/// If not empty represents the column in the primary table that will be used for row
-		/// version control purposes.
+		/// Represents the column to be used for row version control, if any.
 		/// </summary>
 		public MapVersionColumn<T> VersionColumn
 		{
@@ -568,199 +577,107 @@
 			if (_Repository.IsDisposed) throw new ObjectDisposedException(_Repository.ToString());
 			if (_Repository.Link.IsDisposed) throw new ObjectDisposedException(_Repository.Link.ToString());
 
-			var selects = Validate_GenerateSelects();
-			var schema = Validate_GetPreliminarySchema(selects);
-			Validate_DiscardEntriesAndAddColumns(schema);
-			Validate_NormalizeSchemaNames(schema);
-			Validate_VerifyMapDefinitions(schema);
-			Validate_CaptureWorkingSchemas(schema);
-			Validate_GenerateProxyHolder();
-			Validate_CaptureEntityConstructor();
+			_Members.OnValidate();
+			_Columns.OnValidate();
+			_VersionColumn.OnValidate();
 
-			_IsValidated = true;
-		}
-		private List<string> Validate_GenerateSelects()
-		{
-			bool sensitive = Repository.Link.Engine.CaseSensitiveNames;
+			bool sensitive = _Repository.Link.Engine.CaseSensitiveNames;
 			List<string> selects = new List<string>();
-			string str = null;
 
-			// If mode is auto the list will be empty to select all columns. If mode is explicit
-			// then we will use only the columns that have been defined explicitly...
+			// Preparing the list of columns to select...
 			if (_DiscoveryMode == MapDiscoveryMode.Explicit)
 			{
-				if (VersionColumn.Name != null)
+				foreach (var col in _Columns)
 				{
-					selects.Add(VersionColumn.Name);
+					if (!col.Excluded) selects.Add(col.Name);
 				}
-				foreach (var col in Columns)
-				{
-					if (col.Excluded) continue;
-
-					str = selects.Find(x => string.Compare(x, col.Name, !sensitive) == 0);
-					if (str == null) selects.Add(col.Name);
-				}
-				foreach (var member in Members)
-				{
-					foreach (var mcol in member.Columns)
-					{
-						str = selects.Find(x => string.Compare(x, mcol.Name, !sensitive) == 0);
-						if (str == null) selects.Add(mcol.Name);
-					}
-				}
-
-				// In explicit mode having an empty selects' list is obvioulsy an error...
-				if (selects.Count == 0) throw new EmptyException(
-					"No candidate columns defined in this map '{0}' for Explicit Discovery Mode"
+				if (selects.Count != 0) throw new EmptyException(
+					"No columns defined for this '{0}' for Explicit Discovery Mode."
 					.FormatWith(this));
 			}
 
-			return selects;
-		}
-		private ISchema Validate_GetPreliminarySchema(List<string> selects)
-		{
+			// Obtaining the preliminary schema...
 			var cmd = Link.From(x => Table);
 			cmd.Top(1);
 			foreach (var select in selects) cmd.Select(x => select);
 
-			var iter = cmd.GetEnumerator(); bool r = iter.MoveNext();
+			var iter = cmd.GetEnumerator();
+			var r = iter.MoveNext();
 			var schema = iter.Schema;
 			var record = iter.CurrentRecord; if (record != null) record.Dispose();
 			iter.Reset();
 			iter.Dispose();
 
 			if (schema.Count == 0) throw new EmptyException(
-				"Schema is empty for map '{0}'.".FormatWith(this));
+				"Database schema retrieved is empty for map '{0}'.".FormatWith(this));
 
-			return schema;
-		}
-		private void Validate_DiscardEntriesAndAddColumns(ISchema schema)
-		{
-			bool sensitive = Repository.Link.Engine.CaseSensitiveNames;
+			// Normalizing schema entry names...
 			List<ISchemaEntry> entries = new List<ISchemaEntry>(schema);
-			foreach (var entry in entries)
-			{
-				// See if column is excluded or has been defined...
-				var col = Columns.FirstOrDefault<MapColumn<T>>(x => string.Compare(x.Name, entry.ColumnName, !sensitive) == 0);
-				if (col != null)
-				{
-					if (col.Excluded) schema.Remove(entry);
-					continue;
-				}
-
-				// See if column is defined as the row version control one...
-				if (string.Compare(VersionColumn.Name, entry.ColumnName, !sensitive) == 0)
-					continue;
-
-				// See if column is defined for a member...
-				bool found = false;
-				foreach (var member in Members)
-					foreach (var mcol in member.Columns)
-						if (string.Compare(mcol.Name, entry.ColumnName, !sensitive) == 0) found = true;
-				if (found) continue;
-
-				// Discarding entry if explicit mode is set (we have not found it defined...)
-				if (DiscoveryMode == MapDiscoveryMode.Explicit)
-				{
-					schema.Remove(entry);
-					continue;
-				}
-
-				// But in mode Auto we will add a new column instance to keep track of it...
-				col = Columns.Add(x => entry.ColumnName);
-				col.AutoDiscovered = true;
-			}
-
-			if (schema.Count == 0) throw new InvalidOperationException(
-				"Schema is empty after removing columns for map '{0}'.".FormatWith(this));
-
-			entries.Clear();
-			entries = null;
-		}
-		private void Validate_NormalizeSchemaNames(ISchema schema)
-		{
-			List<ISchemaEntry> entries = new List<ISchemaEntry>(schema);
-
 			foreach (var entry in entries) schema.Remove(entry);
-			foreach (var entry in entries)
-			{
-				// We need not to keep track of table's name, and in any case it would make harder
-				// other future processess...
-				entry.TableName = null;
-				schema.Add(entry);
-			}
-
+			foreach (var entry in entries) { entry.TableName = null; schema.Add(entry); }
 			entries.Clear();
-			entries = null;
-		}
-		private void Validate_VerifyMapDefinitions(ISchema schema)
-		{
-			ISchemaEntry temp = null;
 
-			if (VersionColumn.Name != null)
+			// Validating columns...
+			foreach (var col in _Columns)
 			{
-				// Can use FindEntry as columns should have unique names in the primary table...
-				temp = schema.FindEntry(VersionColumn.Name, raise: true);
-				if (temp == null) throw new NotFoundException(
-					"Row version column '{0}' not found in the generated schema."
-					.FormatWith(VersionColumn.Name));
-			}
+				var entry = schema.FindEntry(col.Name);
 
-			foreach (var col in Columns)
-			{
-				if (col.Excluded) continue;
-				if (col.AutoDiscovered) continue;
-
-				// Can use FindEntry as columns should have unique names in the primary table...
-				temp = schema.FindEntry(col.Name, raise: true);
-				if (temp == null) throw new NotFoundException(
-					"Column '{0}' not found in the generated schema."
-					.FormatWith(col.Name));
-			}
-
-			foreach (var member in Members)
-			{
-				foreach (var mcol in member.Columns)
+				if (col.Excluded)
 				{
-					// Can use FindEntry as columns should have unique names in primary table...
-					temp = schema.FindEntry(mcol.Name, raise: true);
-					if (temp == null) throw new NotFoundException(
-						"Column '{0}' for member '{1}' not found in the generated schema."
-						.FormatWith(mcol.Name, member.Name));
+					if (entry != null) schema.Remove(entry);
+					continue;
+				}
+				if (entry == null) throw new NotFoundException(
+					"No entry found in schema for column '{0}' in map '{1}'."
+					.FormatWith(col.Name, this));
+			}
+
+			// Adding newly found columns...
+			if (DiscoveryMode == MapDiscoveryMode.Auto)
+			{
+				foreach (var entry in schema)
+				{
+					var col = _Columns.Find(x => string.Compare(x.Name, entry.ColumnName, !sensitive) == 0);
+					if (col == null)
+					{
+						col = _Columns.Add(x => entry.ColumnName);
+						col.OnValidate();
+						col.AutoDiscovered = true;
+					}
 				}
 			}
-		}
-		private void Validate_CaptureWorkingSchemas(ISchema schema)
-		{
-			_Schema = schema;
-			if (_Schema.Count == 0) throw new EmptyException(
-				"Generated schema is empty for map '{0}'.".FormatWith(this));
+
+			// Validating working schemas...
+			if ((_Schema = schema).Count == 0) throw new EmptyException(
+				"Normalized schema is empty for map '{0}'."
+				.FormatWith(this));
+
+			var idlist = _Schema.IdentityList();
+			if (idlist.Count == 0) throw new EmptyException(
+				"Normalized schema '{0}' contains no identity columns.".FormatWith(_Schema));
 
 			_SchemaId = _Schema.Clone();
 			_SchemaId.Clear();
-			_SchemaId.AddRange(_Schema.PrimaryKeyColumns(), cloneNotOrphans: true);
-			if (_SchemaId.Count == 0) _SchemaId.AddRange(_Schema.UniqueValuedColumns(), cloneNotOrphans: true);
-			if (_SchemaId.Count == 0) throw new EmptyException(
-				"Generated schema '{0}' does not contain identity columns for map '{1}'."
-				.FormatWith(_Schema, this));
-		}
-		private void Validate_GenerateProxyHolder()
-		{
+			_SchemaId.AddRange(idlist, cloneNotOrphans: true);
+
+			// Generating a proxy holder if needed...
 			_ProxyHolder = ProxyGenerator.Locate(this);
-		}
-		private void Validate_CaptureEntityConstructor()
-		{
-			var type = ProxyHolder != null ? ProxyHolder.ExtendedType : EntityType;
+
+			// Capturing the default constructor, if any...
+			var type = _ProxyHolder == null ? EntityType : ProxyHolder.ProxyType;
 			var cons = type.GetConstructors(TypeEx.InstancePublicAndHidden);
 			foreach (var con in cons)
 			{
 				var pars = con.GetParameters();
-				if (pars.Length == 0) { _ConstructorInfo = con; break; }
+				if (pars.Length == 0) { _Constructor = con; break; }
 			}
+
+			_IsValidated = true;
 		}
 
 		/// <summary>
-		/// The proxy holder created to manage the entities of this map, if any.
+		/// The proxy holder created for the type of the entities managed by this instance,
+		/// or null.
 		/// </summary>
 		internal ProxyHolder ProxyHolder
 		{
@@ -776,7 +693,7 @@
 		/// </summary>
 		internal Type ProxyType
 		{
-			get { return ProxyHolder == null ? null : ProxyHolder.ExtendedType; }
+			get { return ProxyHolder == null ? null : ProxyHolder.ProxyType; }
 		}
 		Type IUberMap.ProxyType
 		{
@@ -808,73 +725,65 @@
 		}
 
 		/// <summary>
-		/// Writes into the record the values obtained from the entity.
-		/// <para>Only the columns in the target record are taken into consideration.</para>
+		/// Writes into the target record the contents from the source entity. Only the
+		/// existing columns in the target record are taken into consideration.
 		/// </summary>
-		/// <param name="entity">The source entity.</param>
-		/// <param name="record">The target record.</param>
 		internal void WriteRecord(T entity, IRecord record)
 		{
 			bool sensitive = Link.Engine.CaseSensitiveNames;
+			ISchema schema = record.Schema;
+			ISchemaEntry entry = null;
+			MapColumn<T> col = null;
+			object value = null;
 
-			// Processing the record's entries...
+			// Processing the columns of the target record...
 			for (int i = 0; i < record.Count; i++)
 			{
-				var entry = record.Schema[i];
+				entry = schema[i];
+				col = _Columns.Find(x => string.Compare(x.Name, entry.ColumnName, !sensitive) == 0);
 
-				// Rules set for columns...
-				var col = Columns.Find(x => string.Compare(x.Name, entry.ColumnName, !sensitive) == 0);
-				if (col != null && col.WriteEnabled)
+				if (col != null && !col.Excluded && col.WriteEnabled)
 				{
 					if (col.WriteRecord != null)
 					{
-						var value = col.WriteRecord(entity);
+						value = col.WriteRecord(entity);
 						record[i] = value;
 					}
 					else if (col.ElementInfo != null && col.ElementInfo.CanRead)
 					{
-						var value = col.ElementInfo.GetValue(entity);
+						value = col.ElementInfo.GetValue(entity);
 						record[i] = value;
 					}
 				}
-
-				// Rules set for members...
-				foreach (var member in Members)
-				{
-					var mcol = member.Columns.Find(x => string.Compare(x.Name, entry.ColumnName, !sensitive) == 0);
-					if (mcol != null && mcol.WriteEnabled)
-					{
-						if (mcol.WriteRecord != null)
-						{
-							var value = mcol.WriteRecord(entity);
-							record[i] = value;
-						}
-						else if (mcol.ElementInfo != null && mcol.ElementInfo.CanRead)
-						{
-							var value = mcol.ElementInfo.GetValue(entity);
-							record[i] = value;
-						}
-					}
-				}
 			}
 
-			// Transfering the value for the row version column from the metadata record to
-			// the external record, if needed - this is a way to emulate a storage for that
-			// value even if there is no member in the type suitable to hold it...
-			if (VersionColumn.Name != null)
+			// Target record may need the verion column...
+			if (VersionColumn.Name == null) return;
+			entry = schema.FindEntry(VersionColumn.Name); if (entry == null) return;
+			int n = schema.IndexOf(entry);
+
+			col = VersionColumn.Column; if (col.WriteEnabled)
 			{
-				try
+				if (col.WriteRecord != null)
 				{
-					var meta = MetaEntity.Locate(entity);
-					var cache = meta.Record.Schema.FindEntry(VersionColumn.Name, raise: false); if (cache == null) return;
-					var entry = record.Schema.FindEntry(VersionColumn.Name, raise: false); if (entry == null) return;
-
-					int n = meta.Record.Schema.IndexOf(cache);
-					int k = record.Schema.IndexOf(entry);
-					record[k] = meta.Record[n];
+					value = col.WriteRecord(entity);
+					record[n] = value;
+					return;
 				}
-				catch { }
+				if (col.ElementInfo != null && col.ElementInfo.CanRead)
+				{
+					value = col.ElementInfo.GetValue(entity);
+					record[n] = value;
+					return;
+				}
 			}
+
+			// It may happen version is not stored in the entity, but only on its record...
+			var meta = MetaEntity.Locate(entity);
+			var cache = meta.Record; if (cache == null) return;
+
+			value = cache[VersionColumn.Name];
+			record[n] = value;
 		}
 		void IUberMap.WriteRecord(object entity, IRecord record)
 		{
@@ -882,59 +791,37 @@
 		}
 
 		/// <summary>
-		/// Loads into the entity the values obtained from the record.
-		/// <para>Only the columns in the source record are taken into consideration.</para>
+		/// Loads into the target entity the contents from the source record. Only the existing
+		/// columns in the source record are taken into consideration.
 		/// </summary>
-		/// <param name="record">The source record.</param>
-		/// <param name="entity">The target entity.</param>
 		internal void LoadEntity(IRecord record, T entity)
 		{
 			bool sensitive = Link.Engine.CaseSensitiveNames;
+			ISchema schema = record.Schema;
+			ISchemaEntry entry = null;
+			MapColumn<T> col = null;
+			object value = null;
 
-			// Processing the record's entries...
+			// Processing the columns of the target record...
 			for (int i = 0; i < record.Count; i++)
 			{
-				var entry = record.Schema[i];
+				entry = schema[i];
+				col = _Columns.Find(x => string.Compare(x.Name, entry.ColumnName, !sensitive) == 0);
 
-				// Rules set for columns...
-				var col = Columns.Find(x => string.Compare(x.Name, entry.ColumnName, !sensitive) == 0);
-				if (col != null && col.LoadEnabled)
+				if (col != null && !col.Excluded && col.LoadEnabled)
 				{
 					if (col.LoadEntity != null)
 					{
-						var value = record[i];
+						value = record[i];
 						col.LoadEntity(value, entity);
 					}
 					else if (col.ElementInfo != null && col.ElementInfo.CanWrite)
 					{
-						var value = record[i].ConvertTo(col.ElementInfo.ElementType);
+						value = record[i].ConvertTo(col.ElementInfo.ElementType);
 						col.ElementInfo.SetValue(entity, value);
 					}
 				}
-
-				// Rules set for members...
-				foreach (var member in Members)
-				{
-					var mcol = member.Columns.Find(x => string.Compare(x.Name, entry.ColumnName, !sensitive) == 0);
-					if (mcol != null && mcol.LoadEnabled)
-					{
-						if (mcol.LoadEntity != null)
-						{
-							var value = record[i];
-							mcol.LoadEntity(value, entity);
-						}
-						else if (mcol.ElementInfo != null && mcol.ElementInfo.CanWrite)
-						{
-							var value = record[i].ConvertTo(mcol.ElementInfo.ElementType);
-							mcol.ElementInfo.SetValue(entity, value);
-						}
-					}
-				}
 			}
-
-			// There are no mechanisms to load into the entity the value of the row version
-			// column. Actually, it may happen that there is no member suitable to hold its
-			// value.... so we do nothing.
 		}
 		void IUberMap.LoadEntity(IRecord record, object entity)
 		{
@@ -942,39 +829,38 @@
 		}
 
 		/// <summary>
-		/// Completes the members of the given meta-entity.
-		/// <para>Only the non-lazy members are processed by this method, as they are processed
-		/// by their overriden getters when needed.</para>
+		/// Completes the members of the given meta-entity. Only the non-lazy members are
+		/// processed by this method, as they are processed by their overriden getters when
+		/// needed.
 		/// </summary>
-		/// <param name="meta">The meta-entity whose members are to be completed.</param>
 		internal void CompleteMembers(MetaEntity meta)
 		{
 			T entity = (T)meta.Entity;
+
 			if (entity == null) return;
 			if (meta.Record == null) return;
 			if (meta.Completed) return;
 
 			meta.Completed = true; foreach (var member in Members)
 			{
-				if (member.CompleteMember == null) continue; // Nothing to do...
-				if (member.LazyProperty != null) continue; // Deferred to lazy loading...
+				if (member.CompleteMember == null) continue;  // nothing to do...
+				if (member.LazyProperty != null) continue; // deferred to lazy...
 
 				member.CompleteMember(meta.Record, entity);
 
-				if (UberHelper.TrackChildEntities &&
+				if (TrackChildEntities &&
 					member.DependencyMode == MemberDependencyMode.Child &&
 					member.ElementInfo.CanRead &&
 					member.ElementInfo.ElementType.IsListAlike())
 				{
 					var type = member.ElementInfo.ElementType.ListAlikeMemberType();
-					if (type != null && type.IsClass)
+					if (type != null && (type.IsClass || type.IsInterface))
 					{
-						if (!meta.ChildDependencies.ContainsKey(member.Name))
-							meta.ChildDependencies.Add(member.Name, new HashSet<object>());
+						HashSet<object> childs = null;
+						if (!meta.ChildDependencies.TryGetValue(member.Name, out childs))
+							meta.ChildDependencies.Add(member.Name, (childs = new HashSet<object>()));
 
-						var childs = meta.ChildDependencies[member.Name];
 						childs.Clear();
-
 						var iter = member.ElementInfo.GetValue(entity) as IEnumerable;
 						foreach (var obj in iter) childs.Add(obj);
 					}
@@ -987,39 +873,117 @@
 		}
 
 		/// <summary>
-		/// Whether this instance keeps track of the entities it has managed in its internal
-		/// cache, or not.
+		/// Creates a new temporal record, associated with the ID schema, whose contents are
+		/// loaded from the source record given. Returns null if the source record contains not
+		/// all the id columns, or if there are any inconsistencies.
+		/// </summary>
+		internal IRecord ExtractId(IRecord source)
+		{
+			var id = new Core.Concrete.Record(SchemaId); for (int i = 0; i < SchemaId.Count; i++)
+			{
+				var name = SchemaId[i].ColumnName;
+				var entry = source.Schema.FindEntry(name, raise: false); if (entry == null)
+				{
+					id.Dispose();
+					return null;
+				}
+				int ix = source.Schema.IndexOf(entry);
+				id[i] = source[ix];
+			}
+			return id;
+		}
+		IRecord IUberMap.ExtractId(IRecord source)
+		{
+			return this.ExtractId(source);
+		}
+
+		/// <summary>
+		/// Whether tracking of entities is enabled for this map or not.
 		/// </summary>
 		public bool TrackEntities
 		{
 			get { return _TrackEntities; }
 			set
 			{
-				if (IsDisposed) return; // Just return, there is no need to throw an exception...
+				if (!IsDisposed && (value == false)) ClearEntities(detach: false);
 				_TrackEntities = value;
-				if (value == false) ClearEntities(detach: false); // False to avoid losing their state...
 			}
 		}
 
 		/// <summary>
-		/// Whether to track or not the child entities of the members defined.
+		/// Whether tracking of child entities for dependency properties is enabled for this
+		/// map or not.
 		/// </summary>
 		public bool TrackChildEntities
 		{
 			get { return _TrackChildEntities; }
-			set { _TrackChildEntities = value; }
+			set
+			{
+				if (!IsDisposed && (value == false)) ClearChildEntities();
+				_TrackChildEntities = value;
+			}
 		}
 
 		/// <summary>
-		/// The collection of entities managed by this map, if it is tracking entities.
+		/// The collection of entities in this map.
 		/// </summary>
-		internal UberEntitySet UberEntities
+		internal MetaEntityCollection MetaEntities
 		{
-			get { return _UberEntities; }
+			get { return _MetaEntities; }
 		}
-		UberEntitySet IUberMap.UberEntities
+		MetaEntityCollection IUberMap.MetaEntities
 		{
-			get { return this.UberEntities; }
+			get { return this.MetaEntities; }
+		}
+
+		/// <summary>
+		/// The collection of entities in a valid state tracked by this map.
+		/// </summary>
+		public IEnumerable<MetaEntity> Entities
+		{
+			get
+			{
+				if (IsDisposed) throw new ObjectDisposedException(this.ToString());
+
+				CollectInvalidEntities();
+				return MetaEntities.Items;
+			}
+		}
+		IEnumerable<IMetaEntity> IDataMap.Entities
+		{
+			get { return this.Entities; }
+		}
+
+		/// <summary>
+		/// Clears the cache of this map and, optionally, detaches the entities that were
+		/// tracked.
+		/// </summary>
+		/// <param name="detach">True to also detach the entities removed from the cache.</param>
+		public void ClearEntities(bool detach = true)
+		{
+			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
+			lock (MasterLock)
+			{
+				if (detach)
+				{
+					var metas = _MetaEntities.ToArray();
+					foreach (var meta in metas) Detach(meta);
+					Array.Clear(metas, 0, metas.Length);
+				}
+				_MetaEntities.Clear();
+			}
+		}
+
+		/// <summary>
+		/// Clears the child entities of all managed entities.
+		/// </summary>
+		internal void ClearChildEntities()
+		{
+			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
+			lock (MasterLock)
+			{
+				foreach (var meta in _MetaEntities.Items) meta.ChildDependencies.Clear();
+			}
 		}
 
 		/// <summary>
@@ -1027,64 +991,32 @@
 		/// </summary>
 		internal void CollectInvalidEntities()
 		{
-			lock (_UberEntities.SyncRoot)
+			lock (MasterLock)
 			{
-				var list = _UberEntities.Where(x => !x.HasValidEntity).ToArray();
-				foreach (var meta in list)
+				var metas = _MetaEntities.Items.Where(x => !x.HasValidEntity).ToArray();
+				foreach (var meta in metas)
 				{
-					// There is no need to check the repo's operations as these keep a hard
-					// reference to the entity, and so the GC should not collect those that
-					// are annotated there...
-
 					DebugEx.IndentWriteLine("\n- Collecting '{0}'...", meta);
-					UberEntities.Remove(meta);
-					meta.Clear();
+
+					var ops = Repository.UberOperations.FindAllMeta(meta);
+					foreach (var op in ops) op.Dispose();
+					ops.Clear(); ops = null;
+
+					MetaEntities.Remove(meta);
+					meta.UberMap = null;
+					meta.UberOperation = null;
+					meta.ChildDependencies.Clear();
+					meta.Completed = false;
+					meta.Record = null;
+
 					DebugEx.Unindent();
 				}
+				Array.Clear(metas, 0, metas.Length); metas = null;
 			}
 		}
 		void IUberMap.CollectInvalidEntities()
 		{
 			this.CollectInvalidEntities();
-		}
-
-		/// <summary>
-		/// The current collection of entities in a valid state tracked by this map, if any.
-		/// </summary>
-		public IEnumerable<IMetaEntity> Entities
-		{
-			get
-			{
-				if (!IsDisposed) CollectInvalidEntities();
-				return UberEntities;
-			}
-		}
-
-		/// <summary>
-		/// Clears the cache of tracked entities maintained by this map and optionally, detaches
-		/// those entities.
-		/// </summary>
-		/// <param name="detach">True to forcibly detach the entities found in the cache.</param>
-		public void ClearEntities(bool detach = true)
-		{
-			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
-			lock (_UberEntities.SyncRoot)
-			{
-				if (detach)
-				{
-					// If any entity has a pending operation we need to discard them all as we
-					// have no way to control all possible side effects...
-
-					bool discard = false;
-					foreach (var meta in _UberEntities)
-						if (_Repository.UberOperations.IndexOf(meta) >= 0) { discard = true; break; }
-
-					if (discard) _Repository.DiscardChanges();
-
-					foreach (var meta in _UberEntities) meta.Clear();
-				}
-				_UberEntities.Clear();
-			}
 		}
 
 		/// <summary>
@@ -1098,10 +1030,10 @@
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
 			Validate();
 
-			T obj = null; if (_ConstructorInfo != null) obj = (T)_ConstructorInfo.Invoke(null);
+			T obj = null; if (_Constructor != null) obj = (T)_Constructor.Invoke(null);
 			else
 			{
-				var type = ProxyHolder != null ? ProxyHolder.ExtendedType : EntityType;
+				var type = ProxyType ?? EntityType;
 				obj = (T)FormatterServices.GetUninitializedObject(type);
 			}
 
@@ -1122,20 +1054,19 @@
 			if (entity == null) throw new ArgumentNullException("entity", "Entity cannot be null.");
 			Validate();
 
-			lock (_UberEntities.SyncRoot)
+			lock (MasterLock)
 			{
 				var meta = MetaEntity.Locate(entity);
-				if (object.ReferenceEquals(meta.Map, this)) return;
-				if (meta.Map != null)
-					throw new NotOrphanException("Entity '{0}' cannot be attached to this map '{1}'."
-					.FormatWith(meta, this));
+				if (object.ReferenceEquals(meta.UberMap, this)) return;
+				if (meta.UberMap != null)
+					throw new NotOrphanException("Entity '{0}' is not orphan.".FormatWith(meta));
 
 				var record = new Core.Concrete.Record(Schema);
 				WriteRecord(entity, record);
 				meta.Record = record;
 				meta.UberMap = this;
 
-				if (TrackEntities) UberEntities.Add(meta);
+				if (TrackEntities) MetaEntities.Add(meta);
 			}
 		}
 		void IDataMap.Attach(object entity)
@@ -1155,28 +1086,38 @@
 			if (entity == null) throw new ArgumentNullException("entity", "Entity cannot be null.");
 			Validate();
 
-			bool r = false; lock (_UberEntities.SyncRoot)
-			{
-				var meta = MetaEntity.Locate(entity);
-				if (object.ReferenceEquals(meta.Map, this))
-				{
-					r = _UberEntities.Remove(meta); if (r || !TrackEntities) // !TrackEntities: entity has not to be on the cache...
-					{
-						// If there is a pending operation on the entity we need to discard them all
-						// as we have no way to control all possible side effects...
-						bool discard = _Repository.UberOperations.IndexOf(meta) >= 0;
-						if (discard) _Repository.DiscardChanges();
-
-						meta.Clear();
-						r = true; // To cover the case when (!TrackEntities)...
-					}
-				}
-			}
-			return r;
+			var meta = MetaEntity.Locate(entity);
+			return Detach(meta);
 		}
 		bool IDataMap.Detach(object entity)
 		{
 			return this.Detach((T)entity);
+		}
+
+		/// <summary>
+		/// Removes the given entity from this map, making it become a detached one. Returns true
+		/// if the entity has been removed, or false otherwise.
+		/// </summary>
+		internal bool Detach(MetaEntity meta)
+		{
+			bool r = object.ReferenceEquals(meta.UberMap, this); if (r)
+			{
+				var ops = Repository.UberOperations.FindAllMeta(meta);
+				foreach (var op in ops) op.Dispose();
+				ops.Clear(); ops = null;
+
+				MetaEntities.Remove(meta);
+				meta.UberMap = null;
+				meta.UberOperation = null;
+				meta.ChildDependencies.Clear();
+				meta.Record = null;
+				meta.Completed = false;
+			}
+			return r;
+		}
+		bool IUberMap.Detach(MetaEntity meta)
+		{
+			return this.Detach(meta);
 		}
 
 		/// <summary>
@@ -1217,80 +1158,54 @@
 		}
 
 		/// <summary>
-		/// Returns true if the given record contains, potentially among others, all the identity
-		/// columns found for this map when it was validated.
-		/// </summary>
-		bool HasIdColumns(IRecord record)
-		{
-			if (record == null) return false;
-			if (record.Schema == null) return false;
-
-			foreach (var entry in SchemaId)
-			{
-				var temp = record.Schema.FindEntry(entry.ColumnName, raise: false);
-				if (temp == null) return false;
-			}
-			return true;
-		}
-
-		/// <summary>
-		/// Returns true if the given record contains only the identity columns found for this
-		/// map when it was validated.
-		/// </summary>
-		bool HasIdColumnsOnly(IRecord record)
-		{
-			if (!HasIdColumns(record)) return false;
-
-			foreach (var entry in record.Schema)
-			{
-				var temp = SchemaId.FindEntry(entry.ColumnName, raise: false);
-				if (temp == null) return false;
-			}
-			return true;
-		}
-
-		/// <summary>
-		/// Finds and returns inmediately a suitable entity that meets the conditions given, by
+		/// finds and returns inmediately a suitable entity that meets the conditions given, by
 		/// looking for it in the managed cache and, if it cannot be found there, querying the
-		/// database for it. Returns null if such entity cannot be found neither in the cache
+		/// database for it. returns null if such entity cannot be found neither in the cache
 		/// nor in the database.
 		/// </summary>
-		/// <param name="specs">A collection of dynamic lambda expressions each containing the
-		/// name and value to find for a column, as in: 'x => x.Column == Value'.</param>
-		/// <returns>The requested entity, or null.</returns>
+		/// <param name="specs">a collection of dynamic lambda expressions each containing the
+		/// name and value to find for a column, as in: 'x => x.column == value'.</param>
+		/// <returns>the requested entity, or null.</returns>
 		public T FindNow(params Func<dynamic, object>[] specs)
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
 			if (specs == null) throw new ArgumentNullException("specs", "Specifications array cannot be null.");
 			Validate();
 
-			// The specification in a record form...
-			var record = Record.Create(specs);
-
-			// Let's see if we can find it in the cache...
-			if (TrackEntities)
+			var record = Record.Create(specs); foreach (var entry in SchemaId)
 			{
-				// If the record is an id spec we can go fast...
-				if (HasIdColumnsOnly(record))
+				// This is a hack to optimize finding the record by identity columns...
+				var temp = record.Schema.FindEntry(entry.ColumnName, raise: false);
+				if (temp != null) temp.IsPrimaryKeyColumn = true;
+			}
+
+			// Let's use the record as the index in the cache if posssible...
+			lock (MasterLock)
+			{
+				var node = MetaEntities.FindNode(record);
+				if (node != null)
 				{
-					lock (UberEntities.SyncRoot)
+					var meta = node.Find(x => x.HasValidEntity);
+					if (meta != null)
 					{
-						var node = UberEntities.GetNode(record); if (node != null)
-						{
-							var meta = node.Find(x => x.HasValidEntity);
-							if (meta != null)
-							{
-								record.Dispose(disposeSchema: true);
-								return (T)meta.Entity;
-							}
-						}
+						record.Dispose(disposeSchema: true);
+						return (T)meta.Entity;
 					}
 				}
+			}
 
-				// The default scenario is to iterate through the cache...
-				lock (UberEntities.SyncRoot)
+			// If not an identity record we need to iterate through the cache...
+			bool isId = true; foreach (var entry in SchemaId)
+			{
+				var temp = record.Schema.FindEntry(entry.ColumnName, raise: false);
+				if (temp == null) { isId = false; break; }
+			}
+
+			if (!isId)
+			{
+				lock (MasterLock)
 				{
-					foreach (var meta in UberEntities)
+					foreach (var meta in MetaEntities.Items)
 					{
 						if (!meta.HasValidEntity) continue;
 						if (meta.Record == null) continue;
@@ -1305,7 +1220,7 @@
 				}
 			}
 
-			// If not found in the cache, or cache with no tracked entities...
+			// If not found in the cache...
 			var cmd = Query().Top(1);
 			var tag = new DynamicNode.Argument("x");
 
@@ -1329,32 +1244,6 @@
 		}
 
 		/// <summary>
-		/// Creates a new temporal record, associated with the ID schema, whose contents are
-		/// loaded from the source record given. Returns null if the source record contains not
-		/// all the id columns, or if there are any inconsistencies.
-		/// </summary>
-		internal IRecord ExtractId(IRecord source)
-		{
-			var id = new Core.Concrete.Record(SchemaId); for (int i = 0; i < SchemaId.Count; i++)
-			{
-				var name = SchemaId[i].ColumnName;
-				var entry = source.Schema.FindEntry(name, raise: false);
-				if (entry == null)
-				{
-					return null;
-				}
-
-				int ix = source.Schema.IndexOf(entry);
-				id[i] = source[ix];
-			}
-			return id;
-		}
-		IRecord IUberMap.ExtractId(IRecord source)
-		{
-			return this.ExtractId(source);
-		}
-
-		/// <summary>
 		/// Refreshes inmediately the contents of the given entity (and potentially of its
 		/// dependencies), along with all the entities in the cache that share the same
 		/// identity.
@@ -1370,30 +1259,19 @@
 			if (entity == null) throw new ArgumentNullException("entity", "Entity cannot be null.");
 			Validate();
 
-			// We will always work with attached entities (only fails if it was already attached
-			// to other map, and in this case we ar happy it to fail)...
-			Attach(entity);
-
-			// Some common data...
 			var meta = MetaEntity.Locate(entity);
-			var rec = new Core.Concrete.Record(Schema); WriteRecord(entity, rec);
-			var id = ExtractId(rec);
-			if (id == null) throw new
-				InvalidOperationException("Cannot obtain identity from entity '{0}'".FormatWith(meta));
+			var attached = object.ReferenceEquals(meta.Map, this);
+			if (!attached) Attach(entity); // By definition we only refresh attached entities...
 
-			// Prepare to refresh everything in the cache, including the captured childs...
-			lock (UberEntities.SyncRoot)
+			var record = meta.Record; lock (MasterLock) // Forcing the refresh of the cache...
 			{
-				// Old identity...
-				var node = UberEntities.GetNode(meta.Record);
-				if (node != null) foreach (var temp in node) temp.Completed = false;
+				meta.Completed = false;
 
-				// New identity (eventually)...
-				node = id == null ? null : UberEntities.GetNode(id);
-				if (node != null) foreach (var temp in node) temp.Completed = false;
+				var node = MetaEntities.FindNode(record);
+				if (node != null) foreach (var item in node) item.Completed = false;
 			}
 
-			// Querying the database...
+			var id = ExtractId(record);
 			var cmd = Query().Top(1);
 			var tag = new DynamicNode.Argument("x");
 
@@ -1406,13 +1284,13 @@
 				left.Dispose();
 			}
 			id.Dispose();
-			rec.Dispose();
 			tag.Dispose();
 
 			T obj = cmd.First(); cmd.Dispose();
 
-			// If not found in the database we¡ll force it to become into a detached state...
-			if (obj == null) Detach(entity);
+			// We don't implicitly attach something not found...
+			if (obj == null && !attached) Detach(entity);
+
 			return obj;
 		}
 		object IDataMap.RefreshNow(object entity)
@@ -1474,13 +1352,13 @@
 		{
 			return new DataUpdate<T>(this, entity);
 		}
-		IDataUpdate<T> IDataMap<T>.Update(T entity)
+		IDataUpdate<T> IDataMap<T>.Update(T entitity)
 		{
-			return this.Update(entity);
+			return this.Update(entitity);
 		}
-		IDataUpdate IDataMap.Update(object entity)
+		IDataUpdate IDataMap.Update(object entitity)
 		{
-			return this.Update((T)entity);
+			return this.Update((T)entitity);
 		}
 	}
 }

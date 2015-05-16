@@ -1,15 +1,14 @@
-﻿namespace Kerosene.ORM.Maps
-{
-	using Kerosene.ORM.Core;
-	using Kerosene.Tools;
-	using System;
-	using System.Linq;
+﻿using Kerosene.ORM.Core;
+using Kerosene.Tools;
+using System;
 
-	// ==================================================== 
+namespace Kerosene.ORM.Maps
+{
+	// ====================================================
 	/// <summary>
-	/// Helpers and extensions for working with <see cref="IDataRepository"/> instances.
+	/// Helpers and extensions for working with Repository instances.
 	/// </summary>
-	public static partial class DataRepository
+	public static class DataRepository
 	{
 		/// <summary>
 		/// Creates a new repository instance associated with the given link.

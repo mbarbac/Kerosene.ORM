@@ -1,12 +1,12 @@
-﻿namespace Kerosene.ORM.Direct.Concrete
-{
-	using Kerosene.Tools;
-	using System;
-	using System.Collections.Generic;
-	using System.Data.Common;
-	using System.Data.SqlClient;
-	using System.Linq;
+﻿using Kerosene.Tools;
+using System;
+using System.Collections.Generic;
+using System.Data.Common;
+using System.Data.SqlClient;
+using System.Linq;
 
+namespace Kerosene.ORM.Direct.Concrete
+{
 	// ==================================================== 
 	/// <summary>
 	/// Represents a generic SQLSERVER database engine for a direct connection scenario.

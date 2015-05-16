@@ -1,14 +1,11 @@
-﻿namespace Kerosene.ORM.Maps
-{
-	using Kerosene.ORM.Core;
-	using Kerosene.Tools;
-	using System;
-	using System.Linq;
+﻿using System;
 
-	// ==================================================== 
+namespace Kerosene.ORM.Maps
+{
+	// ====================================================
 	/// <summary>
 	/// Represents an attempt to update or delete a record that has been changed in the database
-	/// per the optimistic concurrency mode.
+	/// while its state was kept in the cache.
 	/// </summary>
 	[Serializable]
 	public class ChangedException : Exception

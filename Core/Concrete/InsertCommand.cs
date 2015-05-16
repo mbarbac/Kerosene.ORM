@@ -1,11 +1,11 @@
-﻿namespace Kerosene.ORM.Core.Concrete
-{
-	using Kerosene.Tools;
-	using System;
-	using System.Linq;
-	using System.Linq.Expressions;
-	using System.Text;
+﻿using Kerosene.Tools;
+using System;
+using System.Linq;
+using System.Linq.Expressions;
+using System.Text;
 
+namespace Kerosene.ORM.Core.Concrete
+{
 	// ==================================================== 
 	/// <summary>
 	/// Represents an insert command.
@@ -69,7 +69,7 @@
 		{
 			base.OnClone(cloned);
 			var temp = cloned as InsertCommand;
-			if (cloned == null) throw new InvalidCastException(
+			if (temp == null) throw new InvalidCastException(
 				"Cloned instance '{0}' is not a valid '{1}' one."
 				.FormatWith(cloned.Sketch(), typeof(InsertCommand).EasyName()));
 

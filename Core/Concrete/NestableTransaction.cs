@@ -1,10 +1,10 @@
-﻿namespace Kerosene.ORM.Core.Concrete
-{
-	using Kerosene.Tools;
-	using System;
-	using System.Linq;
-	using System.Text;
+﻿using Kerosene.Tools;
+using System;
+using System.Linq;
+using System.Text;
 
+namespace Kerosene.ORM.Core.Concrete
+{
 	// ==================================================== 
 	/// <summary>
 	/// Represents an abstract nestable transaction associated with a given

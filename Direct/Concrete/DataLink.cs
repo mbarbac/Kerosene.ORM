@@ -1,11 +1,11 @@
-﻿namespace Kerosene.ORM.Direct.Concrete
-{
-	using Kerosene.Tools;
-	using System;
-	using System.Data;
-	using System.Linq;
-	using System.Threading;
+﻿using Kerosene.Tools;
+using System;
+using System.Data;
+using System.Linq;
+using System.Threading;
 
+namespace Kerosene.ORM.Direct.Concrete
+{
 	// ==================================================== 
 	/// <summary>
 	/// Represents an agnostic direct connection with an underlying database.
@@ -67,7 +67,7 @@
 		{
 			base.OnClone(cloned);
 			var temp = cloned as DataLink;
-			if (cloned == null) throw new InvalidCastException(
+			if (temp == null) throw new InvalidCastException(
 				"Cloned instance '{0}' is not a valid '{1}' one."
 				.FormatWith(cloned.Sketch(), typeof(DataLink).EasyName()));
 

@@ -1,14 +1,12 @@
-﻿namespace Kerosene.ORM.Maps
-{
-	using Kerosene.ORM.Core;
-	using Kerosene.Tools;
-	using System;
-	using System.Linq;
+﻿using Kerosene.ORM.Core;
+using Kerosene.Tools;
+using System;
 
+namespace Kerosene.ORM.Maps
+{
 	// ==================================================== 
 	/// <summary>
-	/// Indicates the current state of the underlying entity associated with the metadata
-	/// package.
+	/// Indicates the current state of AN underlying entity.
 	/// </summary>
 	public enum MetaState
 	{
@@ -44,20 +42,20 @@
 		Ready
 	}
 
-	// ==================================================== 
+	// ====================================================
 	/// <summary>
-	/// Represents the metadata the framework associates with its managed entities.
+	/// Represents the metadata associated with a managed entity.
 	/// </summary>
 	public interface IMetaEntity
 	{
 		/// <summary>
 		/// The actual entity this metadata is associated with, or null if it has been collected
-		/// or it is not available for any reasons.
+		/// or if it is not available.
 		/// </summary>
 		object Entity { get; }
 
 		/// <summary>
-		/// The map that is managing this instance, or null if it is a detached one.
+		/// The map that is managing the underlying entity, or null if it is a detached one.
 		/// </summary>
 		IDataMap Map { get; }
 

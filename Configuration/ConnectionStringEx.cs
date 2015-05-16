@@ -1,9 +1,9 @@
-﻿namespace Kerosene.ORM.Configuration
-{
-	using Kerosene.Tools;
-	using System;
-	using System.Configuration;
+﻿using Kerosene.Tools;
+using System;
+using System.Configuration;
 
+namespace Kerosene.ORM.Configuration
+{
 	// ==================================================== 
 	/// <summary>
 	/// Helpers and extensions for working with connection strings.

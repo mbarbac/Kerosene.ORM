@@ -1,13 +1,12 @@
-﻿namespace Kerosene.ORM.Maps
-{
-	using Kerosene.ORM.Core;
-	using Kerosene.Tools;
-	using System;
-	using System.Collections;
-	using System.Collections.Generic;
-	using System.Linq;
+﻿using Kerosene.ORM.Core;
+using Kerosene.Tools;
+using System;
+using System.Collections;
+using System.Collections.Generic;
 
-	// ==================================================== 
+namespace Kerosene.ORM.Maps
+{
+	// ====================================================
 	/// <summary>
 	/// Represents a query command for the entities of the associated map.
 	/// </summary>
@@ -171,8 +170,7 @@
 	/// <summary>
 	/// Represents a query command for the entities of the associated map.
 	/// </summary>
-	public interface IDataQuery<T>
-		: IMetaCommand<T>, IEnumerable<T>, IDataQuery where T : class
+	public interface IDataQuery<T> : IDataQuery, IMetaCommand<T>, IEnumerable<T> where T : class
 	{
 		/// <summary>
 		/// Creates a new object able to execute this command.

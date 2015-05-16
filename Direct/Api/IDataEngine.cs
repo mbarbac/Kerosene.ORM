@@ -1,11 +1,11 @@
-﻿namespace Kerosene.ORM.Direct
-{
-	using Kerosene.Tools;
-	using System;
-	using System.Collections.Generic;
-	using System.Data.Common;
-	using System.Linq;
+﻿using Kerosene.Tools;
+using System;
+using System.Collections.Generic;
+using System.Data.Common;
+using System.Linq;
 
+namespace Kerosene.ORM.Direct
+{
 	// ==================================================== 
 	/// <summary>
 	/// Represents the type of an underlying database engine in a direct connection scenario.

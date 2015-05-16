@@ -1,10 +1,10 @@
-﻿namespace Kerosene.ORM.Direct
-{
-	using Kerosene.Tools;
-	using System;
-	using System.Collections.Generic;
-	using System.Linq;
+﻿using Kerosene.Tools;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
+namespace Kerosene.ORM.Direct
+{
 	// ==================================================== 
 	/// <summary>
 	/// Factory class to generate new <see cref="IDataLink"/> instances.

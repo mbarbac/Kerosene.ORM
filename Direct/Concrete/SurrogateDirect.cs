@@ -1,12 +1,12 @@
-﻿namespace Kerosene.ORM.Direct.Concrete
-{
-	using Kerosene.Tools;
-	using System;
-	using System.Collections.Generic;
-	using System.Data;
-	using System.Linq;
-	using System.Transactions;
+﻿using Kerosene.Tools;
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Linq;
+using System.Transactions;
 
+namespace Kerosene.ORM.Direct.Concrete
+{
 	// ==================================================== 
 	/// <summary>
 	/// Acts as a surrogate for direct enumerator or direct executor operations.

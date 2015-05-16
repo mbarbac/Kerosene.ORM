@@ -1,11 +1,10 @@
-﻿namespace Kerosene.ORM.Maps
-{
-	using Kerosene.ORM.Core;
-	using Kerosene.Tools;
-	using System;
-	using System.Collections.Generic;
-	using System.Linq;
+﻿using Kerosene.ORM.Core;
+using Kerosene.Tools;
+using System;
+using System.Collections.Generic;
 
+namespace Kerosene.ORM.Maps
+{
 	// ==================================================== 
 	/// <summary>
 	/// Represents how a map will discover the columns in the database that will be associated
@@ -26,29 +25,19 @@
 		Explicit
 	}
 
-	// ==================================================== 
+	// ====================================================
 	/// <summary>
-	/// Represents a map between the type of the entities it is associated with and their
-	/// database representation.
+	/// Represents a map between entities of a POCO class and a primary table in an underlying
+	/// database-alike service.
 	/// </summary>
 	public interface IDataMap : IDisposableEx
 	{
 		/// <summary>
-		/// Returns a new map that is associated with the repository given, and that contains
-		/// a copy of the structure and rules of the original one. Maps created using this
-		/// method are not considered weak ones.
+		/// Returns a new instance that is associated with the new given repository and that
+		/// contains a copy of the customizations of the original one.
 		/// </summary>
-		/// <param name="repo">The repository the new map will be associated with.</param>
-		/// <returns>A new map.</returns>
+		/// <returns>A new instance.</returns>
 		IDataMap Clone(IDataRepository repo);
-
-		/// <summary>
-		/// Whether this map is considered a weak map or not.
-		/// <para>Weak maps are created automatically when an entity type is referenced by any
-		/// map operation and there was no registered map for that type. Weak maps are disposed
-		/// if a regular non-weak map is registered (created) explicitly.</para>
-		/// </summary>
-		bool IsWeakMap { get; }
 
 		/// <summary>
 		/// The repository this map is registered into.
@@ -56,15 +45,10 @@
 		IDataRepository Repository { get; }
 
 		/// <summary>
-		/// The type of the entities managed by this map.
-		/// </summary>
-		Type EntityType { get; }
-
-		/// <summary>
 		/// The name of the primary table in the underlying database the entities managed by
 		/// this map are associated with.
 		/// </summary>
-		string Table { get; }
+		string Table { get; set; }
 
 		/// <summary>
 		/// If not null a dynamic lambda expression that resolves into the logic to add into
@@ -74,26 +58,34 @@
 		Func<dynamic, object> Discriminator { get; set; }
 
 		/// <summary>
+		/// Wheter this map is considered a weak one or not.
+		/// </summary>
+		bool IsWeakMap { get; }
+
+		/// <summary>
 		/// How the map will discover the columns in the database that will be associated with
 		/// the type.
 		/// </summary>
 		MapDiscoveryMode DiscoveryMode { get; set; }
 
 		/// <summary>
-		/// The collection of members in the type that have been explicitly associated with
-		/// the map.
+		/// The type of the entities managed by this map.
+		/// </summary>
+		Type EntityType { get; }
+
+		/// <summary>
+		/// The collection of members of the type for which either a dependency and/or a
+		/// completion method has been defined.
 		/// </summary>
 		IMapMemberCollection Members { get; }
 
 		/// <summary>
-		/// The collection of columns in the primary table that have been explicitly associated
-		/// with the map.
+		/// The collection of columns in the database associated with this map.
 		/// </summary>
 		IMapColumnCollection Columns { get; }
 
 		/// <summary>
-		/// If not empty represents the column in the primary table that will be used for row
-		/// version control purposes.
+		/// Represents the column to be used for row version control, if any.
 		/// </summary>
 		IMapVersionColumn VersionColumn { get; }
 
@@ -115,21 +107,20 @@
 		void Validate();
 
 		/// <summary>
-		/// Whether this instance keeps track of the entities it has managed in its internal
-		/// cache, or not.
+		/// Whether tracking of entities is enabled or disabled for this map.
 		/// </summary>
 		bool TrackEntities { get; set; }
 
 		/// <summary>
-		/// The current collection of entities in a valid state tracked by this map, if any.
+		/// The collection of entities in a valid state tracked by this map.
 		/// </summary>
 		IEnumerable<IMetaEntity> Entities { get; }
 
 		/// <summary>
-		/// Clears the cache of tracked entities maintained by this map and optionally, detaches
-		/// those entities.
+		/// Clears the cache of this map and, optionally, detaches the entities that were
+		/// tracked.
 		/// </summary>
-		/// <param name="detach">True to forcibly detach the entities found in the cache.</param>
+		/// <param name="detach">True to also detach the entities removed from the cache.</param>
 		void ClearEntities(bool detach = true);
 
 		/// <summary>
@@ -170,14 +161,14 @@
 		IDataQuery Where(Func<dynamic, object> where);
 
 		/// <summary>
-		/// Finds and returns inmediately a suitable entity that meets the conditions given, by
+		/// finds and returns inmediately a suitable entity that meets the conditions given, by
 		/// looking for it in the managed cache and, if it cannot be found there, querying the
-		/// database for it. Returns null if such entity cannot be found neither in the cache
+		/// database for it. returns null if such entity cannot be found neither in the cache
 		/// nor in the database.
 		/// </summary>
-		/// <param name="specs">A collection of dynamic lambda expressions each containing the
-		/// name and value to find for a column, as in: 'x => x.Column == Value'.</param>
-		/// <returns>The requested entity, or null.</returns>
+		/// <param name="specs">a collection of dynamic lambda expressions each containing the
+		/// name and value to find for a column, as in: 'x => x.column == value'.</param>
+		/// <returns>the requested entity, or null.</returns>
 		object FindNow(params Func<dynamic, object>[] specs);
 
 		/// <summary>
@@ -223,37 +214,33 @@
 		IDataUpdate Update(object entity);
 	}
 
-	// ==================================================== 
+	// ====================================================
 	/// <summary>
-	/// Represents a map between the type of the entities it is associated with and their
-	/// database representation.
+	/// Represents a map between entities of a POCO class and a primary table in an underlying
+	/// database-alike service.
 	/// </summary>
 	public interface IDataMap<T> : IDataMap where T : class
 	{
 		/// <summary>
-		/// Returns a new map that is associated with the repository given, and that contains
-		/// a copy of the structure and rules of the original one. Maps created using this
-		/// method are not considered weak ones.
+		/// Returns a new instance that is associated with the new given repository and that
+		/// contains a copy of the customizations of the original one.
 		/// </summary>
-		/// <param name="repo">The repository the new map will be associated with.</param>
-		/// <returns>A new map.</returns>
+		/// <returns>A new instance.</returns>
 		new IDataMap<T> Clone(IDataRepository repo);
 
 		/// <summary>
-		/// The collection of members in the type that have been explicitly associated with
-		/// the map.
+		/// The collection of members of the type for which either a dependency and/or a
+		/// completion method has been defined.
 		/// </summary>
 		new IMapMemberCollection<T> Members { get; }
 
 		/// <summary>
-		/// The collection of columns in the primary table that have been explicitly associated
-		/// with the map.
+		/// The collection of columns in the database associated with this map.
 		/// </summary>
 		new IMapColumnCollection<T> Columns { get; }
 
 		/// <summary>
-		/// If not empty represents the column in the primary table that will be used for row
-		/// version control purposes.
+		/// Represents the column to be used for row version control, if any.
 		/// </summary>
 		new IMapVersionColumn<T> VersionColumn { get; }
 

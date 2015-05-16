@@ -1,10 +1,10 @@
-﻿namespace Kerosene.ORM.Core.Concrete
-{
-	using Kerosene.Tools;
-	using System;
-	using System.Linq;
-	using System.Text;
+﻿using Kerosene.Tools;
+using System;
+using System.Linq;
+using System.Text;
 
+namespace Kerosene.ORM.Core.Concrete
+{
 	// ==================================================== 
 	/// <summary>
 	/// Represents a delete command.
@@ -67,7 +67,7 @@
 		{
 			base.OnClone(cloned);
 			var temp = cloned as DeleteCommand;
-			if (cloned == null) throw new InvalidCastException(
+			if (temp == null) throw new InvalidCastException(
 				"Cloned instance '{0}' is not a valid '{1}' one."
 				.FormatWith(cloned.Sketch(), typeof(DeleteCommand).EasyName()));
 

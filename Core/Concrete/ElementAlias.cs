@@ -1,10 +1,10 @@
-﻿namespace Kerosene.ORM.Core.Concrete
-{
-	using Kerosene.Tools;
-	using System;
-	using System.Linq;
-	using System.Runtime.Serialization;
+﻿using Kerosene.Tools;
+using System;
+using System.Linq;
+using System.Runtime.Serialization;
 
+namespace Kerosene.ORM.Core.Concrete
+{
 	// ==================================================== 
 	/// <summary>
 	/// Represents the alias associated with a given element in a given context.
@@ -122,7 +122,7 @@
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
 			var temp = cloned as ElementAlias;
-			if (cloned == null) throw new InvalidCastException(
+			if (temp == null) throw new InvalidCastException(
 				"Cloned instance '{0}' is not a valid '{1}' one."
 				.FormatWith(cloned.Sketch(), typeof(ElementAlias).EasyName()));
 

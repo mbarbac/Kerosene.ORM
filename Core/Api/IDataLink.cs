@@ -1,8 +1,8 @@
-﻿namespace Kerosene.ORM.Core
-{
-	using Kerosene.Tools;
-	using System;
+﻿using Kerosene.Tools;
+using System;
 
+namespace Kerosene.ORM.Core
+{
 	// ==================================================== 
 	/// <summary>
 	/// Represents an agnostic connection with a database-alike service.

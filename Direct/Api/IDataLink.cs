@@ -1,10 +1,10 @@
-﻿namespace Kerosene.ORM.Direct
-{
-	using Kerosene.Tools;
-	using System;
-	using System.Data;
-	using System.Linq;
+﻿using Kerosene.Tools;
+using System;
+using System.Data;
+using System.Linq;
 
+namespace Kerosene.ORM.Direct
+{
 	// ==================================================== 
 	/// <summary>
 	/// Represents an agnostic direct connection with an underlying database.

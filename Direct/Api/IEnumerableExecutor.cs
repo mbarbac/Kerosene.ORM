@@ -1,14 +1,13 @@
-﻿// ======================================================== IEnumerableExecutor.cs
+﻿using Kerosene.Tools;
+using System;
+using System.Linq;
+
 namespace Kerosene.ORM.Direct
 {
-	using Kerosene.Tools;
-	using System;
-
 	// ==================================================== 
 	/// <summary>
 	/// Represents an object able to execute an enumerable command, in a direct connection
-	/// scenario, and to produce the collection collection of records resulting from this
-	/// execution.
+	/// scenario, and to produce the collection of records resulting from this execution.
 	/// </summary>
 	public interface IEnumerableExecutor : Core.IEnumerableExecutor
 	{
@@ -21,4 +20,3 @@ namespace Kerosene.ORM.Direct
 		new IEnumerableExecutor GetEnumerator();
 	}
 }
-// ======================================================== 

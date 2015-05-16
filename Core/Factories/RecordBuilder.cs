@@ -1,12 +1,12 @@
-﻿namespace Kerosene.ORM.Core
-{
-	using Kerosene.Tools;
-	using System;
-	using System.Collections.Generic;
-	using System.Dynamic;
-	using System.Linq;
-	using System.Text;
+﻿using Kerosene.Tools;
+using System;
+using System.Collections.Generic;
+using System.Dynamic;
+using System.Linq;
+using System.Text;
 
+namespace Kerosene.ORM.Core
+{
 	// ==================================================== 
 	/// <summary>
 	/// Represents an object able to create new records using the collection of entries and

@@ -1,12 +1,12 @@
-﻿namespace Kerosene.ORM.Core
-{
-	using Kerosene.Tools;
-	using System;
-	using System.Collections.Generic;
-	using System.Data.Common;
-	using System.Linq;
-	using System.Reflection;
+﻿using Kerosene.Tools;
+using System;
+using System.Collections.Generic;
+using System.Data.Common;
+using System.Linq;
+using System.Reflection;
 
+namespace Kerosene.ORM.Core
+{
 	// ==================================================== 
 	/// <summary>
 	/// Factory class to register and locate <see cref="IDataEngine"/> instances.

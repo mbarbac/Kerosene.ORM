@@ -1,11 +1,11 @@
-﻿namespace Kerosene.ORM.Core.Concrete
-{
-	using Kerosene.Tools;
-	using System;
-	using System.Collections;
-	using System.Collections.Generic;
-	using System.Linq;
+﻿using Kerosene.Tools;
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 
+namespace Kerosene.ORM.Core.Concrete
+{
 	// ==================================================== 
 	/// <summary>
 	/// Represents an abstract enumerable command to be executed against a database-alike
@@ -104,20 +104,6 @@
 		public IEnumerableExecutor ConvertBy(Func<IRecord, object> converter)
 		{
 			var iter = GetEnumerator(); iter.Converter = converter;
-			return iter;
-		}
-
-		/// <summary>
-		/// Creates a new enumerator that returns the strong typed instances that results from
-		/// the conversion of the records produced by the database into instances of the given
-		/// type. The values of its public properties and fields are populated with the ones of
-		/// the matching columns from the database.
-		/// </summary>
-		/// <typeparam name="T">The type of the receiving instances.</typeparam>
-		/// <returns>A new enumerator.</returns>
-		public IEnumerableExecutorTo<T> ConvertTo<T>() where T : class
-		{
-			var iter = new EnumerableExecutorTo<T>(this);
 			return iter;
 		}
 	}
