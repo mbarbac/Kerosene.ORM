@@ -4,6 +4,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 
 namespace Kerosene.ORM.Maps.Concrete
@@ -37,7 +38,7 @@ namespace Kerosene.ORM.Maps.Concrete
 
 			if (LazyProperties != null && LazyProperties.Count != 0)
 			{
-				sb.Append(" ["); bool first = true; foreach (var item in LazyProperties.Items)
+				sb.Append(" ["); bool first = true; foreach (var item in LazyProperties)
 				{
 					if (first) first = false; else sb.Append(", ");
 					sb.Append(item);

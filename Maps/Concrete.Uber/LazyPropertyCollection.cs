@@ -4,12 +4,13 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 
 namespace Kerosene.ORM.Maps.Concrete
 {
 	// ====================================================
-	internal class LazyPropertyCollection
+	internal class LazyPropertyCollection : IEnumerable<LazyProperty>
 	{
 		Dictionary<string, LazyProperty> _Items = new Dictionary<string, LazyProperty>();
 
@@ -28,11 +29,15 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 
 		/// <summary>
-		/// The items contained in this collection
+		/// Obtains an enumerator for the members of this instance.
 		/// </summary>
-		internal IEnumerable<LazyProperty> Items
+		public IEnumerator<LazyProperty> GetEnumerator()
 		{
-			get { return _Items.Values; }
+			return _Items.Values.GetEnumerator();
+		}
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return this.GetEnumerator();
 		}
 
 		/// <summary>

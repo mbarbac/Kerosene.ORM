@@ -8,7 +8,6 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.Serialization;
 using System.Text;
-using System.Threading;
 
 namespace Kerosene.ORM.Maps.Concrete
 {
@@ -21,11 +20,6 @@ namespace Kerosene.ORM.Maps.Concrete
 		new DataRepository Repository { get; }
 
 		/// <summary>
-		/// The object that can be used to synchronize operations on this map.
-		/// </summary>
-		object MasterLock { get; }
-
-		/// <summary>
 		/// The link reference held by the associated repository, if any.
 		/// </summary>
 		IDataLink Link { get; }
@@ -34,12 +28,6 @@ namespace Kerosene.ORM.Maps.Concrete
 		/// Wheter this map is considered a weak one or not.
 		/// </summary>
 		new bool IsWeakMap { get; set; }
-
-		/// <summary>
-		/// Whether tracking of child entities for dependency properties is enabled for this
-		/// map or not.
-		/// </summary>
-		bool TrackChildEntities { get; set; }
 
 		/// <summary>
 		/// The collection of members of the type for which either a dependency and/or a
@@ -56,6 +44,22 @@ namespace Kerosene.ORM.Maps.Concrete
 		/// Represents the column to be used for row version control, if any.
 		/// </summary>
 		new IUberVersionColumn VersionColumn { get; }
+
+		/// <summary>
+		/// The collection of entities registered tracked by this instance.
+		/// </summary>
+		MetaEntityCollection MetaEntities { get; }
+
+		/// <summary>
+		/// Collects and removes the invalid entities in the cache of this map, if any.
+		/// </summary>
+		void CollectInvalidEntities();
+
+		/// <summary>
+		/// Whether tracking of child entities for dependency properties is enabled for this
+		/// map or not.
+		/// </summary>
+		bool TrackChildEntities { get; set; }
 
 		/// <summary>
 		/// The proxy holder created for the type of the entities managed by this instance,
@@ -79,14 +83,11 @@ namespace Kerosene.ORM.Maps.Concrete
 		ISchema SchemaId { get; }
 
 		/// <summary>
-		/// The collection of entities in this map.
+		/// Creates a new temporal record, associated with the ID schema, whose contents are
+		/// loaded from the source record given. Returns null if the source record contains not
+		/// all the id columns, or if there are any inconsistencies.
 		/// </summary>
-		MetaEntityCollection MetaEntities { get; }
-
-		/// <summary>
-		/// Collects and removes the invalid entities in the cache of this map, if any.
-		/// </summary>
-		void CollectInvalidEntities();
+		IRecord ExtractId(IRecord record);
 
 		/// <summary>
 		/// Writes into the target record the contents from the source entity. Only the existing
@@ -106,32 +107,19 @@ namespace Kerosene.ORM.Maps.Concrete
 		/// needed.
 		/// </summary>
 		void CompleteMembers(MetaEntity meta);
-
-		/// <summary>
-		/// Creates a new temporal record, associated with the ID schema, whose contents are
-		/// loaded from the source record given. Returns null if the source record contains not
-		/// all the id columns, or if there are any inconsistencies.
-		/// </summary>
-		IRecord ExtractId(IRecord source);
-
-		/// <summary>
-		/// Removes the given entity from this map, making it become a detached one. Returns true
-		/// if the entity has been removed, or false otherwise.
-		/// </summary>
-		bool Detach(MetaEntity meta);
 	}
 
 	// ====================================================
 	/// <summary>
-	/// Represents a map between entities of a POCO class and a primary table in an underlying
+	/// Represents a map between entities of a POCO class and a table in an underlying
 	/// database-alike service.
 	/// </summary>
+	/// <typeparam name="T">The type of the entities managed by this map.</typeparam>
 	public class DataMap<T> : IDataMap<T>, IUberMap where T : class
 	{
 		bool _IsDisposed = false;
 		ulong _SerialId = 0;
 		DataRepository _Repository = null;
-		object _MasterLock = null;
 		bool _IsWeakMap = false;
 		string _Table = null;
 		Func<dynamic, object> _Discriminator = null;
@@ -146,7 +134,7 @@ namespace Kerosene.ORM.Maps.Concrete
 		ISchema _Schema = null;
 		ISchema _SchemaId = null;
 		ConstructorInfo _Constructor = null;
-		MetaEntityCollection _MetaEntities = new MetaEntityCollection();
+		MetaEntityCollection _MetaEntities = null;
 
 		/// <summary>
 		/// Invoked when initializing this instance.
@@ -172,14 +160,16 @@ namespace Kerosene.ORM.Maps.Concrete
 
 				_SerialId = ++Uber.DataMapLastSerial;
 				_Repository = repo;
-				_MasterLock = repo.MasterLock;
 				_TrackEntities = _Repository.TrackEntities;
+				_TrackChildEntities = _Repository.TrackChildEntities;
 				Table = table;
 
 				_Members = new MapMemberCollection<T>(this);
 				_Columns = new MapColumnCollection<T>(this);
 				_VersionColumn = new MapVersionColumn<T>(this);
-				
+
+				_MetaEntities = new MetaEntityCollection(this);
+
 				repo.UberMaps.Add(this);
 			}
 		}
@@ -260,7 +250,8 @@ namespace Kerosene.ORM.Maps.Concrete
 			if (!IsDisposed) { OnDispose(true); GC.SuppressFinalize(this); }
 		}
 
-		/// <summary></summary>
+		/// <summary>
+		/// </summary>
 		~DataMap()
 		{
 			if (!IsDisposed) OnDispose(false);
@@ -274,19 +265,19 @@ namespace Kerosene.ORM.Maps.Concrete
 		{
 			if (disposing)
 			{
-				if (_MasterLock != null) Monitor.Enter(_MasterLock);
-
-				if (_MetaEntities != null) ClearEntities(detach: true);
+				if (_MetaEntities != null)
+				{
+					var metas = _MetaEntities.ToArray(); foreach (var meta in metas) meta.Reset(remove: false);
+					Array.Clear(metas, 0, metas.Length);
+					_MetaEntities.Dispose();
+				}
 				if (_Repository != null && !_Repository.IsDisposed) _Repository.UberMaps.Remove(this);
 				if (_Members != null) _Members.OnDispose();
 				if (_Columns != null) _Columns.OnDispose();
 				if (_VersionColumn != null) _VersionColumn.OnDispose();
-
-				if (_MasterLock != null) Monitor.Exit(_MasterLock);
 			}
 
 			_Repository = null;
-			_MasterLock = null;
 			_Discriminator = null;
 			_Members = null;
 			_Columns = null;
@@ -370,14 +361,17 @@ namespace Kerosene.ORM.Maps.Concrete
 				"Cloned instance '{0}' is not a valid '{1}' one."
 				.FormatWith(cloned.Sketch(), typeof(DataMap<T>).EasyName()));
 
-			temp._Discriminator = _Discriminator;
-			temp._DiscoveryMode = _DiscoveryMode;
-			temp._TrackEntities = _TrackEntities;
-			temp._TrackChildEntities = _TrackChildEntities;
+			lock (temp.Repository.MasterLock)
+			{
+				temp.Discriminator = Discriminator;
+				temp.DiscoveryMode = DiscoveryMode;
+				temp.TrackEntities = TrackEntities;
+				temp.TrackChildEntities = TrackChildEntities;
 
-			temp._Columns = _Columns.Clone(temp); // Must come first...
-			temp._Members = _Members.Clone(temp);
-			temp._VersionColumn = _VersionColumn.Clone(temp);
+				temp._Columns = _Columns.Clone(temp); // Must come first...
+				temp._Members = _Members.Clone(temp);
+				temp._VersionColumn = _VersionColumn.Clone(temp);
+			}
 		}
 
 		/// <summary>
@@ -386,6 +380,14 @@ namespace Kerosene.ORM.Maps.Concrete
 		public ulong SerialId
 		{
 			get { return _SerialId; }
+		}
+
+		/// <summary>
+		/// The type of the entities managed by this map.
+		/// </summary>
+		public Type EntityType
+		{
+			get { return typeof(T); }
 		}
 
 		/// <summary>
@@ -401,23 +403,25 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 
 		/// <summary>
-		/// The object that can be used to synchronize operations on this map.
-		/// </summary>
-		internal object MasterLock
-		{
-			get { return _MasterLock; }
-		}
-		object IUberMap.MasterLock
-		{
-			get { return this.MasterLock; }
-		}
-
-		/// <summary>
 		/// The link reference held by the associated repository, if any.
 		/// </summary>
 		public IDataLink Link
 		{
 			get { return Repository == null ? null : Repository.Link; }
+		}
+
+		/// <summary>
+		/// Wheter this map is considered a weak one or not.
+		/// </summary>
+		public bool IsWeakMap
+		{
+			get { return _IsWeakMap; }
+			internal set { _IsWeakMap = value; }
+		}
+		bool IUberMap.IsWeakMap
+		{
+			get { return this.IsWeakMap; }
+			set { this.IsWeakMap = value; }
 		}
 
 		/// <summary>
@@ -431,7 +435,7 @@ namespace Kerosene.ORM.Maps.Concrete
 			{
 				if (IsDisposed) throw new ObjectDisposedException(this.ToString());
 				if (IsValidated) throw new InvalidOperationException("This map '{0}' is validated.".FormatWith(this));
-				
+
 				_Table = value.Validated("Table Name");
 			}
 		}
@@ -454,20 +458,6 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 
 		/// <summary>
-		/// Wheter this map is considered a weak one or not.
-		/// </summary>
-		public bool IsWeakMap
-		{
-			get { return _IsWeakMap; }
-			internal set { _IsWeakMap = value; }
-		}
-		bool IUberMap.IsWeakMap
-		{
-			get { return this.IsWeakMap; }
-			set { this.IsWeakMap = value; }
-		}
-
-		/// <summary>
 		/// How the map will discover the columns in the database that will be associated with
 		/// the type.
 		/// </summary>
@@ -481,14 +471,6 @@ namespace Kerosene.ORM.Maps.Concrete
 
 				_DiscoveryMode = value;
 			}
-		}
-
-		/// <summary>
-		/// The type of the entities managed by this map.
-		/// </summary>
-		public Type EntityType
-		{
-			get { return typeof(T); }
 		}
 
 		/// <summary>
@@ -562,13 +544,11 @@ namespace Kerosene.ORM.Maps.Concrete
 
 		/// <summary>
 		/// Validates this map so that it becomes usable for map operations.
-		/// <para>
-		/// If this map is already validated then this operation has no effects. Once a map is
-		/// validated then it does not allow any further changes in its rules or structure.
-		/// Validation is carried automatically by the framework when needed, but can also be
-		/// invoked explicitly by client applications in order to lock the map and disable any
-		/// further modification to it.
-		/// </para>
+		/// <para> If this map is already validated then this operation has no effects. Once a map
+		/// is validated then it does not allow any further changes in its rules or structure.</para>
+		/// <para>Validation is carried automatically by the framework when needed, but can also
+		/// be invoked explicitly by client applications in order to lock the map and disable any
+		/// further modification to it.</para>
 		/// </summary>
 		public void Validate()
 		{
@@ -653,9 +633,20 @@ namespace Kerosene.ORM.Maps.Concrete
 				"Normalized schema is empty for map '{0}'."
 				.FormatWith(this));
 
-			var idlist = _Schema.IdentityList();
+			var idlist = _Schema.PrimaryKeyColumns().ToList();
+			if (idlist.Count == 0) idlist = _Schema.UniqueValuedColumns().ToList();
 			if (idlist.Count == 0) throw new EmptyException(
 				"Normalized schema '{0}' contains no identity columns.".FormatWith(_Schema));
+
+			if (idlist.Count == 1)
+			{
+				var entry = idlist[0];
+				bool value = false;
+				if (entry.Metadata.Contains("IsRowVersion")) value = (bool)entry.Metadata["IsRowVersion"];
+
+				if (value) throw new EmptyException(
+					"Normalized schema '{0}' contains no valid identity columns.".FormatWith(_Schema));
+			}
 
 			_SchemaId = _Schema.Clone();
 			_SchemaId.Clear();
@@ -674,6 +665,110 @@ namespace Kerosene.ORM.Maps.Concrete
 			}
 
 			_IsValidated = true;
+		}
+
+		/// <summary>
+		/// The collection of entities registered tracked by this instance.
+		/// </summary>
+		internal MetaEntityCollection MetaEntities
+		{
+			get { return _MetaEntities; }
+		}
+		MetaEntityCollection IUberMap.MetaEntities
+		{
+			get { return this.MetaEntities; }
+		}
+
+		/// <summary>
+		/// Collects and removes the invalid entities in the cache of this map, if any.
+		/// </summary>
+		internal void CollectInvalidEntities()
+		{
+			lock (Repository.MasterLock)
+			{
+				var metas = new List<MetaEntity>();
+				foreach (var meta in _MetaEntities)
+				{
+					if (!meta.HasValidEntity) metas.Add(meta);
+					else meta.ForgetUnusedChilds();
+				}
+				foreach (var meta in metas)
+				{
+					DebugEx.IndentWriteLine("\n- Collecting '{0}'...", meta);
+					_MetaEntities.Remove(meta);
+					meta.Reset(remove: false);
+					DebugEx.Unindent();
+				}
+				metas.Clear(); metas = null;
+			}
+		}
+		void IUberMap.CollectInvalidEntities()
+		{
+			this.CollectInvalidEntities();
+		}
+
+		/// <summary>
+		/// Whether tracking of entities is enabled or disabled for this map.
+		/// </summary>
+		public bool TrackEntities
+		{
+			get { return _TrackEntities; }
+			set
+			{
+				if (!IsDisposed && (value == false)) ClearEntities();
+				_TrackEntities = value;
+			}
+		}
+
+		/// <summary>
+		/// Whether tracking of child entities for dependency properties is enabled for this
+		/// map or not.
+		/// </summary>
+		public bool TrackChildEntities
+		{
+			get { return _TrackChildEntities; }
+			set
+			{
+				if (!IsDisposed && (value == false))
+				{
+					lock (Repository.MasterLock)
+					{
+						foreach (var meta in _MetaEntities) meta.ChildDependencies.Clear();
+					}
+				}
+				_TrackChildEntities = value;
+			}
+		}
+
+		/// <summary>
+		/// The collection of tracked entities of this map that are in a valid state.
+		/// </summary>
+		public IEnumerable<object> Entities
+		{
+			get
+			{
+				if (!IsDisposed)
+				{
+					CollectInvalidEntities(); foreach (var meta in _MetaEntities)
+					{
+						var entity = meta.Entity;
+						if (entity != null) yield return entity;
+					}
+				}
+			}
+		}
+
+		/// <summary>
+		/// Clears the cache of tracked entities.
+		/// </summary>
+		public void ClearEntities()
+		{
+			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
+			lock (Repository.MasterLock)
+			{
+				foreach (var meta in _MetaEntities) meta.CollectionId = null;
+				_MetaEntities.Clear();
+			}
 		}
 
 		/// <summary>
@@ -726,8 +821,33 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 
 		/// <summary>
-		/// Writes into the target record the contents from the source entity. Only the
-		/// existing columns in the target record are taken into consideration.
+		/// Creates a new temporal record, associated with the ID schema, whose contents are
+		/// loaded from the source record given. Returns null if the source record contains not
+		/// all the id columns, or if there are any inconsistencies.
+		/// </summary>
+		internal IRecord ExtractId(IRecord record)
+		{
+			var id = new Core.Concrete.Record(SchemaId); for (int i = 0; i < SchemaId.Count; i++)
+			{
+				var name = SchemaId[i].ColumnName;
+				var entry = record.Schema.FindEntry(name, raise: false); if (entry == null)
+				{
+					id.Dispose();
+					return null;
+				}
+				int ix = record.Schema.IndexOf(entry);
+				id[i] = record[ix];
+			}
+			return id;
+		}
+		IRecord IUberMap.ExtractId(IRecord record)
+		{
+			return this.ExtractId(record);
+		}
+
+		/// <summary>
+		/// Writes into the target record the contents from the source entity. Only the existing
+		/// columns in the target record are taken into consideration.
 		/// </summary>
 		internal void WriteRecord(T entity, IRecord record)
 		{
@@ -758,11 +878,11 @@ namespace Kerosene.ORM.Maps.Concrete
 				}
 			}
 
-			// Target record may need the verion column...
+			// Target record may need the version column...
 			if (VersionColumn.Name == null) return;
 			entry = schema.FindEntry(VersionColumn.Name); if (entry == null) return;
-			int n = schema.IndexOf(entry);
 
+			int n = schema.IndexOf(entry);
 			col = VersionColumn.Column; if (col.WriteEnabled)
 			{
 				if (col.WriteRecord != null)
@@ -842,183 +962,21 @@ namespace Kerosene.ORM.Maps.Concrete
 			if (meta.Record == null) return;
 			if (meta.Completed) return;
 
-			meta.Completed = true; foreach (var member in Members)
+			meta.Completed = true; // No side effects for lazy properties...
+			meta.ChildDependencies.Clear();
+
+			foreach (var member in Members)
 			{
-				if (member.CompleteMember == null) continue;  // nothing to do...
-				if (member.LazyProperty != null) continue; // deferred to lazy...
+				if (member.CompleteMember == null) continue; // nothing to do...
+				if (member.LazyProperty != null) continue; // lazy property deferred...
 
 				member.CompleteMember(meta.Record, entity);
-
-				if (TrackChildEntities &&
-					member.DependencyMode == MemberDependencyMode.Child &&
-					member.ElementInfo.CanRead &&
-					member.ElementInfo.ElementType.IsListAlike())
-				{
-					var type = member.ElementInfo.ElementType.ListAlikeMemberType();
-					if (type != null && (type.IsClass || type.IsInterface))
-					{
-						HashSet<object> childs = null;
-						if (!meta.ChildDependencies.TryGetValue(member.Name, out childs))
-							meta.ChildDependencies.Add(member.Name, (childs = new HashSet<object>()));
-
-						childs.Clear();
-						var iter = member.ElementInfo.GetValue(entity) as IEnumerable;
-						foreach (var obj in iter) childs.Add(obj);
-					}
-				}
+				meta.CaptureMetaMemberChilds(member);
 			}
-		}
+		}		
 		void IUberMap.CompleteMembers(MetaEntity meta)
 		{
 			this.CompleteMembers(meta);
-		}
-
-		/// <summary>
-		/// Creates a new temporal record, associated with the ID schema, whose contents are
-		/// loaded from the source record given. Returns null if the source record contains not
-		/// all the id columns, or if there are any inconsistencies.
-		/// </summary>
-		internal IRecord ExtractId(IRecord source)
-		{
-			var id = new Core.Concrete.Record(SchemaId); for (int i = 0; i < SchemaId.Count; i++)
-			{
-				var name = SchemaId[i].ColumnName;
-				var entry = source.Schema.FindEntry(name, raise: false); if (entry == null)
-				{
-					id.Dispose();
-					return null;
-				}
-				int ix = source.Schema.IndexOf(entry);
-				id[i] = source[ix];
-			}
-			return id;
-		}
-		IRecord IUberMap.ExtractId(IRecord source)
-		{
-			return this.ExtractId(source);
-		}
-
-		/// <summary>
-		/// Whether tracking of entities is enabled for this map or not.
-		/// </summary>
-		public bool TrackEntities
-		{
-			get { return _TrackEntities; }
-			set
-			{
-				if (!IsDisposed && (value == false)) ClearEntities(detach: false);
-				_TrackEntities = value;
-			}
-		}
-
-		/// <summary>
-		/// Whether tracking of child entities for dependency properties is enabled for this
-		/// map or not.
-		/// </summary>
-		public bool TrackChildEntities
-		{
-			get { return _TrackChildEntities; }
-			set
-			{
-				if (!IsDisposed && (value == false)) ClearChildEntities();
-				_TrackChildEntities = value;
-			}
-		}
-
-		/// <summary>
-		/// The collection of entities in this map.
-		/// </summary>
-		internal MetaEntityCollection MetaEntities
-		{
-			get { return _MetaEntities; }
-		}
-		MetaEntityCollection IUberMap.MetaEntities
-		{
-			get { return this.MetaEntities; }
-		}
-
-		/// <summary>
-		/// The collection of entities in a valid state tracked by this map.
-		/// </summary>
-		public IEnumerable<MetaEntity> Entities
-		{
-			get
-			{
-				if (IsDisposed) throw new ObjectDisposedException(this.ToString());
-
-				CollectInvalidEntities();
-				return MetaEntities.Items;
-			}
-		}
-		IEnumerable<IMetaEntity> IDataMap.Entities
-		{
-			get { return this.Entities; }
-		}
-
-		/// <summary>
-		/// Clears the cache of this map and, optionally, detaches the entities that were
-		/// tracked.
-		/// </summary>
-		/// <param name="detach">True to also detach the entities removed from the cache.</param>
-		public void ClearEntities(bool detach = true)
-		{
-			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
-			lock (MasterLock)
-			{
-				if (detach)
-				{
-					var metas = _MetaEntities.ToArray();
-					foreach (var meta in metas) Detach(meta);
-					Array.Clear(metas, 0, metas.Length);
-				}
-				_MetaEntities.Clear();
-			}
-		}
-
-		/// <summary>
-		/// Clears the child entities of all managed entities.
-		/// </summary>
-		internal void ClearChildEntities()
-		{
-			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
-			lock (MasterLock)
-			{
-				foreach (var meta in _MetaEntities.Items) meta.ChildDependencies.Clear();
-			}
-		}
-
-		/// <summary>
-		/// Collects and removes the invalid entities in the cache of this map, if any.
-		/// </summary>
-		internal void CollectInvalidEntities()
-		{
-			lock (MasterLock)
-			{
-				var metas = new List<MetaEntity>();
-				foreach (var meta in _MetaEntities.Items) if (!meta.HasValidEntity) metas.Add(meta);
-				foreach (var meta in metas)
-				{
-					DebugEx.IndentWriteLine("\n- Collecting '{0}'...", meta);
-
-					var ops = Repository.UberOperations.FindAllMeta(meta);
-					foreach (var op in ops) op.Dispose();
-					ops.Clear(); ops = null;
-
-					MetaEntities.Remove(meta);
-					meta.UberMap = null;
-					meta.UberOperation = null;
-					meta.ChildDependencies.Clear();
-					meta.Completed = false;
-					meta.Record = null;
-
-					DebugEx.Unindent();
-				}
-				metas.Clear(); metas = null;
-			}
-		}
-		void IUberMap.CollectInvalidEntities()
-		{
-			this.CollectInvalidEntities();
 		}
 
 		/// <summary>
@@ -1056,19 +1014,25 @@ namespace Kerosene.ORM.Maps.Concrete
 			if (entity == null) throw new ArgumentNullException("entity", "Entity cannot be null.");
 			Validate();
 
-			lock (MasterLock)
+			lock (Repository.MasterLock)
 			{
 				var meta = MetaEntity.Locate(entity);
-				if (object.ReferenceEquals(meta.UberMap, this)) return;
-				if (meta.UberMap != null)
+				if (!object.ReferenceEquals(meta.UberMap, this) && meta.UberMap != null)
 					throw new NotOrphanException("Entity '{0}' is not orphan.".FormatWith(meta));
 
-				var record = new Core.Concrete.Record(Schema);
-				WriteRecord(entity, record);
-				meta.Record = record;
-				meta.UberMap = this;
+				if (meta.CollectionId != null) MetaEntities.Remove(meta);
 
-				if (TrackEntities) MetaEntities.Add(meta);
+				if (!TrackEntities)
+				{
+					if (meta.Record == null)
+					{
+						var record  = new Core.Concrete.Record(Schema);
+						WriteRecord(entity, record);
+						meta.Record = record;
+					}
+					meta.UberMap = this;
+				}
+				else MetaEntities.Add(meta);
 			}
 		}
 		void IDataMap.Attach(object entity)
@@ -1089,37 +1053,19 @@ namespace Kerosene.ORM.Maps.Concrete
 			Validate();
 
 			var meta = MetaEntity.Locate(entity);
-			return Detach(meta);
+			bool r = object.ReferenceEquals(meta.UberMap, this); if (r)
+			{
+				lock (Repository.MasterLock)
+				{
+					MetaEntities.Remove(meta);
+					meta.Reset(remove: false, record: false);
+				}
+			}
+			return r;
 		}
 		bool IDataMap.Detach(object entity)
 		{
 			return this.Detach((T)entity);
-		}
-
-		/// <summary>
-		/// Removes the given entity from this map, making it become a detached one. Returns true
-		/// if the entity has been removed, or false otherwise.
-		/// </summary>
-		internal bool Detach(MetaEntity meta)
-		{
-			bool r = object.ReferenceEquals(meta.UberMap, this); if (r)
-			{
-				var ops = Repository.UberOperations.FindAllMeta(meta);
-				foreach (var op in ops) op.Dispose();
-				ops.Clear(); ops = null;
-
-				MetaEntities.Remove(meta);
-				meta.UberMap = null;
-				meta.UberOperation = null;
-				meta.ChildDependencies.Clear();
-				meta.Record = null;
-				meta.Completed = false;
-			}
-			return r;
-		}
-		bool IUberMap.Detach(MetaEntity meta)
-		{
-			return this.Detach(meta);
 		}
 
 		/// <summary>
@@ -1174,48 +1120,41 @@ namespace Kerosene.ORM.Maps.Concrete
 			if (specs == null) throw new ArgumentNullException("specs", "Specifications array cannot be null.");
 			Validate();
 
+			bool isId = true;
 			var record = Record.Create(specs); foreach (var entry in SchemaId)
 			{
 				// This is a hack to optimize finding the record by identity columns...
 				var temp = record.Schema.FindEntry(entry.ColumnName, raise: false);
 				if (temp != null) temp.IsPrimaryKeyColumn = true;
+				else isId = false;
 			}
 
-			// Let's use the record as the index in the cache if posssible...
-			lock (MasterLock)
+			lock (Repository.MasterLock) // Finding by accurate identity...
 			{
-				var node = MetaEntities.FindNode(record);
-				if (node != null)
+				var node = MetaEntities.FindNode(record); if (node != null)
 				{
-					var meta = node.Find(x => x.HasValidEntity);
-					if (meta != null)
+					var meta = node.FirstOrDefault(x => x.HasValidEntity);
+					var obj = meta == null ? null : meta.Entity; if (obj != null)
 					{
 						record.Dispose(disposeSchema: true);
-						return (T)meta.Entity;
+						return (T)obj;
 					}
 				}
 			}
 
-			// If not an identity record we need to iterate through the cache...
-			bool isId = true; foreach (var entry in SchemaId)
+			if (!isId) // Finding by a non-identity record...
 			{
-				var temp = record.Schema.FindEntry(entry.ColumnName, raise: false);
-				if (temp == null) { isId = false; break; }
-			}
-
-			if (!isId)
-			{
-				lock (MasterLock)
+				lock (Repository.MasterLock)
 				{
-					foreach (var meta in MetaEntities.Items)
+					foreach (var meta in MetaEntities)
 					{
-						if (!meta.HasValidEntity) continue;
+						var obj = meta.Entity; if (obj == null) continue;
 						if (meta.Record == null) continue;
 
 						var changes = record.Changes(meta.Record); if (changes == null)
 						{
 							record.Dispose(disposeSchema: true);
-							return (T)meta.Entity;
+							return (T)obj;
 						}
 						changes.Dispose(disposeSchema: true);
 					}
@@ -1237,8 +1176,8 @@ namespace Kerosene.ORM.Maps.Concrete
 			tag.Dispose();
 			record.Dispose(disposeSchema: true);
 
-			T obj = cmd.First();
-			return obj;
+			T item = cmd.First();
+			return item;
 		}
 		object IDataMap.FindNow(params Func<dynamic, object>[] specs)
 		{
@@ -1262,21 +1201,17 @@ namespace Kerosene.ORM.Maps.Concrete
 			Validate();
 
 			var meta = MetaEntity.Locate(entity);
-			var attached = object.ReferenceEquals(meta.Map, this);
-			if (!attached) Attach(entity); // By definition we only refresh attached entities...
+			meta.Completed = false;
 
-			var record = meta.Record; lock (MasterLock) // Forcing the refresh of the cache...
+			var id = new Core.Concrete.Record(SchemaId); WriteRecord(entity, id);
+			lock (Repository.MasterLock)
 			{
-				meta.Completed = false;
-
-				var node = MetaEntities.FindNode(record);
+				var node = MetaEntities.FindNode(id);
 				if (node != null) foreach (var item in node) item.Completed = false;
 			}
 
-			var id = ExtractId(record);
 			var cmd = Query().Top(1);
 			var tag = new DynamicNode.Argument("x");
-
 			for (int i = 0; i < id.Count; i++)
 			{
 				var left = new DynamicNode.GetMember(tag, id.Schema[i].ColumnName);
@@ -1285,40 +1220,26 @@ namespace Kerosene.ORM.Maps.Concrete
 				bin.Dispose();
 				left.Dispose();
 			}
-			id.Dispose();
 			tag.Dispose();
+			id.Dispose();
 
 			T obj = cmd.First(); cmd.Dispose();
 
-			// We don't implicitly attach something not found...
-			if (obj == null && !attached) Detach(entity);
+			if (obj != null && !object.ReferenceEquals(obj, entity))
+			{
+				var temp = MetaEntity.Locate(obj);
+
+				meta.Record = temp.Record.Clone();
+				meta.UberMap = this; if (TrackEntities) MetaEntities.Add(meta);
+				LoadEntity(temp.Record, entity);
+				meta.Completed = false; CompleteMembers(meta);
+			}
 
 			return obj;
 		}
 		object IDataMap.RefreshNow(object entity)
 		{
 			return this.RefreshNow((T)entity);
-		}
-
-		/// <summary>
-		/// Creates a new insert operation for the given entity.
-		/// <para>The new command must be firstly submitted into the associated repository in
-		/// order it to be executed when all pending change operations annotated into that
-		/// repository are executed as a group.</para>
-		/// </summary>
-		/// <param name="entity">The entity to be inserted.</param>
-		/// <returns>A new command.</returns>
-		public DataInsert<T> Insert(T entity)
-		{
-			return new DataInsert<T>(this, entity);
-		}
-		IDataInsert<T> IDataMap<T>.Insert(T entity)
-		{
-			return this.Insert(entity);
-		}
-		IDataInsert IDataMap.Insert(object entity)
-		{
-			return this.Insert((T)entity);
 		}
 
 		/// <summary>
@@ -1340,6 +1261,48 @@ namespace Kerosene.ORM.Maps.Concrete
 		IDataDelete IDataMap.Delete(object entity)
 		{
 			return this.Delete((T)entity);
+		}
+
+		/// <summary>
+		/// Creates a new save command for the entities managed by this map.
+		/// <para>The new command must be firstly submitted into the associated repository in
+		/// order it to be executed when all pending change operations annotated into that
+		/// repository are executed as a group.</para>
+		/// </summary>
+		/// <param name="entity">The entity to be inserted.</param>
+		/// <returns>A new save command.</returns>
+		public DataSave<T> Save(T entity)
+		{
+			return new DataSave<T>(this, entity);
+		}
+		IDataSave<T> IDataMap<T>.Save(T entity)
+		{
+			return this.Save(entity);
+		}
+		IDataSave IDataMap.Save(object entity)
+		{
+			return this.Save((T)entity);
+		}
+
+		/// <summary>
+		/// Creates a new insert operation for the given entity.
+		/// <para>The new command must be firstly submitted into the associated repository in
+		/// order it to be executed when all pending change operations annotated into that
+		/// repository are executed as a group.</para>
+		/// </summary>
+		/// <param name="entity">The entity to be inserted.</param>
+		/// <returns>A new command.</returns>
+		public DataInsert<T> Insert(T entity)
+		{
+			return new DataInsert<T>(this, entity);
+		}
+		IDataInsert<T> IDataMap<T>.Insert(T entity)
+		{
+			return this.Insert(entity);
+		}
+		IDataInsert IDataMap.Insert(object entity)
+		{
+			return this.Insert((T)entity);
 		}
 
 		/// <summary>

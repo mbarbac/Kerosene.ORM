@@ -4,20 +4,34 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 
 namespace Kerosene.ORM.Maps.Concrete
 {
 	// ====================================================
-	internal class MetaEntityCollection
+	internal class MetaEntityCollection : IEnumerable<MetaEntity>
 	{
+		IUberMap _Master = null;
 		Dictionary<string, List<MetaEntity>> _Items = new Dictionary<string, List<MetaEntity>>();
 		private const int NODE_INITIAL_SIZE = 1;
 
 		/// <summary>
 		/// Initializes a new instance.
 		/// </summary>
-		internal MetaEntityCollection() { }
+		internal MetaEntityCollection(IUberMap map)
+		{
+			_Master = map;
+		}
+
+		/// <summary>
+		/// Disposes this instance.
+		/// </summary>
+		internal void Dispose()
+		{
+			if (_Items != null) Clear(); _Items = null;
+			_Master = null;
+		}
 
 		/// <summary>
 		/// Returns the string representation of this instance.
@@ -29,15 +43,26 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 
 		/// <summary>
-		/// The items contained in this collection
 		/// </summary>
-		internal IEnumerable<MetaEntity> Items
+		IEnumerable<MetaEntity> ItemsCollection
 		{
 			get
 			{
 				foreach (var node in _Items)
 					foreach (var item in node.Value) yield return item;
 			}
+		}
+
+		/// <summary>
+		/// Obtains an enumerator for the members of this instance.
+		/// </summary>
+		public IEnumerator<MetaEntity> GetEnumerator()
+		{
+			return ItemsCollection.GetEnumerator();
+		}
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return this.GetEnumerator();
 		}
 
 		/// <summary>
@@ -53,49 +78,104 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 
 		/// <summary>
+		/// Builds the id string associated with the given record.
+		/// Returns null if it cannot be generated or, optionally, raises an exception.
+		/// </summary>
+		string ObtainId(IRecord record, bool raise)
+		{
+			var first = true;
+			var sb = new StringBuilder(); for (int i = 0; i < _Master.SchemaId.Count; i++)
+			{
+				var name = _Master.SchemaId[i].ColumnName;
+				var entry = record.Schema.FindEntry(name, raise: false); if (entry == null)
+				{
+					if (raise) throw new InvalidOperationException("Identity column '{0}' not found in record '{1}'.".FormatWith(name, record));
+					return null;
+				}
+
+				int ix = record.Schema.IndexOf(entry);
+				var value = record[ix];
+
+				if (first) first = false; else sb.Append(",");
+				sb.AppendFormat("[{0}]", value == null ? "ø" : value.Sketch());
+			}
+			return sb.ToString();
+		}
+
+		/// <summary>
+		/// Returns the id string associated with the given entity, generating it if needed.
+		/// Returns null if it cannot be generated if needed or, optionally, raises an exception.
+		/// Optionally captures the state in a new record if it did not exist previously.
+		/// </summary>
+		string ObtainId(MetaEntity meta, bool raise, bool captureRecord)
+		{
+			var str = meta.CollectionId; if (str == null)
+			{
+				var obj = meta.Entity;
+				if (obj == null) throw new InvalidOperationException("MetaEntity '{0}' is invalid.".FormatWith(meta));
+
+				var empty = false;
+				var record = meta.Record; if (record == null)
+				{
+					empty = true;
+					record = new Core.Concrete.Record(_Master.Schema); _Master.WriteRecord(obj, record);
+					if (captureRecord) meta.Record = record;
+				}
+
+				str = ObtainId(record, raise);
+				if (empty && !captureRecord) record.Dispose();
+			}
+			return str;
+		}
+
+		/// <summary>
 		/// Adds the given element into this collection.
 		/// </summary>
-		internal void Add(MetaEntity item)
+		internal void Add(MetaEntity meta)
 		{
-			string id = item == null ? null : item.IdentityString;
-			if (id == null) throw new Exception("Cannot obtain identity for '{0}'.".FormatWith(item.Sketch()));
+			string id = ObtainId(meta, raise: true, captureRecord: true);
 
 			List<MetaEntity> node = null; if (!_Items.TryGetValue(id, out node))
 			{
 				node = new List<MetaEntity>(NODE_INITIAL_SIZE);
 				_Items.Add(id, node);
 			}
-			node.Add(item);
+			node.Add(meta);
+			meta.CollectionId = id;
+			meta.UberMap = _Master;
 		}
 
 		/// <summary>
 		/// Removes the given element from this collection.
 		/// </summary>
-		internal bool Remove(MetaEntity item)
+		internal bool Remove(MetaEntity meta)
 		{
-			var r = false; if (item == null) return false;
-			var id = item.IdentityString; if (id != null)
-			{
-				List<MetaEntity> node = null; if (_Items.TryGetValue(id, out node))
-				{
-					r = node.Remove(item);
-					if (r && node.Count == 0) _Items.Remove(id);
-				}
-			}
+			bool r = false; 
+			string id = ObtainId(meta, raise: false, captureRecord: false);
+
+			List<MetaEntity> node = null;
+			if (id != null && _Items.TryGetValue(id, out node)) r = node.Remove(meta);
+
 			if (!r)
 			{
-				List<MetaEntity> node = null; foreach (var kvp in _Items)
+				foreach (var kvp in _Items)
 				{
-					r = kvp.Value.Remove(item);
-					if (r)
+					r = kvp.Value.Remove(meta); if (r)
 					{
 						id = kvp.Key;
 						node = kvp.Value;
 						break;
 					}
 				}
-				if (r && node.Count != 0) _Items.Remove(id);
 			}
+
+			if (r)
+			{
+				meta.CollectionId = null;
+				meta.UberMap = null;
+				if (node.Count == 0) _Items.Remove(id);
+			}
+
 			return r;
 		}
 
@@ -110,43 +190,36 @@ namespace Kerosene.ORM.Maps.Concrete
 		/// <summary>
 		/// Returns a new array containing the elements of this collection.
 		/// </summary>
-		public MetaEntity[] ToArray()
+		internal MetaEntity[] ToArray()
 		{
-			int num = Count; var array = new MetaEntity[num]; if (num > 0)
-			{
-				int index = 0; foreach (var kvp in _Items)
-				{
-					kvp.Value.CopyTo(array, index);
-					index += kvp.Value.Count;
-				}
-			}
+			var array = new MetaEntity[Count];
+			int n = 0; foreach (var item in ItemsCollection) array[n++] = item;
 			return array;
 		}
 
 		/// <summary>
-		/// Returns the actual node that maintains the entities with the given identity.
+		/// Returns the collection of members sharing the given identity, or null.
 		/// </summary>
-		internal List<MetaEntity> FindNode(string id)
+		internal IEnumerable<MetaEntity> FindNode(string id)
 		{
 			List<MetaEntity> node = null; if (id != null) _Items.TryGetValue(id, out node);
 			return node;
 		}
 
 		/// <summary>
-		/// Returns the actual node that maintains the entities with the identity obtained
-		/// from the given record, or null if no node can be found.
+		/// Returns the collection of members sharing the given identity, or null.
 		/// </summary>
-		internal List<MetaEntity> FindNode(IRecord record)
+		internal IEnumerable<MetaEntity> FindNode(IRecord record)
 		{
-			return FindNode(record.IdentityString());
+			return FindNode(ObtainId(record, raise: false));
 		}
 
 		/// <summary>
-		/// Returns the actual node that maintains the entities with the its same identity.
+		/// Returns the collection of members sharing the given identity, or null.
 		/// </summary>
-		internal List<MetaEntity> FindNode(MetaEntity meta)
+		internal IEnumerable<MetaEntity> FindNode(MetaEntity meta)
 		{
-			return FindNode(meta.IdentityString);
+			return FindNode(ObtainId(meta, raise: false, captureRecord: false));
 		}
 	}
 }

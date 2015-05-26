@@ -4,19 +4,33 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 
 namespace Kerosene.ORM.Maps.Concrete
 {
 	// ====================================================
-	internal class UberMapCollection
+	internal class UberMapCollection : IEnumerable<IUberMap>
 	{
+		DataRepository _Master = null;
 		Dictionary<Type, IUberMap> _Items = new Dictionary<Type, IUberMap>();
 
 		/// <summary>
 		/// Initializes a new instance.
 		/// </summary>
-		internal UberMapCollection() { }
+		internal UberMapCollection(DataRepository repo)
+		{
+			_Master = repo;
+		}
+
+		/// <summary>
+		/// Disposes this instance.
+		/// </summary>
+		internal void Dispose()
+		{
+			if (_Items != null) Clear(); _Items = null;
+			_Master = null;
+		}
 
 		/// <summary>
 		/// Returns the string representation of this instance.
@@ -24,15 +38,19 @@ namespace Kerosene.ORM.Maps.Concrete
 		/// <returns>A string containing the string representation of this instance.</returns>
 		public override string ToString()
 		{
-			return string.Format("{0}({1})", GetType().EasyName(), _Items.Count);
+			return string.Format("{0}({1})", GetType().EasyName(), Count);
 		}
 
 		/// <summary>
-		/// The items contained in this collection
+		/// Obtains an enumerator for the members of this instance.
 		/// </summary>
-		internal IEnumerable<IUberMap> Items
+		public IEnumerator<IUberMap> GetEnumerator()
 		{
-			get { return _Items.Values; }
+			return _Items.Values.GetEnumerator();
+		}
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return this.GetEnumerator();
 		}
 
 		/// <summary>
@@ -40,7 +58,7 @@ namespace Kerosene.ORM.Maps.Concrete
 		/// </summary>
 		public int Count
 		{
-			get { return _Items.Count; }
+			get { return _Items == null ? 0 : _Items.Count; }
 		}
 
 		/// <summary>
@@ -48,6 +66,7 @@ namespace Kerosene.ORM.Maps.Concrete
 		/// </summary>
 		internal void Add(IUberMap item)
 		{
+			if (_Items.ContainsKey(item.EntityType)) throw new DuplicateException("Type '{0}' is already registered.".FormatWith(item.EntityType.EasyName()));
 			_Items.Add(item.EntityType, item);
 		}
 

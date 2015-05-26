@@ -4,6 +4,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Text;
@@ -17,15 +18,8 @@ namespace Kerosene.ORM.Maps.Concrete
 	/// </summary>
 	public static partial class ProxyGenerator
 	{
-		private const string PROXY_ASSEMBLY_NAME = "KeroseneRunTimeProxies";
-		private const int MAX_PROXY_NAME_LENGTH = 512 - 1;
-		private const string COMPLETEDFLAG_SUFFIX = "_Completed";
-		private const string SOURCEBACK_SUFFIX = "_Source";
-
 		static ProxyHolderCollection _ProxyHolders = new ProxyHolderCollection();
 		static object _ProxyLock = new object();
-		static AssemblyBuilder _AssemblyBuilder = null;
-		static ModuleBuilder _ModuleBuilder = null;
 
 		/// <summary>
 		/// The global collection of proxy ProxyHolders.
@@ -43,6 +37,14 @@ namespace Kerosene.ORM.Maps.Concrete
 		{
 			get { return _ProxyLock; }
 		}
+
+		private const string PROXY_ASSEMBLY_NAME = "KeroseneRunTimeProxies";
+		private const int MAX_PROXY_NAME_LENGTH = 512 - 1;
+		private const string COMPLETEDFLAG_SUFFIX = "_Completed";
+		private const string SOURCEBACK_SUFFIX = "_Source";
+
+		static AssemblyBuilder _AssemblyBuilder = null;
+		static ModuleBuilder _ModuleBuilder = null;
 
 		/// <summary>
 		/// Initializes the proxy generator if needed.
@@ -127,7 +129,7 @@ namespace Kerosene.ORM.Maps.Concrete
 			ProxyHolder holder = null; lock (ProxyLock)
 			{
 				// If the appropriate holder exists, just return it...
-				holder = ProxyHolders.Items.Where(x => x.ProxyType.Name == name).FirstOrDefault();
+				holder = ProxyHolders.Where(x => x.ProxyType.Name == name).FirstOrDefault();
 				if (holder != null) { list.Clear(); return holder; }
 
 				// Otherwise, create a new one - we cannot yet add it as its type is not set yet...
@@ -148,7 +150,7 @@ namespace Kerosene.ORM.Maps.Concrete
 					baseType, null);
 
 				// The fields that maintain whether the extended property is loaded or not...
-				foreach (var lazy in holder.LazyProperties.Items)
+				foreach (var lazy in holder.LazyProperties)
 					lazy.LazyCompletedFlag = proxyBuilder.DefineField(lazy.Name + COMPLETEDFLAG_SUFFIX,
 						typeof(bool),
 						FieldAttributes.Public);
@@ -165,7 +167,7 @@ namespace Kerosene.ORM.Maps.Concrete
 						baseCon.CallingConvention,
 						types);
 
-					il = proxyCon.GetILGenerator(); foreach (var element in holder.LazyProperties.Items)
+					il = proxyCon.GetILGenerator(); foreach (var element in holder.LazyProperties)
 					{
 						il.Emit(OpCodes.Ldarg_0);
 						il.Emit(OpCodes.Ldc_I4_0);
@@ -182,7 +184,7 @@ namespace Kerosene.ORM.Maps.Concrete
 				var onProxyGetter = typeof(ProxyGenerator).GetMethod("OnProxyGetter", BindingFlags.Public | BindingFlags.Static);
 
 				// Treating the lazy properties...
-				foreach (var lazy in holder.LazyProperties.Items)
+				foreach (var lazy in holder.LazyProperties)
 				{
 					lazy.ExtendedProperty = proxyBuilder.DefineProperty(lazy.Name,
 						lazy.OriginalProperty.Attributes,
@@ -261,7 +263,7 @@ namespace Kerosene.ORM.Maps.Concrete
 				holder.ProxyType = proxyBuilder.CreateType();
 
 				// Before releasing the lock let's cache some relevant information...
-				var type = holder.ProxyType; foreach (var lazy in holder.LazyProperties.Items)
+				var type = holder.ProxyType; foreach (var lazy in holder.LazyProperties)
 				{
 					lazy.LazyCompletedFlag = type.GetField(lazy.LazyCompletedFlag.Name, TypeEx.InstancePublicAndHidden);
 
@@ -326,28 +328,11 @@ namespace Kerosene.ORM.Maps.Concrete
 				if (member.CompleteMember == null) break;
 
 				lazy.LazyCompletedFlag.SetValue(entity, true);
+
 				member.CompleteMember(meta.Record, entity);
 				value = lazy.SourceBackGetter.Invoke(entity, null);
 
-
-				if (meta.UberMap.TrackChildEntities &&
-				   member.DependencyMode == MemberDependencyMode.Child &&
-				   member.ElementInfo.CanRead &&
-				   member.ElementInfo.ElementType.IsListAlike())
-				{
-					type = member.ElementInfo.ElementType.ListAlikeMemberType();
-					if (type != null && (type.IsClass || type.IsInterface))
-					{
-						HashSet<object> childs = null;
-						if (!meta.ChildDependencies.TryGetValue(member.Name, out childs))
-							meta.ChildDependencies.Add(member.Name, (childs = new HashSet<object>()));
-
-						childs.Clear();
-						var iter = member.ElementInfo.GetValue(entity) as IEnumerable;
-						foreach (var obj in iter) childs.Add(obj);
-					}
-				}
-
+				meta.CaptureMetaMemberChilds(member);
 
 				break;
 			}

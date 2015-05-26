@@ -13,42 +13,27 @@ namespace Kerosene.ORM.Maps.Concrete
 	/// <summary>
 	/// Represents an update operation for its associated entity.
 	/// </summary>
-	public class DataUpdate<T> : MetaOperation<T>, IDataUpdate<T>, IUberOperation where T : class
+	public class DataUpdate<T> : DataSave<T>, IDataUpdate<T> where T : class
 	{
 		/// <summary>
 		/// Initializes a new instance.
 		/// </summary>
 		/// <param name="map">The map this command will be associated with.</param>
 		/// <param name="entity">The entity affected by this operation.</param>
-		public DataUpdate(DataMap<T> map, T entity)
-			: base(map, entity)
-		{
-		}
+		public DataUpdate(DataMap<T> map, T entity) : base(map, entity) { }
 
 		/// <summary>
-		/// Returns a new core command that when executed materializes the operation this instance
-		/// refers to, or null if that command cannot be generated for any reasons.
+		/// Submits this operation so that it will be executed, along with all other pending
+		/// change operations on its associated repository, when it executes then all against
+		/// the underlying database as a single logic unit.
 		/// </summary>
-		/// <returns>A new core command, or null.</returns>
-		public IUpdateCommand GenerateCoreCommand()
+		public override void Submit()
 		{
-			return IsDisposed ? null : Map.GenerateUpdateCommand(Entity);
-		}
-		ICommand ICoreCommandProvider.GenerateCoreCommand()
-		{
-			return this.GenerateCoreCommand();
-		}
+			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
+			if (MetaEntity.UberMap == null) throw new OrphanException(
+				"Entity '{0}' is not attached to any map.".FormatWith(MetaEntity));
 
-		/// <summary>
-		/// Invoked to execute the operation this instance refers to.
-		/// </summary>
-		internal void OnExecute()
-		{
-			Repository.DoSave(Entity);
-		}
-		void IUberOperation.OnExecute()
-		{
-			this.OnExecute();
+			base.Submit();
 		}
 	}
 
@@ -139,32 +124,6 @@ namespace Kerosene.ORM.Maps.Concrete
 			changes.Dispose(disposeSchema: true);
 
 			return cmd;
-		}
-
-		/// <summary>
-		/// Returns wheter the given child entity requires an update.
-		/// </summary>
-		internal static bool DoesChildNeedUpdate(this MetaEntity child, bool cascade)
-		{
-			if (child.HasRecordChanges()) return true;
-
-			var list = child.GetRemovedChilds();
-			var need = list.Count != 0;
-			list.Clear(); list = null; if (need) return true;
-
-			if (cascade)
-			{
-				list = child.GetDependencies(MemberDependencyMode.Child); foreach (var obj in list)
-				{
-					if (obj == null) continue;
-					var meta = MetaEntity.Locate(obj);
-					if (meta.DoesChildNeedUpdate(cascade: false)) { need = true; break; }
-				}
-				list.Clear(); list = null;
-				if (need) return true;
-			}
-
-			return false;
 		}
 	}
 }

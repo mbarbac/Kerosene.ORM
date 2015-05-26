@@ -55,8 +55,7 @@ namespace Kerosene.ORM.Maps
 	/// Represents an object able to execute a query command and return the entities produced
 	/// as the result of that execution.
 	/// </summary>
-	public interface IDataQueryEnumerator<T> : IDataQueryEnumerator, IEnumerator<T>
-		where T : class
+	public interface IDataQueryEnumerator<T> : IDataQueryEnumerator, IEnumerator<T> where T : class
 	{
 		/// <summary>
 		/// The command associated with this instance.

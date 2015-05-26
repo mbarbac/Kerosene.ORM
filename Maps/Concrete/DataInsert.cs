@@ -4,6 +4,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 
 namespace Kerosene.ORM.Maps.Concrete
@@ -12,42 +13,27 @@ namespace Kerosene.ORM.Maps.Concrete
 	/// <summary>
 	/// Represents an insert operation for its associated entity.
 	/// </summary>
-	public class DataInsert<T> : MetaOperation<T>, IDataInsert<T>, IUberOperation where T : class
+	public class DataInsert<T> : DataSave<T>, IDataInsert<T> where T : class
 	{
 		/// <summary>
 		/// Initializes a new instance.
 		/// </summary>
 		/// <param name="map">The map this command will be associated with.</param>
 		/// <param name="entity">The entity affected by this operation.</param>
-		public DataInsert(DataMap<T> map, T entity)
-			: base(map, entity)
-		{
-		}
+		public DataInsert(DataMap<T> map, T entity) : base(map, entity) { }
 
 		/// <summary>
-		/// Returns a new core command that when executed materializes the operation this instance
-		/// refers to, or null if that command cannot be generated for any reasons.
+		/// Submits this operation so that it will be executed, along with all other pending
+		/// change operations on its associated repository, when it executes then all against
+		/// the underlying database as a single logic unit.
 		/// </summary>
-		/// <returns>A new core command, or null.</returns>
-		public IInsertCommand GenerateCoreCommand()
+		public override void Submit()
 		{
-			return IsDisposed ? null : Map.GenerateInsertCommand(Entity);
-		}
-		ICommand ICoreCommandProvider.GenerateCoreCommand()
-		{
-			return this.GenerateCoreCommand();
-		}
+			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
+			if (MetaEntity.UberMap != null) throw new NotOrphanException(
+				"Entity '{0}' is already attached to map '{1}'.".FormatWith(MetaEntity, MetaEntity.UberMap));
 
-		/// <summary>
-		/// Invoked to execute the operation this instance refers to.
-		/// </summary>
-		internal void OnExecute()
-		{
-			Repository.DoSave(Entity);
-		}
-		void IUberOperation.OnExecute()
-		{
-			this.OnExecute();
+			base.Submit();
 		}
 	}
 

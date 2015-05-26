@@ -4,6 +4,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 
 namespace Kerosene.ORM.Maps.Concrete
@@ -20,7 +21,7 @@ namespace Kerosene.ORM.Maps.Concrete
 		IQueryCommand _CoreCommand = null;
 		IEnumerableExecutor _Enumerator = null;
 		T _Current = null;
-		//bool _Indented = false;
+		bool _Indented = false;
 
 		/// <summary>
 		/// Initializes a new instance.
@@ -121,36 +122,29 @@ namespace Kerosene.ORM.Maps.Concrete
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
 
-			// First execution...
-			if (_CoreCommand == null)
+			if (_CoreCommand == null) // Preparing iterations...
 			{
-				_CoreCommand = _Command.GenerateCoreCommand();
-				if (_CoreCommand == null) throw new CannotCreateException(
-					"Cannot create a core query command for this '{0}'."
-					.FormatWith(this));
+				_CoreCommand = _Command.GenerateCoreCommand(); if (_CoreCommand == null)
+					throw new CannotCreateException("Cannot create a core query command for this '{0}'.".FormatWith(this));
 
-				_Enumerator = _CoreCommand.GetEnumerator();
-				if (_Enumerator == null) throw new CannotCreateException(
-					"Cannot create a core query enumerator for this '{0}'."
-					.FormatWith(this));
+				_Enumerator = _CoreCommand.GetEnumerator(); if (_Enumerator == null)
+					throw new CannotCreateException("Cannot create a core query enumerator for this '{0}'.".FormatWith(this));
 
-				//DebugEx.IndentWriteLine("\n- Query: entering '{0}'...".FormatWith(_Command.TraceString()));
-				//_Indented = true;
+				DebugEx.IndentWriteLine("\n- Query: entering '{0}'...".FormatWith(_Command.TraceString()));
+				_Indented = true;
 			}
 
-			// Current iteration...
-			_Current = null; bool r = _Enumerator.MoveNext(); if (r)
+			_Current = null; bool r = _Enumerator.MoveNext(); if (r) // Current iteration...
 			{
-				var source = _Enumerator.CurrentRecord;
+				var record = _Enumerator.CurrentRecord;
 				var disposable = true;
 				var map = _Command.Map;
 
-				lock (map.MasterLock)
+				lock (map.Repository.MasterLock)
 				{
 					if (map.TrackEntities)
 					{
-						var node = map.MetaEntities.FindNode(source);
-						if (node != null)
+						var node = map.MetaEntities.FindNode(record); if (node != null)
 						{
 							foreach (var meta in node)
 							{
@@ -176,7 +170,7 @@ namespace Kerosene.ORM.Maps.Concrete
 								}
 
 								DebugEx.IndentWriteLine("\n- Query: hydrating meta '{0}'.".FormatWith(meta));
-								meta.Record = source.Clone();
+								meta.Record = record.Clone();
 								map.LoadEntity(meta.Record, obj);
 								map.CompleteMembers(meta);
 								DebugEx.Unindent();
@@ -186,20 +180,17 @@ namespace Kerosene.ORM.Maps.Concrete
 
 					if (_Current == null)
 					{
-						DebugEx.IndentWriteLine("\n- Query: new entity '{0}({1})'".FormatWith(map.EntityType.EasyName(), source));
+						DebugEx.IndentWriteLine("\n- Query: new meta '{0}({1})'.".FormatWith(map.EntityType.EasyName(), record));
 						_Current = map.NewEntity(); var meta = MetaEntity.Locate(_Current);
-
-						meta.Record = source; disposable = false; // Faster this way in the general case...
-						meta.UberMap = map;
+						meta.Record = record; disposable = false;
+						meta.UberMap = map; if (map.TrackEntities) map.MetaEntities.Add(meta);
 						map.LoadEntity(meta.Record, _Current);
-
-						if (map.TrackEntities) map.MetaEntities.Add(meta);
 						map.CompleteMembers(meta);
 						DebugEx.Unindent();
 					}
 				}
 
-				if (disposable) source.Dispose();
+				if (disposable) record.Dispose();
 			}
 			else Reset();
 
@@ -213,7 +204,7 @@ namespace Kerosene.ORM.Maps.Concrete
 		{
 			if (_Enumerator != null) _Enumerator.Dispose(); _Enumerator = null;
 			if (_CoreCommand != null) _CoreCommand.Dispose(); _CoreCommand = null;
-			//if (_Indented) { DebugEx.Unindent(); _Indented = false; }
+			if (_Indented) { DebugEx.Unindent(); _Indented = false; }
 			_Current = null;
 		}
 

@@ -14,8 +14,8 @@ namespace Kerosene.ORM.Maps
 	public interface IDataRepository : IDisposableEx
 	{
 		/// <summary>
-		/// Returns a new instance that is associated with the new given link and that contains
-		/// a copy of the maps and customizations of the original one.
+		/// Returns a new instance that will be associated with the new given link and that will
+		/// contain a copy of the maps and customizations of the original one.
 		/// </summary>
 		/// <returns>A new instance.</returns>
 		IDataRepository Clone(IDataLink link);
@@ -29,12 +29,6 @@ namespace Kerosene.ORM.Maps
 		/// The collection of maps registered into this repository.
 		/// </summary>
 		IEnumerable<IDataMap> Maps { get; }
-
-		/// <summary>
-		/// Clears and disposes all the maps registered into this instance, and reverts its
-		/// managed entities, if any is tracked, to a detached state.
-		/// </summary>
-		void ClearMaps();
 
 		/// <summary>
 		/// Whether weak maps are enabled for this instance or not.
@@ -66,6 +60,12 @@ namespace Kerosene.ORM.Maps
 		IDataMap<T> LocateMap<T>(Func<dynamic, object> table = null) where T : class;
 
 		/// <summary>
+		/// Clears and disposes all the maps registered into this instance, and reverts its
+		/// managed entities, if any is tracked, to a detached state.
+		/// </summary>
+		void ClearMaps();
+
+		/// <summary>
 		/// Whether tracking of entities is enabled or disabled, in principle, for the maps that
 		/// are registered into this instance. The setter cascades the new value into all the
 		/// maps registered at the moment when the new value is set.
@@ -73,18 +73,14 @@ namespace Kerosene.ORM.Maps
 		bool TrackEntities { get; set; }
 
 		/// <summary>
-		/// The collection of entities in a valid state tracked by the maps registered into
-		/// this instance.
+		/// The collection of tracked entities that are in a valid state of the maps of this repository.
 		/// </summary>
-		IEnumerable<IMetaEntity> Entities { get; }
+		IEnumerable<object> Entities { get; }
 
 		/// <summary>
-		/// Clears the caches of all the maps registered into this instance and, optionally,
-		/// detaches the entities that were tracked.
+		/// Clears the cache of tracked entities of the maps on this repository.
 		/// </summary>
-		/// <param name="detach">True to also detach the entities removed from the caches of
-		/// the maps.</param>
-		void ClearEntities(bool detach = true);
+		void ClearEntities();
 
 		/// <summary>
 		/// Creates a new entity with the appropriate type for the requested map.
@@ -154,26 +150,6 @@ namespace Kerosene.ORM.Maps
 		T RefreshNow<T>(T entity) where T : class;
 
 		/// <summary>
-		/// Creates a new insert operation for the given entity.
-		/// <para>The new command must be firstly submitted into the associated repository in
-		/// order it to be executed when all pending change operations annotated into that
-		/// repository are executed as a group.</para>
-		/// </summary>
-		/// <typeparam name="T">The type of the managed entities.</typeparam>
-		/// <param name="entity">The entity to be inserted.</param>
-		/// <returns>A new command.</returns>
-		IDataInsert<T> Insert<T>(T entity) where T : class;
-
-		/// <summary>
-		/// Convenience method to create the operation associated with the given entity, to
-		/// submit it into the repository, and to execute inmediately all the pending change
-		/// operations annotated into it.
-		/// </summary>
-		/// <typeparam name="T">The type of the managed entities.</typeparam>
-		/// <param name="entity">The entity affected by the operation.</param>
-		void InsertNow<T>(T entity) where T : class;
-
-		/// <summary>
 		/// Creates a new delete operation for the given entity.
 		/// <para>The new command must be firstly submitted into the associated repository in
 		/// order it to be executed when all pending change operations annotated into that
@@ -192,6 +168,46 @@ namespace Kerosene.ORM.Maps
 		/// <typeparam name="T">The type of the managed entities.</typeparam>
 		/// <param name="entity">The entity affected by the operation.</param>
 		void DeleteNow<T>(T entity) where T : class;
+
+		/// <summary>
+		/// Creates a new save (insert/update) operation for the given entity.
+		/// <para>The new command must be firstly submitted into the associated repository in
+		/// order it to be executed when all pending change operations annotated into that
+		/// repository are executed as a group.</para>
+		/// </summary>
+		/// <typeparam name="T">The type of the managed entities.</typeparam>
+		/// <param name="entity">The entity to be inserted.</param>
+		/// <returns>A new command.</returns>
+		IDataSave<T> Save<T>(T entity) where T : class;
+
+		/// <summary>
+		/// Convenience method to create the operation associated with the given entity, to
+		/// submit it into the repository, and to execute inmediately all the pending change
+		/// operations annotated into it.
+		/// </summary>
+		/// <typeparam name="T">The type of the managed entities.</typeparam>
+		/// <param name="entity">The entity affected by the operation.</param>
+		void SaveNow<T>(T entity) where T : class;
+
+		/// <summary>
+		/// Creates a new insert operation for the given entity.
+		/// <para>The new command must be firstly submitted into the associated repository in
+		/// order it to be executed when all pending change operations annotated into that
+		/// repository are executed as a group.</para>
+		/// </summary>
+		/// <typeparam name="T">The type of the managed entities.</typeparam>
+		/// <param name="entity">The entity to be inserted.</param>
+		/// <returns>A new command.</returns>
+		IDataInsert<T> Insert<T>(T entity) where T : class;
+
+		/// <summary>
+		/// Convenience method to create the operation associated with the given entity, to
+		/// submit it into the repository, and to execute inmediately all the pending change
+		/// operations annotated into it.
+		/// </summary>
+		/// <typeparam name="T">The type of the managed entities.</typeparam>
+		/// <param name="entity">The entity affected by the operation.</param>
+		void InsertNow<T>(T entity) where T : class;
 
 		/// <summary>
 		/// Creates a new delete operation for the given entity.
@@ -224,5 +240,22 @@ namespace Kerosene.ORM.Maps
 		/// repository.
 		/// </summary>
 		void DiscardChanges();
+	}
+
+	// ====================================================
+	/// <summary>
+	/// Helpers and extensions for working with Repository instances.
+	/// </summary>
+	public static class DataRepository
+	{
+		/// <summary>
+		/// Creates a new repository instance associated with the given link.
+		/// </summary>
+		/// <param name="link">The link reference.</param>
+		/// <returns>The newly created repository.</returns>
+		public static IDataRepository Create(IDataLink link)
+		{
+			return new Concrete.DataRepository(link);
+		}
 	}
 }

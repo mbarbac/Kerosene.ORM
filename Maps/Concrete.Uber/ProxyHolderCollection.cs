@@ -4,12 +4,13 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 
 namespace Kerosene.ORM.Maps.Concrete
 {
 	// ====================================================
-	internal class ProxyHolderCollection
+	internal class ProxyHolderCollection : IEnumerable<ProxyHolder>
 	{
 		Dictionary<Type, ProxyHolder> _Items = new Dictionary<Type, ProxyHolder>();
 
@@ -28,11 +29,15 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 
 		/// <summary>
-		/// The items contained in this collection
+		/// Obtains an enumerator for the members of this instance.
 		/// </summary>
-		internal IEnumerable<ProxyHolder> Items
+		public IEnumerator<ProxyHolder> GetEnumerator()
 		{
-			get { return _Items.Values; }
+			return _Items.Values.GetEnumerator();
+		}
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return this.GetEnumerator();
 		}
 
 		/// <summary>

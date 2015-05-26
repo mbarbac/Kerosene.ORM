@@ -18,16 +18,16 @@ namespace Kerosene.ORM.Maps
 		object Entity { get; }
 
 		/// <summary>
-		/// Whether this operation has been submitted or not.
-		/// </summary>
-		bool IsSubmitted { get; }
-
-		/// <summary>
 		/// Submits this operation so that it will be executed, along with all other pending
 		/// change operations on its associated repository, when it executes then all against
 		/// the underlying database as a single logic unit.
 		/// </summary>
 		void Submit();
+
+		/// <summary>
+		/// Whether this operation has been submitted already or not.
+		/// </summary>
+		bool IsSubmitted { get; }
 	}
 
 	// ====================================================

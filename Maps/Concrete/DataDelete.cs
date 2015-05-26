@@ -15,14 +15,24 @@ namespace Kerosene.ORM.Maps.Concrete
 	/// </summary>
 	public class DataDelete<T> : MetaOperation<T>, IDataDelete<T>, IUberOperation where T : class
 	{
+		IDeleteCommand _Command = null;
+
 		/// <summary>
 		/// Initializes a new instance.
 		/// </summary>
 		/// <param name="map">The map this command will be associated with.</param>
 		/// <param name="entity">The entity affected by this operation.</param>
-		public DataDelete(DataMap<T> map, T entity)
-			: base(map, entity)
+		public DataDelete(DataMap<T> map, T entity) : base(map, entity) { }
+
+		/// <summary>
+		/// Invoked when disposing or finalizing this instance.
+		/// </summary>
+		/// <param name="disposing">True if the object is being disposed, false otherwise.</param>
+		protected override void OnDispose(bool disposing)
 		{
+			if (_Command != null) _Command.Dispose(); _Command = null;
+
+			base.OnDispose(disposing);
 		}
 
 		/// <summary>
@@ -40,15 +50,109 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 
 		/// <summary>
-		/// Invoked to execute the operation this instance refers to.
+		/// Submits this operation so that it will be executed, along with all other pending
+		/// change operations on its associated repository, when it executes then all against
+		/// the underlying database as a single logic unit.
 		/// </summary>
-		internal void OnExecute()
+		public override void Submit()
 		{
-			Repository.DoDelete(Entity);
+			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
+			if (MetaEntity.UberMap == null) throw new OrphanException(
+				"Entity '{0}' is not attached to any map.".FormatWith(MetaEntity));
+
+			base.Submit();
 		}
-		void IUberOperation.OnExecute()
+
+		/// <summary>
+		/// Invoked to execute this operation.
+		/// </summary>
+		internal void OnExecute(object origin = null)
 		{
-			this.OnExecute();
+			lock (Repository.MasterLock)
+			{
+				List<object> list = null;
+				ChangeEntry change = null;
+				IDeleteCommand cmd = null;
+
+				DebugEx.IndentWriteLine("\n- Preparing 'Delete({0})'...", MetaEntity);
+				try
+				{
+					list = MetaEntity.GetRemovedChilds();
+					foreach (var obj in list)
+					{
+						if (obj == null) continue;
+						if (object.ReferenceEquals(obj, origin)) continue;
+						var type = obj.GetType(); if (!type.IsClass && !type.IsInterface) continue;
+
+						var meta = MetaEntity.Locate(obj);
+						var map = meta.UberMap ?? Repository.LocateUberMap(type);
+						if (map == null) throw new NotFoundException("Cannot find map for type '{0}'.".FormatWith(type.EasyName()));
+
+						var op = map.Delete(obj);
+						try { ((IUberOperation)op).OnExecute(origin: Entity); }
+						finally { op.Dispose(); }
+					}
+					list.Clear(); list = null;
+
+					list = MetaEntity.GetDependencies(Map, MemberDependencyMode.Child);
+					foreach (var obj in list)
+					{
+						if (obj == null) continue;
+						if (object.ReferenceEquals(obj, origin)) continue;
+						var type = obj.GetType(); if (!type.IsClass && !type.IsInterface) continue;
+
+						var meta = MetaEntity.Locate(obj);
+						var map = meta.UberMap ?? Repository.LocateUberMap(type);
+						if (map == null) throw new NotFoundException("Cannot find map for type '{0}'.".FormatWith(type.EasyName()));
+
+						var op = map.Delete(obj);
+						try { ((IUberOperation)op).OnExecute(origin: Entity); }
+						finally { op.Dispose(); }
+					}
+					list.Clear(); list = null;
+
+					cmd = Map.GenerateDeleteCommand(Entity);
+					if (cmd != null)
+					{
+						DebugEx.IndentWriteLine("\n- Executing '{0}'...", cmd);
+						try
+						{
+							MetaEntity.ValidateRowVersion();
+							int n = cmd.Execute();
+						}
+						finally { DebugEx.Unindent(); }
+					}
+					Map.Detach(Entity);
+
+					change = new ChangeEntry(ChangeType.Delete, Map, Entity);
+					Repository.ChangeEntries.Add(change);
+
+					list = MetaEntity.GetDependencies(Map, MemberDependencyMode.Parent);
+					foreach (var obj in list)
+					{
+						if (obj == null) continue;
+						if (object.ReferenceEquals(obj, origin)) continue;
+						var type = obj.GetType(); if (!type.IsClass && !type.IsInterface) continue;
+
+						var meta = MetaEntity.Locate(obj);
+						var map = meta.UberMap ?? Repository.LocateUberMap(type);
+						if (map == null) throw new NotFoundException("Cannot find map for type '{0}'.".FormatWith(type.EasyName()));
+
+						change = new ChangeEntry(ChangeType.Refresh, map, obj);
+						Repository.ChangeEntries.Add(change);
+					}
+				}
+				finally
+				{
+					if (cmd != null) cmd.Dispose(); cmd = null;
+					if (list != null) list.Clear(); list = null;
+					DebugEx.Unindent();
+				}
+			}
+		}
+		void IUberOperation.OnExecute(object origin)
+		{
+			this.OnExecute(origin);
 		}
 	}
 

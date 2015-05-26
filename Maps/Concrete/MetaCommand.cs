@@ -4,12 +4,19 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 
 namespace Kerosene.ORM.Maps.Concrete
 {
 	// ====================================================
-	internal interface IUberCommand : IMetaCommand { }
+	internal interface IUberCommand : IMetaCommand
+	{
+		/// <summary>
+		/// The map this command is associated with.
+		/// </summary>
+		IUberMap UberMap { get; }
+	}
 
 	// ====================================================
 	/// <summary>
@@ -100,6 +107,18 @@ namespace Kerosene.ORM.Maps.Concrete
 		IDataMap IMetaCommand.Map
 		{
 			get { return this.Map; }
+		}
+
+		/// <summary>
+		/// The map this command is associated with.
+		/// </summary>
+		internal IUberMap UberMap
+		{
+			get { return this.Map; }
+		}
+		IUberMap IUberCommand.UberMap
+		{
+			get { return this.UberMap; }
 		}
 
 		/// <summary>

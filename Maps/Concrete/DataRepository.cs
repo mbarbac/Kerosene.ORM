@@ -4,6 +4,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 
 namespace Kerosene.ORM.Maps.Concrete
@@ -20,8 +21,7 @@ namespace Kerosene.ORM.Maps.Concrete
 		ulong _SerialId = 0;
 		IDataLink _Link = null;
 		object _MasterLock = new object();
-		UberMapCollection _UberMaps = new UberMapCollection();
-		UberOperationCollection _UberOperations = new UberOperationCollection();
+		UberMapCollection _UberMaps = null;
 		bool _WeakMapsEnabled = Uber.EnableWeakMaps;
 		bool _TrackEntities = Uber.TrackEntities;
 		bool _TrackChildEntities = Uber.TrackChildEntities;
@@ -29,6 +29,7 @@ namespace Kerosene.ORM.Maps.Concrete
 		bool _TimerDisposed = false;
 		int _Interval = Uber.CollectorInterval;
 		bool _EnableGC = Uber.EnableCollectorGC;
+		UberOperationList _UberOperations = null;
 
 		/// <summary>
 		/// Initializes a new instance.
@@ -38,8 +39,11 @@ namespace Kerosene.ORM.Maps.Concrete
 		{
 			if (link == null) throw new ArgumentNullException("link", "Data Link cannot be null.");
 			if (link.IsDisposed) throw new ObjectDisposedException(link.ToString());
+
 			_Link = link;
 			_SerialId = ++Uber.RepositoryLastSerial;
+			_UberMaps = new UberMapCollection(this);
+			_UberOperations = new UberOperationList(this);
 
 			if (Uber.EnableCollector) EnableCollector();
 		}
@@ -60,7 +64,8 @@ namespace Kerosene.ORM.Maps.Concrete
 			if (!IsDisposed) { OnDispose(true); GC.SuppressFinalize(this); }
 		}
 
-		/// <summary></summary>
+		/// <summary>
+		/// </summary>
 		~DataRepository()
 		{
 			if (!IsDisposed) OnDispose(false);
@@ -80,15 +85,12 @@ namespace Kerosene.ORM.Maps.Concrete
 
 			if (disposing)
 			{
-				lock (MasterLock)
-				{
-					if (_UberOperations != null && !_IsDisposed) DiscardChanges();
-					if (_UberMaps != null && !_IsDisposed) ClearMaps();
-				}
+				if (_UberOperations != null) { DiscardChanges(); _UberOperations.Dispose(); }
+				if (_UberMaps != null) { ClearMaps(); _UberMaps.Dispose(); }
 			}
 
-			_UberMaps = null;
 			_UberOperations = null;
+			_UberMaps = null;
 			_Link = null;
 			_Timer = null;
 
@@ -96,8 +98,22 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 
 		/// <summary>
-		/// Returns a new instance that is associated with the new given link and that contains
-		/// a copy of the maps and customizations of the original one.
+		/// Returns the string representation of this instance.
+		/// </summary>
+		/// <returns>A string containing the standard representation of this instance.</returns>
+		public override string ToString()
+		{
+			var str = string.Format("{0}:{1}({2})",
+				SerialId,
+				GetType().EasyName(),
+				Link.Sketch());
+
+			return IsDisposed ? "disposed::{0}".FormatWith(str) : str;
+		}
+
+		/// <summary>
+		/// Returns a new instance that will be associated with the new given link and that will
+		/// contain a copy of the maps and customizations of the original one.
 		/// </summary>
 		/// <returns>A new instance.</returns>
 		public DataRepository Clone(IDataLink link)
@@ -131,27 +147,14 @@ namespace Kerosene.ORM.Maps.Concrete
 			var enabled = temp.IsCollectorEnabled; if (enabled) temp.DisableCollector();
 			lock (MasterLock)
 			{
-				foreach (var map in _UberMaps.Items) map.Clone(temp);
+				foreach (var map in _UberMaps) map.Clone(temp);
 				temp._WeakMapsEnabled = _WeakMapsEnabled;
 				temp._TrackEntities = _TrackEntities;
+				temp._TrackChildEntities = _TrackChildEntities;
 				temp._Interval = _Interval;
 				temp._EnableGC = _EnableGC;
 			}
 			if (enabled) temp.EnableCollector();
-		}
-
-		/// <summary>
-		/// Returns the string representation of this instance.
-		/// </summary>
-		/// <returns>A string containing the standard representation of this instance.</returns>
-		public override string ToString()
-		{
-			var str = string.Format("{0}:{1}({2})",
-				SerialId,
-				GetType().EasyName(),
-				Link.Sketch());
-
-			return IsDisposed ? "disposed::{0}".FormatWith(str) : str;
 		}
 
 		/// <summary>
@@ -163,20 +166,20 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 
 		/// <summary>
+		/// The link with the underlying database-alike service this instance is associated with.
+		/// </summary>
+		public IDataLink Link
+		{
+			get { return _Link; }
+		}
+
+		/// <summary>
 		/// The object that can be used to synchronize operations related to the repository and
 		/// associated elements.
 		/// </summary>
 		internal object MasterLock
 		{
 			get { return _MasterLock; }
-		}
-
-		/// <summary>
-		/// The link with the underlying database-alike service this instance is associated with.
-		/// </summary>
-		public IDataLink Link
-		{
-			get { return _Link; }
 		}
 
 		/// <summary>
@@ -192,23 +195,7 @@ namespace Kerosene.ORM.Maps.Concrete
 		/// </summary>
 		public IEnumerable<IDataMap> Maps
 		{
-			get { return UberMaps.Items; }
-		}
-
-		/// <summary>
-		/// Clears and disposes all the maps registered into this instance, and reverts its
-		/// managed entities, if any is tracked, to a detached state.
-		/// </summary>
-		public void ClearMaps()
-		{
-			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
-
-			lock (MasterLock)
-			{
-				var maps = UberMaps.ToArray(); foreach (var map in maps) map.Dispose();
-				UberMaps.Clear();
-				Array.Clear(maps, 0, maps.Length);
-			}
+			get { return UberMaps; }
 		}
 
 		/// <summary>
@@ -266,7 +253,7 @@ namespace Kerosene.ORM.Maps.Concrete
 					}
 				}
 			}
-			
+
 			return map;
 		}
 
@@ -305,6 +292,21 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 
 		/// <summary>
+		/// Clears and disposes all the maps registered into this instance, and reverts its
+		/// managed entities, if any is tracked, to a detached state.
+		/// </summary>
+		public void ClearMaps()
+		{
+			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
+			lock (MasterLock)
+			{
+				var maps = UberMaps.ToArray(); foreach (var map in maps) map.Dispose();
+				Array.Clear(maps, 0, maps.Length);
+				UberMaps.Clear();
+			}
+		}
+
+		/// <summary>
 		/// Whether tracking of entities is enabled or disabled, in principle, for the maps that
 		/// are registered into this instance. The setter cascades the new value into all the
 		/// maps registered at the moment when the new value is set.
@@ -315,10 +317,9 @@ namespace Kerosene.ORM.Maps.Concrete
 			set
 			{
 				if (IsDisposed) throw new ObjectDisposedException(this.ToString());
-
 				lock (MasterLock)
 				{
-					foreach (var map in UberMaps.Items) map.TrackEntities = value;
+					foreach (var map in UberMaps) map.TrackEntities = value;
 				}
 				_TrackEntities = value;
 			}
@@ -336,59 +337,36 @@ namespace Kerosene.ORM.Maps.Concrete
 
 				lock (MasterLock)
 				{
-					foreach (var map in UberMaps.Items) map.TrackChildEntities = value;
+					foreach (var map in UberMaps) map.TrackChildEntities = value;
 				}
 				_TrackChildEntities = value;
 			}
 		}
 
 		/// <summary>
-		/// The collection of entities in a valid state tracked by the maps registered into
-		/// this instance.
+		/// The collection of tracked entities that are in a valid state of the maps of this repository.
 		/// </summary>
-		public IEnumerable<IMetaEntity> Entities
+		public IEnumerable<object> Entities
 		{
 			get
 			{
-				if (IsDisposed) throw new ObjectDisposedException(this.ToString());
-
-				lock (MasterLock)
+				if (!IsDisposed)
 				{
-					foreach (var map in UberMaps.Items)
-						foreach (var meta in map.Entities) yield return meta;
+					foreach (var map in UberMaps)
+						foreach (var obj in map.Entities) yield return obj;
 				}
 			}
 		}
-		IEnumerable<IMetaEntity> IDataRepository.Entities
-		{
-			get { return this.Entities; }
-		}
 
 		/// <summary>
-		/// Clears the caches of all the maps registered into this instance and, optionally,
-		/// detaches the entities that were tracked.
+		/// Clears the cache of tracked entities of the maps on this repository.
 		/// </summary>
-		/// <param name="detach">True to also detach the entities removed from the caches of
-		/// the maps.</param>
-		public void ClearEntities(bool detach = true)
+		public void ClearEntities()
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
-
 			lock (MasterLock)
 			{
-				foreach (var map in UberMaps.Items) map.ClearEntities(detach);
-			}
-		}
-
-		/// <summary>
-		/// The total count of entities in the cache.
-		/// </summary>
-		internal int MetaEntitiesCount
-		{
-			get
-			{
-				int r = 0; foreach (var map in UberMaps.Items) r += map.MetaEntities.Count;
-				return r;
+				foreach (var map in UberMaps) map.ClearEntities();
 			}
 		}
 
@@ -505,6 +483,70 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 
 		/// <summary>
+		/// Creates a new delete operation for the given entity.
+		/// <para>The new command must be firstly submitted into the associated repository in
+		/// order it to be executed when all pending change operations annotated into that
+		/// repository are executed as a group.</para>
+		/// </summary>
+		/// <typeparam name="T">The type of the managed entities.</typeparam>
+		/// <param name="entity">The entity to be inserted.</param>
+		/// <returns>A new command.</returns>
+		public DataDelete<T> Delete<T>(T entity) where T : class
+		{
+			return GetValidMap<T>().Delete(entity);
+		}
+		IDataDelete<T> IDataRepository.Delete<T>(T entity)
+		{
+			return this.Delete<T>(entity);
+		}
+
+		/// <summary>
+		/// Convenience method to create the operation associated with the given entity, to
+		/// submit it into the repository, and to execute inmediately all the pending change
+		/// operations annotated into it.
+		/// </summary>
+		/// <typeparam name="T">The type of the managed entities.</typeparam>
+		/// <param name="entity">The entity affected by the operation.</param>
+		public void DeleteNow<T>(T entity) where T : class
+		{
+			var cmd = Delete<T>(entity);
+			cmd.Submit();
+			ExecuteChanges();
+		}
+
+		/// <summary>
+		/// Creates a new save (insert/update) operation for the given entity.
+		/// <para>The new command must be firstly submitted into the associated repository in
+		/// order it to be executed when all pending change operations annotated into that
+		/// repository are executed as a group.</para>
+		/// </summary>
+		/// <typeparam name="T">The type of the managed entities.</typeparam>
+		/// <param name="entity">The entity to be inserted.</param>
+		/// <returns>A new command.</returns>
+		public DataSave<T> Save<T>(T entity) where T : class
+		{
+			return GetValidMap<T>().Save(entity);
+		}
+		IDataSave<T> IDataRepository.Save<T>(T entity)
+		{
+			return this.Save<T>(entity);
+		}
+
+		/// <summary>
+		/// Convenience method to create the operation associated with the given entity, to
+		/// submit it into the repository, and to execute inmediately all the pending change
+		/// operations annotated into it.
+		/// </summary>
+		/// <typeparam name="T">The type of the managed entities.</typeparam>
+		/// <param name="entity">The entity affected by the operation.</param>
+		public void SaveNow<T>(T entity) where T : class
+		{
+			var cmd = Save<T>(entity);
+			cmd.Submit();
+			ExecuteChanges();
+		}
+
+		/// <summary>
 		/// Creates a new insert operation for the given entity.
 		/// <para>The new command must be firstly submitted into the associated repository in
 		/// order it to be executed when all pending change operations annotated into that
@@ -545,38 +587,6 @@ namespace Kerosene.ORM.Maps.Concrete
 		/// <typeparam name="T">The type of the managed entities.</typeparam>
 		/// <param name="entity">The entity to be inserted.</param>
 		/// <returns>A new command.</returns>
-		public DataDelete<T> Delete<T>(T entity) where T : class
-		{
-			return GetValidMap<T>().Delete(entity);
-		}
-		IDataDelete<T> IDataRepository.Delete<T>(T entity)
-		{
-			return this.Delete<T>(entity);
-		}
-
-		/// <summary>
-		/// Convenience method to create the operation associated with the given entity, to
-		/// submit it into the repository, and to execute inmediately all the pending change
-		/// operations annotated into it.
-		/// </summary>
-		/// <typeparam name="T">The type of the managed entities.</typeparam>
-		/// <param name="entity">The entity affected by the operation.</param>
-		public void DeleteNow<T>(T entity) where T : class
-		{
-			var cmd = Delete<T>(entity);
-			cmd.Submit();
-			ExecuteChanges();
-		}
-
-		/// <summary>
-		/// Creates a new delete operation for the given entity.
-		/// <para>The new command must be firstly submitted into the associated repository in
-		/// order it to be executed when all pending change operations annotated into that
-		/// repository are executed as a group.</para>
-		/// </summary>
-		/// <typeparam name="T">The type of the managed entities.</typeparam>
-		/// <param name="entity">The entity to be inserted.</param>
-		/// <returns>A new command.</returns>
 		public DataUpdate<T> Update<T>(T entity) where T : class
 		{
 			return GetValidMap<T>().Update(entity);
@@ -601,62 +611,46 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 
 		/// <summary>
-		/// The collection of operations annotated into this repository.
+		/// The list of operations submitted into this instance.
 		/// </summary>
-		internal UberOperationCollection UberOperations
+		internal UberOperationList UberOperations
 		{
 			get { return _UberOperations; }
 		}
 
 		/// <summary>
-		/// A temporary list to store the operations in process.
+		/// A temporary log of changes.
 		/// </summary>
-		internal List<ChangeEntry> Changes { get; private set; }
+		internal List<ChangeEntry> ChangeEntries { get; private set; }
 
 		/// <summary>
 		/// Executes the change operations annotated into this instance against the underlying
 		/// database as a single logical operation that either succeeds or fails as a whole.
 		/// </summary>
-		public void ExecuteChanges() // NotImplementedException();
+		public void ExecuteChanges()
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
-
 			lock (MasterLock)
 			{
-				Changes = new List<ChangeEntry>();
+				ChangeEntries = new List<ChangeEntry>();
 				try
 				{
 					DebugEx.IndentWriteLine("\n--- Executing changes for '{0}'...".FormatWith(this));
+
 					Link.Transaction.Start();
-					var ops = UberOperations.ToArray();
-					try
-					{
-						foreach (var op in ops) op.OnExecute();
-					}
-					finally { Array.Clear(ops, 0, ops.Length); }
+					foreach (var op in UberOperations) op.OnExecute();
 					Link.Transaction.Commit();
 
 					DebugEx.Unindent();
-					DebugEx.IndentWriteLine("\n--- Completing changes for '{0}'...", this);
+					DebugEx.IndentWriteLine("\n--- Refreshing changes for '{0}'...".FormatWith(this));
 
-					foreach (var item in Changes) item.MetaEntity.Completed = false;
-					while (Changes.Count != 0)
+					ChangeEntries.Reverse();
+					foreach (var entry in ChangeEntries) entry.MetaEntity.Completed = false;
+					foreach (var entry in ChangeEntries)
 					{
-						var change = Changes[0];
-						var entity = change.Entity; if (entity == null) continue;
-						var meta = change.MetaEntity;
-
-						if (change.EntryType != ChangeEntryType.ToDelete)
-						{
-							var type = entity.GetType();
-							var map = meta.UberMap ?? LocateUberMap(type);
-
-							try { map.RefreshNow(entity); }
-							catch { }
-						}
-						
-						var list = Changes.Where(x => x.MetaEntity == change.MetaEntity).ToList();
-						foreach (var item in list) { item.Dispose(); Changes.Remove(item); }
+						if (entry.MetaEntity.Completed) continue;
+						if (entry.ChangeType == ChangeType.Delete) continue;
+						entry.UberMap.RefreshNow(entry.Entity);
 					}
 				}
 				catch (Exception e)
@@ -666,36 +660,28 @@ namespace Kerosene.ORM.Maps.Concrete
 
 					Link.Transaction.Abort();
 
-					Changes.Reverse(); foreach (var item in Changes)
+					ChangeEntries.Reverse();
+					foreach (var entry in ChangeEntries)
 					{
-						var entity = item.Entity; if (entity == null) continue;
-						var meta = item.MetaEntity;
-						var type = entity.GetType();
-						var map = meta.UberMap ?? LocateUberMap(type);
-
-						switch (item.EntryType)
+						switch (entry.ChangeType)
 						{
-							case ChangeEntryType.ToDelete:
-								if (map != null) map.Detach(meta);
-								break;
-
-							case ChangeEntryType.ToInsert:
-								if (meta.UberMap == null) map.Attach(entity);
-								map.RefreshNow(entity);
-								break;
-
-							case ChangeEntryType.ToRefresh:
-							case ChangeEntryType.ToUpdate:
-								map.RefreshNow(entity);
-								break;
+							case ChangeType.Delete: entry.UberMap.Attach(entry.Entity); break;
+							case ChangeType.Insert: entry.UberMap.Detach(entry.Entity); break;
 						}
+					}
+					foreach (var entry in ChangeEntries) entry.MetaEntity.Completed = false;
+					foreach (var entry in ChangeEntries)
+					{
+						if (entry.MetaEntity.Completed) continue;
+						if (entry.ChangeType == ChangeType.Delete) continue;
+						entry.UberMap.RefreshNow(entry.Entity);
 					}
 
 					throw;
 				}
 				finally
 				{
-					if (Changes != null) { foreach (var ch in Changes) ch.Dispose(); Changes.Clear(); } Changes = null;
+					if (ChangeEntries != null) { foreach (var entry in ChangeEntries) entry.Dispose(); ChangeEntries.Clear(); } ChangeEntries = null;
 					DiscardChanges();
 					DebugEx.Unindent();
 				}
@@ -783,29 +769,20 @@ namespace Kerosene.ORM.Maps.Concrete
 		{
 			if (IsDisposed) return;
 
-			DebugEx.IndentWriteLine("\n- Collector fired for '{0}'...'{1}'...", this, MetaEntitiesCount);
-			var enabled = IsCollectorEnabled; if (enabled) DisableCollector();
-
-			// Looks like that .NET 4.x does not collect unreachable objects in debug mode...
-			if (_EnableGC)
-			{
-				long mem = GC.GetTotalMemory(false);
-				GC.AddMemoryPressure(mem);
-
-				GC.Collect();
-				GC.WaitForPendingFinalizers();
-				GC.WaitForFullGCComplete();
-				GC.Collect();
-			}
-
 			lock (MasterLock)
 			{
-				if (UberMaps != null)
-					foreach (var map in UberMaps.Items) map.CollectInvalidEntities();
-			}
+				DebugEx.IndentWriteLine("\n- Collector fired for '{0}'", this);
 
-			if (enabled && !IsDisposed) EnableCollector();
-			DebugEx.Unindent();
+				var enabled = IsCollectorEnabled; if (enabled) DisableCollector();
+				if (_EnableGC) GC.Collect();
+
+				if (_UberMaps != null)
+					foreach(var map in _UberMaps) map.CollectInvalidEntities();
+
+				if (enabled && _Timer != null) EnableCollector();
+
+				DebugEx.Unindent();
+			}
 		}
 	}
 }

@@ -4,6 +4,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 
 namespace Kerosene.ORM.Maps.Concrete
@@ -206,9 +207,9 @@ namespace Kerosene.ORM.Maps.Concrete
 		/// </summary>
 		internal const int DEFAULT_COLLECTOR_INTERVAL =
 #if DEBUG
-		3 * (1000); // seconds
+		5 * (1000); // seconds
 #else
-		3 * (60 * 1000); /// minutes
+		5 * (60 * 1000); /// minutes
 #endif
 
 		/// <summary>

@@ -27,7 +27,7 @@ namespace Kerosene.ORM.Maps
 
 	// ====================================================
 	/// <summary>
-	/// Represents a map between entities of a POCO class and a primary table in an underlying
+	/// Represents a map between entities of a POCO class and a table in an underlying
 	/// database-alike service.
 	/// </summary>
 	public interface IDataMap : IDisposableEx
@@ -40,9 +40,19 @@ namespace Kerosene.ORM.Maps
 		IDataMap Clone(IDataRepository repo);
 
 		/// <summary>
+		/// The type of the entities managed by this map.
+		/// </summary>
+		Type EntityType { get; }
+
+		/// <summary>
 		/// The repository this map is registered into.
 		/// </summary>
 		IDataRepository Repository { get; }
+
+		/// <summary>
+		/// Wheter this map is considered a weak one or not.
+		/// </summary>
+		bool IsWeakMap { get; }
 
 		/// <summary>
 		/// The name of the primary table in the underlying database the entities managed by
@@ -58,20 +68,10 @@ namespace Kerosene.ORM.Maps
 		Func<dynamic, object> Discriminator { get; set; }
 
 		/// <summary>
-		/// Wheter this map is considered a weak one or not.
-		/// </summary>
-		bool IsWeakMap { get; }
-
-		/// <summary>
 		/// How the map will discover the columns in the database that will be associated with
 		/// the type.
 		/// </summary>
 		MapDiscoveryMode DiscoveryMode { get; set; }
-
-		/// <summary>
-		/// The type of the entities managed by this map.
-		/// </summary>
-		Type EntityType { get; }
 
 		/// <summary>
 		/// The collection of members of the type for which either a dependency and/or a
@@ -96,13 +96,11 @@ namespace Kerosene.ORM.Maps
 
 		/// <summary>
 		/// Validates this map so that it becomes usable for map operations.
-		/// <para>
-		/// If this map is already validated then this operation has no effects. Once a map is
-		/// validated then it does not allow any further changes in its rules or structure.
-		/// Validation is carried automatically by the framework when needed, but can also be
-		/// invoked explicitly by client applications in order to lock the map and disable any
-		/// further modification to it.
-		/// </para>
+		/// <para> If this map is already validated then this operation has no effects. Once a map
+		/// is validated then it does not allow any further changes in its rules or structure.</para>
+		/// <para>Validation is carried automatically by the framework when needed, but can also
+		/// be invoked explicitly by client applications in order to lock the map and disable any
+		/// further modification to it.</para>
 		/// </summary>
 		void Validate();
 
@@ -112,16 +110,14 @@ namespace Kerosene.ORM.Maps
 		bool TrackEntities { get; set; }
 
 		/// <summary>
-		/// The collection of entities in a valid state tracked by this map.
+		/// The collection of tracked entities of this map that are in a valid state.
 		/// </summary>
-		IEnumerable<IMetaEntity> Entities { get; }
+		IEnumerable<object> Entities { get; }
 
 		/// <summary>
-		/// Clears the cache of this map and, optionally, detaches the entities that were
-		/// tracked.
+		/// Clears the cache of tracked entities.
 		/// </summary>
-		/// <param name="detach">True to also detach the entities removed from the cache.</param>
-		void ClearEntities(bool detach = true);
+		void ClearEntities();
 
 		/// <summary>
 		/// Creates a new entity with the appropriate type for the requested map.
@@ -184,6 +180,26 @@ namespace Kerosene.ORM.Maps
 		object RefreshNow(object entity);
 
 		/// <summary>
+		/// Creates a new delete operation for the given entity.
+		/// <para>The new command must be firstly submitted into the associated repository in
+		/// order it to be executed when all pending change operations annotated into that
+		/// repository are executed as a group.</para>
+		/// </summary>
+		/// <param name="entity">The entity to be inserted.</param>
+		/// <returns>A new command.</returns>
+		IDataDelete Delete(object entity);
+
+		/// <summary>
+		/// Creates a new save command for the entities managed by this map.
+		/// <para>The new command must be firstly submitted into the associated repository in
+		/// order it to be executed when all pending change operations annotated into that
+		/// repository are executed as a group.</para>
+		/// </summary>
+		/// <param name="entity">The entity to be inserted.</param>
+		/// <returns>A new save command.</returns>
+		IDataSave Save(object entity);
+
+		/// <summary>
 		/// Creates a new insert operation for the given entity.
 		/// <para>The new command must be firstly submitted into the associated repository in
 		/// order it to be executed when all pending change operations annotated into that
@@ -201,24 +217,15 @@ namespace Kerosene.ORM.Maps
 		/// </summary>
 		/// <param name="entity">The entity to be inserted.</param>
 		/// <returns>A new command.</returns>
-		IDataDelete Delete(object entity);
-
-		/// <summary>
-		/// Creates a new delete operation for the given entity.
-		/// <para>The new command must be firstly submitted into the associated repository in
-		/// order it to be executed when all pending change operations annotated into that
-		/// repository are executed as a group.</para>
-		/// </summary>
-		/// <param name="entity">The entity to be inserted.</param>
-		/// <returns>A new command.</returns>
 		IDataUpdate Update(object entity);
 	}
 
 	// ====================================================
 	/// <summary>
-	/// Represents a map between entities of a POCO class and a primary table in an underlying
+	/// Represents a map between entities of a POCO class and a table in an underlying
 	/// database-alike service.
 	/// </summary>
+	/// <typeparam name="T">The type of the entities managed by this map.</typeparam>
 	public interface IDataMap<T> : IDataMap where T : class
 	{
 		/// <summary>
@@ -303,6 +310,16 @@ namespace Kerosene.ORM.Maps
 		/// <param name="entity">The entitt to refresh.</param>
 		/// <returns>A refreshed entity, or null.</returns>
 		T RefreshNow(T entity);
+
+		/// <summary>
+		/// Creates a new save command for the entities managed by this map.
+		/// <para>The new command must be firstly submitted into the associated repository in
+		/// order it to be executed when all pending change operations annotated into that
+		/// repository are executed as a group.</para>
+		/// </summary>
+		/// <param name="entity">The entity to be inserted.</param>
+		/// <returns>A new save command.</returns>
+		IDataSave<T> Save(T entity);
 
 		/// <summary>
 		/// Creates a new insert operation for the given entity.

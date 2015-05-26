@@ -4,64 +4,38 @@ using System;
 
 namespace Kerosene.ORM.Maps
 {
-	// ==================================================== 
-	/// <summary>
-	/// Indicates the current state of AN underlying entity.
-	/// </summary>
-	public enum MetaState
-	{
-		/// <summary>
-		/// The underlying entity has been collected.
-		/// </summary>
-		Collected,
-
-		/// <summary>
-		/// The underlying entity is not associated with any map.
-		/// </summary>
-		Detached,
-
-		/// <summary>
-		/// The underlying entity is marked to be inserted into the database.
-		/// </summary>
-		ToInsert,
-
-		/// <summary>
-		/// The underlying entity is marked to be updated into the database.
-		/// </summary>
-		ToUpdate,
-
-		/// <summary>
-		/// The underlying entity is marked to be deleted from the database.
-		/// </summary>
-		ToDelete,
-
-		/// <summary>
-		/// The underlying entity is considered ready, as if it has been retrieved from, or
-		/// persisted into the database.
-		/// </summary>
-		Ready
-	}
-
 	// ====================================================
 	/// <summary>
-	/// Represents the metadata associated with a managed entity.
+	/// Represents the metadata associated with an entity that can become a managed one.
 	/// </summary>
 	public interface IMetaEntity
 	{
 		/// <summary>
 		/// The actual entity this metadata is associated with, or null if it has been collected
-		/// or if it is not available.
+		/// or if it is invalid.
 		/// </summary>
-		object Entity { get; }
+		object Entity { get;}
 
 		/// <summary>
-		/// The map that is managing the underlying entity, or null if it is a detached one.
+		/// The map that is currently managing this instance, if any.
 		/// </summary>
 		IDataMap Map { get; }
+	}
 
+	// ====================================================
+	/// <summary>
+	/// Helpers and extensions for working with IMetaEntity instances.
+	/// </summary>
+	public static class MetaEntity
+	{
 		/// <summary>
-		/// The state of the underlying entity.
+		/// Returns the meta entity associated with the given object.
 		/// </summary>
-		MetaState State { get; }
+		/// <param name="entity">The entity to locate its meta entity from.</param>
+		/// <returns>The meta entity associated with the given entity.</returns>
+		public static IMetaEntity Locate(object entity)
+		{
+			return Concrete.MetaEntity.Locate(entity);
+		}
 	}
 }

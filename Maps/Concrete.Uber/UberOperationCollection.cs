@@ -4,19 +4,33 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 
 namespace Kerosene.ORM.Maps.Concrete
 {
 	// ====================================================
-	internal class UberOperationCollection
+	internal class UberOperationList : IEnumerable<IUberOperation>
 	{
+		DataRepository _Master = null;
 		List<IUberOperation> _Items = new List<IUberOperation>();
 
 		/// <summary>
 		/// Initializes a new instance.
 		/// </summary>
-		internal UberOperationCollection() { }
+		internal UberOperationList(DataRepository repo)
+		{
+			_Master = repo;
+		}
+
+		/// <summary>
+		/// Disposes this instance.
+		/// </summary>
+		internal void Dispose()
+		{
+			if (_Items != null) Clear(); _Items = null;
+			_Master = null;
+		}
 
 		/// <summary>
 		/// Returns the string representation of this instance.
@@ -28,11 +42,15 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 
 		/// <summary>
-		/// The items contained in this collection
+		/// Obtains an enumerator for the members of this instance.
 		/// </summary>
-		internal IEnumerable<IUberOperation> Items
+		public IEnumerator<IUberOperation> GetEnumerator()
 		{
-			get { return _Items; }
+			return _Items.GetEnumerator();
+		}
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return this.GetEnumerator();
 		}
 
 		/// <summary>
@@ -40,7 +58,7 @@ namespace Kerosene.ORM.Maps.Concrete
 		/// </summary>
 		public int Count
 		{
-			get { return _Items.Count; }
+			get { return _Items == null ? 0 : _Items.Count; }
 		}
 
 		/// <summary>
@@ -48,6 +66,7 @@ namespace Kerosene.ORM.Maps.Concrete
 		/// </summary>
 		internal void Add(IUberOperation item)
 		{
+			if (_Items.Contains(item)) throw new DuplicateException("Operation '{0}' is already registered.".FormatWith(item));
 			_Items.Add(item);
 		}
 
@@ -76,15 +95,7 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 
 		/// <summary>
-		/// Returns whether this collection contains the given item.
-		/// </summary>
-		internal bool Contains(IUberOperation op)
-		{
-			return op == null ? false : _Items.Contains(op);
-		}
-
-		/// <summary>
-		/// Returns the first instance associated with the given entity.
+		/// Returns the first operation associated with the given entity, or null.
 		/// </summary>
 		internal IUberOperation FindEntity(object entity)
 		{
@@ -92,7 +103,15 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 
 		/// <summary>
-		/// Returns the first instance associated with the given entity.
+		/// Returns the last operation associated with the given entity, or null.
+		/// </summary>
+		internal IUberOperation FindLastEntity(object entity)
+		{
+			return _Items.FindLast(x => object.ReferenceEquals(x.Entity, entity));
+		}
+
+		/// <summary>
+		/// Returns all the operations associated with the given entity, or null.
 		/// </summary>
 		internal List<IUberOperation> FindAllEntity(object entity)
 		{
@@ -100,7 +119,7 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 
 		/// <summary>
-		/// Returns the first instance associated with the given meta entity.
+		/// Returns the first operation associated with the given entity, or null.
 		/// </summary>
 		internal IUberOperation FindMeta(MetaEntity meta)
 		{
@@ -108,7 +127,7 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 
 		/// <summary>
-		/// Returns the first instance associated with the given meta entity.
+		/// Returns the last operation associated with the given entity, or null.
 		/// </summary>
 		internal IUberOperation FindLastMeta(MetaEntity meta)
 		{
@@ -116,7 +135,7 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 
 		/// <summary>
-		/// Returns the first instance associated with the given meta entity.
+		/// Returns all the operations associated with the given entity, or null.
 		/// </summary>
 		internal List<IUberOperation> FindAllMeta(MetaEntity meta)
 		{

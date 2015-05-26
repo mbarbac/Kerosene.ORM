@@ -4,6 +4,8 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
+using System.Reflection;
 using System.Text;
 
 namespace Kerosene.ORM.Maps.Concrete
@@ -115,16 +117,13 @@ namespace Kerosene.ORM.Maps.Concrete
 			var sensitive = _Map.Repository.Link.Engine.CaseSensitiveNames;
 
 			_ElementInfo = ElementInfo.Create(_Map.EntityType, _Name, raise: false, flags: flags);
-			if (_ElementInfo == null)
+
+			if (_ElementInfo == null && !sensitive)
 			{
-				var elements = ElementInfo.GetElements(type, flags);
-
-				_ElementInfo = elements.Find(x => string.Compare(x.Name, _Name, false) == 0);
-				if (_ElementInfo == null && !sensitive)
-					_ElementInfo = elements.Find(x => string.Compare(x.Name, _Name, !sensitive) == 0);
-
-				elements.Clear();
+				flags |= BindingFlags.IgnoreCase;
+				_ElementInfo = ElementInfo.Create(_Map.EntityType, _Name, raise: false, flags: flags);
 			}
+
 			if (_ElementInfo == null) throw new NotFoundException(
 				"Member '{0}' not found in type '{1}'."
 				.FormatWith(_Name, _Map.EntityType.EasyName()));
