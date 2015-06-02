@@ -29,7 +29,10 @@ namespace Kerosene.ORM.Maps.Concrete
 		/// </summary>
 		internal void Dispose()
 		{
-			if (_Items != null) Clear(); _Items = null;
+			try { if (_Items != null) Clear(); }
+			catch { }
+			
+			_Items = null;
 			_Master = null;
 		}
 
@@ -42,8 +45,7 @@ namespace Kerosene.ORM.Maps.Concrete
 			return string.Format("{0}({1})", GetType().EasyName(), Count);
 		}
 
-		/// <summary>
-		/// </summary>
+		/// <summary>/// </summary>
 		IEnumerable<MetaEntity> ItemsCollection
 		{
 			get
@@ -78,10 +80,10 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 
 		/// <summary>
-		/// Builds the id string associated with the given record.
+		/// Generates the id string associated with the given record, using the master map's schema.
 		/// Returns null if it cannot be generated or, optionally, raises an exception.
 		/// </summary>
-		string ObtainId(IRecord record, bool raise)
+		string GenerateId(IRecord record, bool raise)
 		{
 			var first = true;
 			var sb = new StringBuilder(); for (int i = 0; i < _Master.SchemaId.Count; i++)
@@ -107,24 +109,27 @@ namespace Kerosene.ORM.Maps.Concrete
 		/// Returns null if it cannot be generated if needed or, optionally, raises an exception.
 		/// Optionally captures the state in a new record if it did not exist previously.
 		/// </summary>
-		string ObtainId(MetaEntity meta, bool raise, bool captureRecord)
+		string LocateId(MetaEntity meta, bool raise, bool captureRecord)
 		{
-			var str = meta.CollectionId; if (str == null)
+			var str = meta.CollectionId;
+			if (str != null) return str;
+
+			var obj = meta.Entity;
+			if (obj == null) throw new InvalidOperationException("MetaEntity '{0}' is invalid.".FormatWith(meta));
+
+			var record = meta.Record; if (record == null)
 			{
-				var obj = meta.Entity;
-				if (obj == null) throw new InvalidOperationException("MetaEntity '{0}' is invalid.".FormatWith(meta));
-
-				var empty = false;
-				var record = meta.Record; if (record == null)
-				{
-					empty = true;
-					record = new Core.Concrete.Record(_Master.Schema); _Master.WriteRecord(obj, record);
-					if (captureRecord) meta.Record = record;
-				}
-
-				str = ObtainId(record, raise);
-				if (empty && !captureRecord) record.Dispose();
+				record = new Core.Concrete.Record(_Master.Schema);
+				_Master.WriteRecord(obj, record);
 			}
+			str = GenerateId(record, raise);
+
+			if (meta.Record == null)
+			{
+				if (captureRecord) meta.Record = record;
+				else record.Dispose();
+			}
+
 			return str;
 		}
 
@@ -133,7 +138,7 @@ namespace Kerosene.ORM.Maps.Concrete
 		/// </summary>
 		internal void Add(MetaEntity meta)
 		{
-			string id = ObtainId(meta, raise: true, captureRecord: true);
+			string id = LocateId(meta, raise: true, captureRecord: true);
 
 			List<MetaEntity> node = null; if (!_Items.TryGetValue(id, out node))
 			{
@@ -150,8 +155,8 @@ namespace Kerosene.ORM.Maps.Concrete
 		/// </summary>
 		internal bool Remove(MetaEntity meta)
 		{
-			bool r = false; 
-			string id = ObtainId(meta, raise: false, captureRecord: false);
+			bool r = false;
+			string id = LocateId(meta, raise: false, captureRecord: false);
 
 			List<MetaEntity> node = null;
 			if (id != null && _Items.TryGetValue(id, out node)) r = node.Remove(meta);
@@ -211,7 +216,7 @@ namespace Kerosene.ORM.Maps.Concrete
 		/// </summary>
 		internal IEnumerable<MetaEntity> FindNode(IRecord record)
 		{
-			return FindNode(ObtainId(record, raise: false));
+			return FindNode(GenerateId(record, raise: false));
 		}
 
 		/// <summary>
@@ -219,7 +224,7 @@ namespace Kerosene.ORM.Maps.Concrete
 		/// </summary>
 		internal IEnumerable<MetaEntity> FindNode(MetaEntity meta)
 		{
-			return FindNode(ObtainId(meta, raise: false, captureRecord: false));
+			return FindNode(LocateId(meta, raise: false, captureRecord: false));
 		}
 	}
 }

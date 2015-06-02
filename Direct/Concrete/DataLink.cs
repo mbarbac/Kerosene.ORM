@@ -245,8 +245,10 @@ namespace Kerosene.ORM.Direct.Concrete
 		/// </summary>
 		public override void Close()
 		{
-			if (Transaction != null && Transaction.IsActive) Transaction.Abort();
-
+			if (Transaction != null && Transaction.IsActive)
+			{
+				Transaction.Abort();
+			}
 			if (_DbConnection != null)
 			{
 				if (_DbConnection.State != ConnectionState.Closed) _DbConnection.Close();

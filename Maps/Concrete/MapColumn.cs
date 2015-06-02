@@ -70,16 +70,16 @@ namespace Kerosene.ORM.Maps.Concrete
 		/// </summary>
 		internal protected virtual void OnDispose()
 		{
+			try
+			{
+				if (_ElementInfo != null) _ElementInfo.Dispose();
+			}
+			catch { }
+
 			_Map = null;
-			if (_ElementInfo != null) _ElementInfo.Dispose(); _ElementInfo = null;
+			_ElementInfo = null;
 			_WriteRecord = null;
 			_LoadEntity = null;
-		}
-
-		/// <summary></summary>
-		~MapColumn()
-		{
-			if (!IsDisposed) OnDispose();
 		}
 
 		/// <summary>

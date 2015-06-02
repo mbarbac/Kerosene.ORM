@@ -28,7 +28,10 @@ namespace Kerosene.ORM.Maps.Concrete
 		/// </summary>
 		internal void Dispose()
 		{
-			if (_Items != null) Clear(); _Items = null;
+			try { if (_Items != null) Clear(); }
+			catch { }
+			
+			_Items = null;
 			_Master = null;
 		}
 

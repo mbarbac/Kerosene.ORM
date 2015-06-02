@@ -56,12 +56,6 @@ namespace Kerosene.ORM.Maps.Concrete
 		void CollectInvalidEntities();
 
 		/// <summary>
-		/// Whether tracking of child entities for dependency properties is enabled for this
-		/// map or not.
-		/// </summary>
-		bool TrackChildEntities { get; set; }
-
-		/// <summary>
 		/// The proxy holder created for the type of the entities managed by this instance,
 		/// or null.
 		/// </summary>
@@ -251,13 +245,6 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 
 		/// <summary>
-		/// </summary>
-		~DataMap()
-		{
-			if (!IsDisposed) OnDispose(false);
-		}
-
-		/// <summary>
 		/// Invoked when disposing or finalizing this instance.
 		/// </summary>
 		/// <param name="disposing">True if the object is being disposed, false otherwise.</param>
@@ -265,16 +252,31 @@ namespace Kerosene.ORM.Maps.Concrete
 		{
 			if (disposing)
 			{
-				if (_MetaEntities != null)
+				try
 				{
-					var metas = _MetaEntities.ToArray(); foreach (var meta in metas) meta.Reset(remove: false);
-					Array.Clear(metas, 0, metas.Length);
-					_MetaEntities.Dispose();
+					if (_MetaEntities != null)
+					{
+						var metas = _MetaEntities.ToArray(); foreach (var meta in metas) meta.Reset(remove: false);
+						Array.Clear(metas, 0, metas.Length);
+						_MetaEntities.Dispose();
+					}
 				}
-				if (_Repository != null && !_Repository.IsDisposed) _Repository.UberMaps.Remove(this);
-				if (_Members != null) _Members.OnDispose();
-				if (_Columns != null) _Columns.OnDispose();
-				if (_VersionColumn != null) _VersionColumn.OnDispose();
+				catch { }
+
+				try
+				{
+					if (_Repository != null && !_Repository.IsDisposed)
+						lock (_Repository.MasterLock) { _Repository.UberMaps.Remove(this); }
+				}
+				catch { }
+
+				try
+				{
+					if (_Members != null) _Members.OnDispose();
+					if (_Columns != null) _Columns.OnDispose();
+					if (_VersionColumn != null) _VersionColumn.OnDispose();
+				}
+				catch { }
 			}
 
 			_Repository = null;
@@ -690,7 +692,6 @@ namespace Kerosene.ORM.Maps.Concrete
 				foreach (var meta in _MetaEntities)
 				{
 					if (!meta.HasValidEntity) metas.Add(meta);
-					else meta.ForgetUnusedChilds();
 				}
 				foreach (var meta in metas)
 				{
@@ -721,22 +722,20 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 
 		/// <summary>
-		/// Whether tracking of child entities for dependency properties is enabled for this
-		/// map or not.
+		/// Whether the managed entities keep track of their own child dependencies to facilitate
+		/// finding the removed ones if needed.
 		/// </summary>
 		public bool TrackChildEntities
 		{
 			get { return _TrackChildEntities; }
 			set
 			{
-				if (!IsDisposed && (value == false))
+				if (IsDisposed) throw new ObjectDisposedException(this.ToString());
+				lock (Repository.MasterLock)
 				{
-					lock (Repository.MasterLock)
-					{
-						foreach (var meta in _MetaEntities) meta.ChildDependencies.Clear();
-					}
+					if (value == false) foreach (var meta in _MetaEntities) meta.ChildDependencies.Clear();
+					_TrackChildEntities = value;
 				}
-				_TrackChildEntities = value;
 			}
 		}
 
@@ -821,9 +820,9 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 
 		/// <summary>
-		/// Creates a new temporal record, associated with the ID schema, whose contents are
-		/// loaded from the source record given. Returns null if the source record contains not
-		/// all the id columns, or if there are any inconsistencies.
+		/// Creates a new temporal record containing the ID columns only as defined by this map.
+		/// Returns null if the source record contains not all the id columns on this map, or if
+		/// there are duplicate columns.
 		/// </summary>
 		internal IRecord ExtractId(IRecord record)
 		{
@@ -973,7 +972,7 @@ namespace Kerosene.ORM.Maps.Concrete
 				member.CompleteMember(meta.Record, entity);
 				meta.CaptureMetaMemberChilds(member);
 			}
-		}		
+		}
 		void IUberMap.CompleteMembers(MetaEntity meta)
 		{
 			this.CompleteMembers(meta);
@@ -1026,7 +1025,7 @@ namespace Kerosene.ORM.Maps.Concrete
 				{
 					if (meta.Record == null)
 					{
-						var record  = new Core.Concrete.Record(Schema);
+						var record = new Core.Concrete.Record(Schema);
 						WriteRecord(entity, record);
 						meta.Record = record;
 					}

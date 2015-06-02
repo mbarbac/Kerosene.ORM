@@ -1,4 +1,6 @@
-﻿using Kerosene.ORM.Core;
+﻿#undef DEBUG
+
+using Kerosene.ORM.Core;
 using Kerosene.Tools;
 using System;
 using System.Collections;
@@ -51,22 +53,20 @@ namespace Kerosene.ORM.Maps.Concrete
 			if (!IsDisposed) { OnDispose(true); GC.SuppressFinalize(this); }
 		}
 
-		/// <summary></summary>
-		~DataQueryEnumerator()
-		{
-			if (!IsDisposed) OnDispose(false);
-		}
-
 		/// <summary>
 		/// Invoked when disposing or finalizing this instance.
 		/// </summary>
 		/// <param name="disposing">True if the object is being disposed, false otherwise.</param>
 		protected virtual void OnDispose(bool disposing)
 		{
-			if (disposing) Reset();
+			if (disposing)
+			{
+				try { Reset(); }
+				catch { }
+			}
 
-			if (_Enumerator != null) _Enumerator.Dispose(); _Enumerator = null;
-			if (_CoreCommand != null) _CoreCommand.Dispose(); _CoreCommand = null;
+			_Enumerator = null;
+			_CoreCommand = null;
 			_Command = null;
 			_Current = null;
 
@@ -121,80 +121,89 @@ namespace Kerosene.ORM.Maps.Concrete
 		public bool MoveNext()
 		{
 			if (IsDisposed) throw new ObjectDisposedException(this.ToString());
-
-			if (_CoreCommand == null) // Preparing iterations...
+			try
 			{
-				_CoreCommand = _Command.GenerateCoreCommand(); if (_CoreCommand == null)
-					throw new CannotCreateException("Cannot create a core query command for this '{0}'.".FormatWith(this));
-
-				_Enumerator = _CoreCommand.GetEnumerator(); if (_Enumerator == null)
-					throw new CannotCreateException("Cannot create a core query enumerator for this '{0}'.".FormatWith(this));
-
-				DebugEx.IndentWriteLine("\n- Query: entering '{0}'...".FormatWith(_Command.TraceString()));
-				_Indented = true;
-			}
-
-			_Current = null; bool r = _Enumerator.MoveNext(); if (r) // Current iteration...
-			{
-				var record = _Enumerator.CurrentRecord;
-				var disposable = true;
-				var map = _Command.Map;
-
-				lock (map.Repository.MasterLock)
+				if (_CoreCommand == null) // Preparing iterations...
 				{
-					if (map.TrackEntities)
+					_CoreCommand = _Command.GenerateCoreCommand(); if (_CoreCommand == null)
+						throw new CannotCreateException("Cannot create a core query command for this '{0}'.".FormatWith(this));
+
+					_Enumerator = _CoreCommand.GetEnumerator(); if (_Enumerator == null)
+						throw new CannotCreateException("Cannot create a core query enumerator for this '{0}'.".FormatWith(this));
+
+					DebugEx.IndentWriteLine("\n- Query: entering '{0}'...".FormatWith(_Command.TraceString()));
+					_Indented = true;
+				}
+
+				_Current = null; bool r = _Enumerator.MoveNext(); if (r) // Current iteration...
+				{
+					var record = _Enumerator.CurrentRecord;
+					var disposable = true;
+					var map = _Command.Map;
+
+					lock (map.Repository.MasterLock)
 					{
-						var node = map.MetaEntities.FindNode(record); if (node != null)
+						if (map.TrackEntities)
 						{
-							foreach (var meta in node)
+							var node = map.MetaEntities.FindNode(record); if (node != null)
 							{
-								T obj = (T)meta.Entity; if (obj == null)
+								foreach (var meta in node)
 								{
-									DebugEx.IndentWriteLine("\n- Query: meta invalid '{0}'.".FormatWith(meta));
+									T obj = (T)meta.Entity; if (obj == null)
+									{
+										DebugEx.IndentWriteLine("\n- Query: meta invalid '{0}'.".FormatWith(meta));
+										DebugEx.Unindent();
+										continue;
+									}
+
+									if (_Current == null) _Current = obj;
+									else
+										if (map.ProxyType != null &&
+											map.ProxyType != _Current.GetType() &&
+											map.ProxyType == obj.GetType())
+											_Current = obj;
+
+									if (meta.Completed)
+									{
+										DebugEx.IndentWriteLine("\n- Query: meta completed '{0}'.".FormatWith(meta));
+										DebugEx.Unindent();
+										continue;
+									}
+
+									DebugEx.IndentWriteLine("\n- Query: hydrating meta '{0}'.".FormatWith(meta));
+									meta.Record = record.Clone();
+									map.LoadEntity(meta.Record, obj);
+									map.CompleteMembers(meta);
 									DebugEx.Unindent();
-									continue;
 								}
-
-								if (_Current == null) _Current = obj;
-								else
-									if (map.ProxyType != null &&
-										map.ProxyType != _Current.GetType() &&
-										map.ProxyType == obj.GetType())
-										_Current = obj;
-
-								if (meta.Completed)
-								{
-									DebugEx.IndentWriteLine("\n- Query: meta completed '{0}'.".FormatWith(meta));
-									DebugEx.Unindent();
-									continue;
-								}
-
-								DebugEx.IndentWriteLine("\n- Query: hydrating meta '{0}'.".FormatWith(meta));
-								meta.Record = record.Clone();
-								map.LoadEntity(meta.Record, obj);
-								map.CompleteMembers(meta);
-								DebugEx.Unindent();
 							}
+						}
+
+						if (_Current == null)
+						{
+							DebugEx.IndentWriteLine("\n- Query: new meta '{0}({1})'.".FormatWith(map.EntityType.EasyName(), record));
+							_Current = map.NewEntity(); var meta = MetaEntity.Locate(_Current);
+							meta.Record = record; disposable = false;
+							meta.UberMap = map; if (map.TrackEntities) map.MetaEntities.Add(meta);
+							map.LoadEntity(meta.Record, _Current);
+							map.CompleteMembers(meta);
+							DebugEx.Unindent();
 						}
 					}
 
-					if (_Current == null)
-					{
-						DebugEx.IndentWriteLine("\n- Query: new meta '{0}({1})'.".FormatWith(map.EntityType.EasyName(), record));
-						_Current = map.NewEntity(); var meta = MetaEntity.Locate(_Current);
-						meta.Record = record; disposable = false;
-						meta.UberMap = map; if (map.TrackEntities) map.MetaEntities.Add(meta);
-						map.LoadEntity(meta.Record, _Current);
-						map.CompleteMembers(meta);
-						DebugEx.Unindent();
-					}
+					if (disposable) record.Dispose();
 				}
+				else Reset();
 
-				if (disposable) record.Dispose();
+				return r;
 			}
-			else Reset();
+			catch
+			{
+				try { Dispose(); }
+				catch { }
 
-			return r;
+				throw;
+			}
 		}
 
 		/// <summary>
@@ -202,9 +211,15 @@ namespace Kerosene.ORM.Maps.Concrete
 		/// </summary>
 		public void Reset()
 		{
-			if (_Enumerator != null) _Enumerator.Dispose(); _Enumerator = null;
-			if (_CoreCommand != null) _CoreCommand.Dispose(); _CoreCommand = null;
-			if (_Indented) { DebugEx.Unindent(); _Indented = false; }
+			try { if (_Enumerator != null) _Enumerator.Dispose(); }
+			catch { }
+			try { if (_CoreCommand != null) _CoreCommand.Dispose(); }
+			catch { }
+
+			if (_Indented) DebugEx.Unindent(); _Indented = false;
+
+			_Enumerator = null;
+			_CoreCommand = null;
 			_Current = null;
 		}
 
@@ -222,14 +237,21 @@ namespace Kerosene.ORM.Maps.Concrete
 			var repo = map.Repository; if (repo.IsDisposed) throw new ObjectDisposedException(repo.ToString());
 			var link = repo.Link; if (link.IsDisposed) throw new ObjectDisposedException(link.ToString());
 
-			var opened = link.IsOpen; if (!opened) link.Open();
+			var opened = link.IsOpen;
+			try
+			{
+				if (!opened) link.Open();
 
-			var list = new List<T>();
-			Reset(); while (MoveNext()) list.Add(Current);
-			Reset();
+				var list = new List<T>();
+				Reset(); while (MoveNext()) list.Add(Current);
+				Reset();
 
-			if (!opened) link.Close();
-			return list;
+				return list;
+			}
+			finally
+			{
+				if (!opened && !link.IsDisposed) link.Close();
+			}			
 		}
 		IList IDataQueryEnumerator.ToList()
 		{
@@ -264,14 +286,21 @@ namespace Kerosene.ORM.Maps.Concrete
 			var repo = map.Repository; if (repo.IsDisposed) throw new ObjectDisposedException(repo.ToString());
 			var link = repo.Link; if (link.IsDisposed) throw new ObjectDisposedException(link.ToString());
 
-			var open = link.IsOpen; if (!open) link.Open();
+			var open = link.IsOpen;
+			try
+			{
+				if (!open) link.Open();
 
-			var obj = (T)null;
-			Reset(); if (MoveNext()) obj = Current;
-			Reset();
+				var obj = (T)null;
+				Reset(); if (MoveNext()) obj = Current;
+				Reset();
 
-			if (!open) link.Close();
-			return obj;
+				return obj;	
+			}
+			finally
+			{
+				if (!open && !link.IsDisposed) link.Close();
+			}
 		}
 		object IDataQueryEnumerator.First()
 		{
@@ -298,14 +327,21 @@ namespace Kerosene.ORM.Maps.Concrete
 			var repo = map.Repository; if (repo.IsDisposed) throw new ObjectDisposedException(repo.ToString());
 			var link = repo.Link; if (link.IsDisposed) throw new ObjectDisposedException(link.ToString());
 
-			var open = link.IsOpen; if (!open) link.Open();
+			var open = link.IsOpen;
+			try
+			{
+				if (!open) link.Open();
 
-			var obj = (T)null;
-			Reset(); while (MoveNext()) obj = Current;
-			Reset();
+				var obj = (T)null;
+				Reset(); while (MoveNext()) obj = Current;
+				Reset();
 
-			if (!open) link.Close();
-			return obj;
+				return obj;
+			}
+			finally
+			{
+				if (!open && !link.IsDisposed) link.Close();
+			}
 		}
 		object IDataQueryEnumerator.Last()
 		{

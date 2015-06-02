@@ -56,7 +56,8 @@ namespace Kerosene.ORM.Core.Concrete
 		{
 			if (disposing)
 			{
-				if (_Aliases != null && !_Aliases.IsDisposed) _Aliases.Dispose();
+				try { if (_Aliases != null && !_Aliases.IsDisposed) _Aliases.Dispose(); }
+				catch { }
 			}
 			_Aliases = null;
 

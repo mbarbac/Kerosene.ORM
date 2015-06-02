@@ -60,8 +60,16 @@ namespace Kerosene.ORM.Core.Concrete
 		/// <param name="disposing">True if the object is being disposed, false otherwise.</param>
 		protected virtual void OnDispose(bool disposing)
 		{
-			if (_Link != null && !_Link.IsDisposed && this.IsActive) Abort();
-			_Link = null;
+			if (disposing)
+			{
+				try
+				{
+					if (_Link != null && !_Link.IsDisposed && this.IsActive) Abort();
+				}
+				catch { }
+
+				_Link = null;
+			}
 
 			_IsDisposed = true;
 		}

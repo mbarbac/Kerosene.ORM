@@ -38,12 +38,6 @@ namespace Kerosene.ORM.Core.Concrete
 			if (!IsDisposed) { OnDispose(true); GC.SuppressFinalize(this); }
 		}
 
-		/// <summary></summary>
-		~Parameter()
-		{
-			if (!IsDisposed) OnDispose(false);
-		}
-
 		/// <summary>
 		/// Invoked when disposing or finalizing this instance.
 		/// </summary>
@@ -52,14 +46,19 @@ namespace Kerosene.ORM.Core.Concrete
 		{
 			if (disposing)
 			{
-				if (_Owner != null)
+				try
 				{
-					var temp = _Owner; _Owner = null;
-					if (temp != null && !temp.IsDisposed) temp.Remove(this);
+					if (_Owner != null)
+					{
+						var temp = _Owner; _Owner = null;
+						if (temp != null && !temp.IsDisposed) temp.Remove(this);
+					}
 				}
+				catch { }
 			}
+
 			_Owner = null;
-			_Value = _Value.Sketch();
+			_Value = disposing ? (_Value == null ? null : _Value.ToString()) : null;
 
 			_IsDisposed = true;
 		}

@@ -52,12 +52,6 @@ namespace Kerosene.ORM.Core.Concrete
 			if (!IsDisposed) { OnDispose(true); GC.SuppressFinalize(this); }
 		}
 
-		/// <summary></summary>
-		~SchemaEntry()
-		{
-			if (!IsDisposed) OnDispose(false);
-		}
-
 		/// <summary>
 		/// Invoked when disposing or finalizing this instance.
 		/// </summary>
@@ -66,16 +60,22 @@ namespace Kerosene.ORM.Core.Concrete
 		{
 			if (disposing)
 			{
-				if (_Owner != null)
+				try
 				{
-					var temp = _Owner; _Owner = null;
-					if (temp != null && !temp.IsDisposed) temp.Remove(this);
-				}
-				if (_Metadata != null) _Metadata.Clear();
+					if (_Owner != null)
+					{
+						var temp = _Owner; _Owner = null;
+						if (temp != null && !temp.IsDisposed) temp.Remove(this);
+					}
 
-				if (_EntryMetadata != null) _EntryMetadata._Entry = null;
-				if (_EntryTags != null) _EntryTags._Entry = null;
+					if (_Metadata != null) _Metadata.Clear();
+
+					if (_EntryMetadata != null) _EntryMetadata._Entry = null;
+					if (_EntryTags != null) _EntryTags._Entry = null;
+				}
+				catch { }
 			}
+
 			_Owner = null;
 			_Metadata = null;
 			_EntryMetadata = null;

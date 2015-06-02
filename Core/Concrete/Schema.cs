@@ -60,12 +60,6 @@ namespace Kerosene.ORM.Core.Concrete
 			if (!IsDisposed) { OnDispose(true); GC.SuppressFinalize(this); }
 		}
 
-		/// <summary></summary>
-		~Schema()
-		{
-			if (!IsDisposed) OnDispose(false);
-		}
-
 		/// <summary>
 		/// Invoked when disposing or finalizing this instance.
 		/// </summary>
@@ -74,15 +68,20 @@ namespace Kerosene.ORM.Core.Concrete
 		{
 			if (disposing)
 			{
-				if (_Members != null)
+				try
 				{
-					var list = _Members.ToArray();
-					foreach (var member in list) member.Dispose();
-					list = null;
-				}
+					if (_Members != null)
+					{
+						var list = _Members.ToArray();
+						foreach (var member in list) member.Dispose();
+						Array.Clear(list, 0, list.Length);
+					}
 
-				if (_Aliases != null && !_Aliases.IsDisposed) _Aliases.Dispose();
+					if (_Aliases != null && !_Aliases.IsDisposed) _Aliases.Dispose();
+				}
+				catch { }
 			}
+
 			_Members = null;
 			_Aliases = null;
 

@@ -68,17 +68,17 @@ namespace Kerosene.ORM.Maps.Concrete
 		/// </summary>
 		internal protected virtual void OnDispose()
 		{
-			_Map = null;
-			if (_ElementInfo != null) _ElementInfo.Dispose(); _ElementInfo = null;
-			_CompleteMember = null;
-			_LazyProperty = null;
-			_Columns = null;
-		}
+			try
+			{
+				if (_ElementInfo != null) _ElementInfo.Dispose();
+			}
+			catch { }
 
-		/// <summary></summary>
-		~MapMember()
-		{
-			if (!IsDisposed) OnDispose();
+			_Map = null;
+			_ElementInfo = null;
+			_CompleteMember = null;
+			_Columns = null;
+			_LazyProperty = null;
 		}
 
 		/// <summary>
@@ -91,7 +91,7 @@ namespace Kerosene.ORM.Maps.Concrete
 
 			sb.Append(_Name ?? string.Empty);
 			if (DependencyMode != MemberDependencyMode.None) sb.AppendFormat(":Is{0}", DependencyMode);
-			if (LazyProperty != null) sb.Append(":Lazy");
+			//if (LazyProperty != null) sb.Append(":Lazy");
 
 			if (_Columns != null && _Columns.Count != 0)
 			{

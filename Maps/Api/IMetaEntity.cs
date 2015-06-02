@@ -14,7 +14,7 @@ namespace Kerosene.ORM.Maps
 		/// The actual entity this metadata is associated with, or null if it has been collected
 		/// or if it is invalid.
 		/// </summary>
-		object Entity { get;}
+		object Entity { get; }
 
 		/// <summary>
 		/// The map that is currently managing this instance, if any.

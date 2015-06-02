@@ -1,64 +1,36 @@
 ﻿using Kerosene.Tools;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Configuration;
-using System.Linq;
 
 namespace Kerosene.ORM.Configuration
 {
-	// ==================================================== 
+	// =====================================================
 	/// <summary>
-	/// The entry that defines common options for maps.
+	/// The entry related to map options.
 	/// </summary>
 	public class DataMapElement : ConfigurationElement
 	{
 		/// <summary></summary>
 		public const string ELEMENT_NAME = "dataMap";
-		/// <summary></summary>
-		public const string PROPERTY_ENABLE_WEAKMAPS = "enableWeakMaps";
-		/// <summary></summary>
-		public const string PROPERTY_TRACK_ENTITIES = "trackEntities";
-		/// <summary></summary>
-		public const string PROPERTY_TRACK_CHILD_ENTITIES = "trackChildEntities";
+
 		/// <summary></summary>
 		public const string PROPERTY_ENABLE_COLLECTOR = "enableCollector";
+
 		/// <summary></summary>
 		public const string PROPERTY_ENABLE_COLLECTOR_GC = "enableCollectorGC";
+		
 		/// <summary></summary>
 		public const string PROPERTY_COLLECTOR_INTERVAL = "collectorInterval";
 
-		/// <summary>
-		/// Whether to enable weak maps or not. Weak maps are automatically created when a type
-		/// is used in a map operation and there was not a map registered for it.
-		/// </summary>
-		[ConfigurationProperty(PROPERTY_ENABLE_WEAKMAPS, IsRequired = false, DefaultValue = null)]
-		public bool? EnableWeakMaps
-		{
-			get { return (bool?)this[PROPERTY_ENABLE_WEAKMAPS]; }
-			set { this[PROPERTY_ENABLE_WEAKMAPS] = value; }
-		}
+		/// <summary></summary>
+		public const string PROPERTY_ENABLE_WEAKMAPS = "enableWeakMaps";
 
-		/// <summary>
-		/// Whether maps track the entities they managed or not.
-		/// </summary>
-		[ConfigurationProperty(PROPERTY_TRACK_ENTITIES, IsRequired = false, DefaultValue = null)]
-		public bool? TrackEntities
-		{
-			get { return (bool?)this[PROPERTY_TRACK_ENTITIES]; }
-			set { this[PROPERTY_TRACK_ENTITIES] = value; }
-		}
+		/// <summary></summary>
+		public const string PROPERTY_TRACK_ENTITIES = "trackEntities";
 
-		/// <summary>
-		/// Whether entities keep track of their own childs in order to cascade change
-		/// operations, or not.
-		/// </summary>
-		[ConfigurationProperty(PROPERTY_TRACK_CHILD_ENTITIES, IsRequired = false, DefaultValue = null)]
-		public bool? TrackChildEntities
-		{
-			get { return (bool?)this[PROPERTY_TRACK_CHILD_ENTITIES]; }
-			set { this[PROPERTY_TRACK_CHILD_ENTITIES] = value; }
-		}
+		/// <summary></summary>
+		public const string PROPERTY_TRACK_CHILD_ENTITIES = "trackChildEntities";
 
 		/// <summary>
 		/// Whether to enable the internal entities' collector.
@@ -89,12 +61,44 @@ namespace Kerosene.ORM.Configuration
 			get { return (int?)this[PROPERTY_COLLECTOR_INTERVAL]; }
 			set { this[PROPERTY_COLLECTOR_INTERVAL] = value; }
 		}
+
+		/// <summary>
+		/// Whether to enable weak maps or not. Weak maps are automatically created when a type
+		/// is used in a map operation and there was not a map registered for it.
+		/// </summary>
+		[ConfigurationProperty(PROPERTY_ENABLE_WEAKMAPS, IsRequired = false, DefaultValue = null)]
+		public bool? EnableWeakMaps
+		{
+			get { return (bool?)this[PROPERTY_ENABLE_WEAKMAPS]; }
+			set { this[PROPERTY_ENABLE_WEAKMAPS] = value; }
+		}
+
+		/// <summary>
+		/// Whether maps track the entities they managed or not.
+		/// </summary>
+		[ConfigurationProperty(PROPERTY_TRACK_ENTITIES, IsRequired = false, DefaultValue = null)]
+		public bool? TrackEntities
+		{
+			get { return (bool?)this[PROPERTY_TRACK_ENTITIES]; }
+			set { this[PROPERTY_TRACK_ENTITIES] = value; }
+		}
+
+		/// <summary>
+		/// Whether entities keep track or their child dependencies or not.
+		/// </summary>
+		[ConfigurationProperty(PROPERTY_TRACK_CHILD_ENTITIES, IsRequired = false, DefaultValue = null)]
+		public bool? TrackChildEntities
+		{
+			get { return (bool?)this[PROPERTY_TRACK_CHILD_ENTITIES]; }
+			set { this[PROPERTY_TRACK_CHILD_ENTITIES] = value; }
+		}
 	}
 
+	// =====================================================
 	public partial class ORMConfiguration
 	{
 		/// <summary>
-		/// Common options for maps.
+		/// Common options for data maps.
 		/// </summary>
 		[ConfigurationProperty(DataMapElement.ELEMENT_NAME, IsRequired = false, DefaultValue = null)]
 		public DataMapElement DataMap

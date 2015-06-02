@@ -272,8 +272,8 @@ namespace Kerosene.ORM.Core
 		}
 
 		/// <summary>
-		/// Provides an estimation of the size of the record in bytes, based upon the memory
-		/// size to use to hold the values of the types of each column.
+		/// Provides an estimation of the size of the record, in bytes, based upon the memory size
+		/// used to hold the values of the types of each column.
 		/// </summary>
 		/// <param name="record">This record.</param>
 		/// <returns>An estimation of the size of the record in bytes.</returns>

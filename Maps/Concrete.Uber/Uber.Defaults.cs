@@ -13,6 +13,122 @@ namespace Kerosene.ORM.Maps.Concrete
 	internal static partial class Uber
 	{
 		/// <summary>
+		/// Whether the entities' collector is enabled or not by default.
+		/// </summary>
+		internal const bool DEFAULT_ENABLE_COLLECTOR = true;
+
+		/// <summary>
+		/// Whether the entities' GC collector is enabled or not by default.
+		/// </summary>
+		internal const bool DEFAULT_ENABLE_COLLECTOR_CG = true;
+
+		/// <summary>
+		/// Whether the entities' collector is enabled or not.
+		/// </summary>
+		public static bool EnableCollector
+		{
+			get
+			{
+				while (!_EnableCollectorCaptured)
+				{
+					var info = Configuration.ORMConfiguration.GetInfo(); if (info == null) break;
+					if (info.DataMap == null) break;
+					if (info.DataMap.EnableCollector == null) break;
+
+					_EnableCollector = (bool)info.DataMap.EnableCollector;
+					break;
+				}
+
+				_EnableCollectorCaptured = true;
+				return _EnableCollector;
+			}
+			set
+			{
+				_EnableCollectorCaptured = true;
+				_EnableCollector = value;
+			}
+		}
+		static bool _EnableCollector = DEFAULT_ENABLE_COLLECTOR;
+		static bool _EnableCollectorCaptured = false;
+
+		/// <summary>
+		/// Whether the entities' GC collector is enabled or not.
+		/// </summary>
+		public static bool EnableCollectorGC
+		{
+			get
+			{
+				while (!_EnableCollectorGCCaptured)
+				{
+					var info = Configuration.ORMConfiguration.GetInfo(); if (info == null) break;
+					if (info.DataMap == null) break;
+					if (info.DataMap.EnableCollectorGC == null) break;
+
+					_EnableCollectorGC = (bool)info.DataMap.EnableCollectorGC;
+					break;
+				}
+
+				_EnableCollectorGCCaptured = true;
+				return _EnableCollectorGC;
+			}
+			set
+			{
+				_EnableCollectorGCCaptured = true;
+				_EnableCollectorGC = value;
+			}
+		}
+		static bool _EnableCollectorGC = DEFAULT_ENABLE_COLLECTOR_CG;
+		static bool _EnableCollectorGCCaptured = false;
+
+		/// <summary>
+		/// The default minimum interval at which the internal collector is fired.
+		/// </summary>
+		internal const int DEFAULT_COLLECTOR_MIN_INTERVAL = 1000;
+
+		/// <summary>
+		/// The default interval at which the internal collector is fired.
+		/// </summary>
+		internal const int DEFAULT_COLLECTOR_INTERVAL =
+#if DEBUG
+				5 * (1000); // seconds
+#else
+				5 * (60 * 1000); // minutes
+#endif
+
+		/// <summary>
+		/// The default interval at which the internal collector is fired.
+		/// </summary>
+		public static int CollectorInterval
+		{
+			get
+			{
+				while (!_CollectorIntervalCaptured)
+				{
+					var info = Configuration.ORMConfiguration.GetInfo(); if (info == null) break;
+					if (info.DataMap == null) break;
+					if (info.DataMap.CollectorInterval == null) break;
+
+					_CollectorInterval = (int)info.DataMap.CollectorInterval;
+					break;
+				}
+
+				_CollectorIntervalCaptured = true;
+				return _CollectorInterval;
+			}
+			set
+			{
+				_CollectorIntervalCaptured = true;
+				_CollectorInterval = value;
+			}
+		}
+		static int _CollectorInterval = DEFAULT_COLLECTOR_INTERVAL;
+		static bool _CollectorIntervalCaptured = false;
+	}
+
+	// ====================================================
+	internal static partial class Uber
+	{
+		/// <summary>
 		/// Whether by default weak maps are enabled.
 		/// </summary>
 		internal const bool DEFAULT_ENABLE_WEAK_MAPS = true;
@@ -83,11 +199,7 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 		static bool _TrackEntities = DEFAULT_TRACK_ENTITIES;
 		static bool _TrackEntitiesCaptured = false;
-	}
 
-	// ==================================================== 
-	internal static partial class Uber
-	{
 		/// <summary>
 		/// Whether by default maps cache the entities they retrieve or not.
 		/// </summary>
@@ -121,133 +233,5 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 		static bool _TrackChildEntities = DEFAULT_TRACK_CHILD_ENTITIES;
 		static bool _TrackChildEntitiesCaptured = false;
-	}
-
-	// ====================================================
-	internal static partial class Uber
-	{
-		/// <summary>
-		/// Whether the entities' collector is enabled or not by default.
-		/// </summary>
-		internal const bool DEFAULT_ENABLE_COLLECTOR = true;
-
-		/// <summary>
-		/// Whether the entities' collector is enabled or not.
-		/// </summary>
-		public static bool EnableCollector
-		{
-			get
-			{
-				while (!_EnableCollectorCaptured)
-				{
-					var info = Configuration.ORMConfiguration.GetInfo(); if (info == null) break;
-					if (info.DataMap == null) break;
-					if (info.DataMap.EnableCollector == null) break;
-
-					_EnableCollector = (bool)info.DataMap.EnableCollector;
-					break;
-				}
-
-				_EnableCollectorCaptured = true;
-				return _EnableCollector;
-			}
-			set
-			{
-				_EnableCollectorCaptured = true;
-				_EnableCollector = value;
-			}
-		}
-		static bool _EnableCollector = DEFAULT_ENABLE_COLLECTOR;
-		static bool _EnableCollectorCaptured = false;
-	}
-
-	// ==================================================== 
-	internal static partial class Uber
-	{
-		/// <summary>
-		/// Whether the entities' GC collector is enabled or not by default.
-		/// </summary>
-		internal const bool DEFAULT_ENABLE_COLLECTOR_CG = true;
-
-		/// <summary>
-		/// Whether the entities' GC collector is enabled or not.
-		/// </summary>
-		public static bool EnableCollectorGC
-		{
-			get
-			{
-				while (!_EnableCollectorGCCaptured)
-				{
-					var info = Configuration.ORMConfiguration.GetInfo(); if (info == null) break;
-					if (info.DataMap == null) break;
-					if (info.DataMap.EnableCollectorGC == null) break;
-
-					_EnableCollectorGC = (bool)info.DataMap.EnableCollectorGC;
-					break;
-				}
-
-				_EnableCollectorGCCaptured = true;
-				return _EnableCollectorGC;
-			}
-			set
-			{
-				_EnableCollectorGCCaptured = true;
-				_EnableCollectorGC = value;
-			}
-		}
-		static bool _EnableCollectorGC = DEFAULT_ENABLE_COLLECTOR_CG;
-		static bool _EnableCollectorGCCaptured = false;
-	}
-
-	// ==================================================== 
-	internal static partial class Uber
-	{
-		/// <summary>
-		/// The default interval at which the internal collector is fired.
-		/// </summary>
-		internal const int DEFAULT_COLLECTOR_INTERVAL =
-#if DEBUG
-		5 * (1000); // seconds
-#else
-		5 * (60 * 1000); /// minutes
-#endif
-
-		/// <summary>
-		/// The default interval at which the internal collector is fired.
-		/// </summary>
-		public static int CollectorInterval
-		{
-			get
-			{
-				while (!_CollectorIntervalCaptured)
-				{
-					var info = Configuration.ORMConfiguration.GetInfo(); if (info == null) break;
-					if (info.DataMap == null) break;
-					if (info.DataMap.CollectorInterval == null) break;
-
-					_CollectorInterval = (int)info.DataMap.CollectorInterval;
-					break;
-				}
-
-				_CollectorIntervalCaptured = true;
-				return _CollectorInterval;
-			}
-			set
-			{
-				_CollectorIntervalCaptured = true;
-				_CollectorInterval = value;
-			}
-		}
-		static int _CollectorInterval = DEFAULT_COLLECTOR_INTERVAL;
-		static bool _CollectorIntervalCaptured = false;
-	}
-
-	// ==================================================== 
-	internal static partial class Uber
-	{
-		/// <summary>
-		/// The default minimum interval at which the internal collector is fired.
-		/// </summary>
-		internal const int DEFAULT_COLLECTOR_MIN_INTERVAL = 1000;
 	}
 }

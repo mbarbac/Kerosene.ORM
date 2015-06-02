@@ -58,12 +58,6 @@ namespace Kerosene.ORM.Maps.Concrete
 			_ValueToString = null;
 		}
 
-		/// <summary></summary>
-		~MapVersionColumn()
-		{
-			if (!IsDisposed) OnDispose();
-		}
-
 		/// <summary>
 		/// Returns the string representation of this instance.
 		/// </summary>

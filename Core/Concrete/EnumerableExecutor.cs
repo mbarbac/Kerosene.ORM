@@ -52,12 +52,6 @@ namespace Kerosene.ORM.Core.Concrete
 			if (!IsDisposed) { OnDispose(true); GC.SuppressFinalize(this); }
 		}
 
-		/// <summary></summary>
-		~EnumerableExecutor()
-		{
-			if (!IsDisposed) OnDispose(false);
-		}
-
 		/// <summary>
 		/// Invoked when disposing or finalizing this instance.
 		/// </summary>
@@ -66,8 +60,10 @@ namespace Kerosene.ORM.Core.Concrete
 		{
 			if (disposing)
 			{
-				if (!IsDisposed) Reset();
+				try { if (!IsDisposed) Reset(); }
+				catch { }
 			}
+
 			_Command = null;
 			_Schema = null;
 			_CurrentRecord = null;
@@ -176,71 +172,79 @@ namespace Kerosene.ORM.Core.Concrete
 			_CurrentRecord = null;
 			_Current = null;
 
-			// First execution...
-			if (!_Started)
+			try
 			{
-				if (IsDisposed) throw new ObjectDisposedException(this.ToString());
-				if (_Command.IsDisposed) throw new ObjectDisposedException(_Command.ToString());
-				if (_Command.Link.IsDisposed) throw new ObjectDisposedException(_Command.Link.ToString());
-
-				if (!Command.CanBeExecuted) throw new CannotExecuteException(
-					"State of command '{0}' is not ready for execution.".FormatWith(Command));
-
-				_Started = true;
-				_TakeOnGoing = false;
-				_TakeRemaining = -1;
-
-				_Schema = OnReaderStart();
-				if (_Schema == null) throw new InvalidOperationException("Schema resulting from execution of '{0}' is null.".FormatWith(this));
-				if (_Schema.Count == 0) throw new EmptyException("Schema resulting of execution from '{0}' is empty.".FormatWith(this));
-
-				// Emulation of skip/take if needed...
-				var cmd = _Command as IQueryCommand; if (cmd != null)
+				// First execution...
+				if (!_Started)
 				{
-					int skip = cmd.GetSkipValue();
-					int take = cmd.GetTakeValue();
-					bool valid = cmd.IsValidForNativeSkipTake();
+					if (IsDisposed) throw new ObjectDisposedException(this.ToString());
+					if (_Command.IsDisposed) throw new ObjectDisposedException(_Command.ToString());
+					if (_Command.Link.IsDisposed) throw new ObjectDisposedException(_Command.Link.ToString());
 
-					if (!valid && skip > 0)
+					if (!Command.CanBeExecuted) throw new CannotExecuteException(
+						"State of command '{0}' is not ready for execution.".FormatWith(Command));
+
+					_Started = true;
+					_TakeOnGoing = false;
+					_TakeRemaining = -1;
+
+					_Schema = OnReaderStart();
+					if (_Schema == null) throw new InvalidOperationException("Schema resulting from execution of '{0}' is null.".FormatWith(this));
+					if (_Schema.Count == 0) throw new EmptyException("Schema resulting of execution from '{0}' is empty.".FormatWith(this));
+
+					// Emulation of skip/take if needed...
+					var cmd = _Command as IQueryCommand; if (cmd != null)
 					{
-						for (int i = 0; i < skip; i++)
+						int skip = cmd.GetSkipValue();
+						int take = cmd.GetTakeValue();
+						bool valid = cmd.IsValidForNativeSkipTake();
+
+						if (!valid && skip > 0)
 						{
-							if (OnReaderNext() == null)
+							for (int i = 0; i < skip; i++)
 							{
-								Reset(); return false;
+								if (OnReaderNext() == null)
+								{
+									Reset(); return false;
+								}
 							}
 						}
-					}
 
-					if (!valid && take > 0)
-					{
-						_TakeOnGoing = true;
-						_TakeRemaining = take;
+						if (!valid && take > 0)
+						{
+							_TakeOnGoing = true;
+							_TakeRemaining = take;
+						}
 					}
 				}
-			}
 
-			// Current iteration...
-			if (_TakeOnGoing)
-			{
-				if (_TakeRemaining > 0)
+				// Current iteration...
+				if (_TakeOnGoing)
 				{
-					_CurrentRecord = OnReaderNext();
-					_TakeRemaining--;
+					if (_TakeRemaining > 0)
+					{
+						_CurrentRecord = OnReaderNext();
+						_TakeRemaining--;
+					}
+					else _CurrentRecord = null;
 				}
-				else _CurrentRecord = null;
-			}
-			else _CurrentRecord = OnReaderNext();
+				else _CurrentRecord = OnReaderNext();
 
-			// Finalizing...
-			if (_CurrentRecord == null)
-			{
-				Reset(); return false;
+				// Finalizing...
+				if (_CurrentRecord == null)
+				{
+					Reset(); return false;
+				}
+				else
+				{
+					_Current = _Converter == null ? _CurrentRecord : _Converter(_CurrentRecord);
+					return true;
+				}
 			}
-			else
+			catch
 			{
-				_Current = _Converter == null ? _CurrentRecord : _Converter(_CurrentRecord);
-				return true;
+				OnDispose(disposing: true);
+				throw;
 			}
 		}
 

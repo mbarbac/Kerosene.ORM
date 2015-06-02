@@ -77,21 +77,21 @@ namespace Kerosene.ORM.Core.Concrete
 			if (!IsDisposed) { OnDispose(true); GC.SuppressFinalize(this); }
 		}
 
-		/// <summary></summary>
-		~DataEngine()
-		{
-			if (!IsDisposed) OnDispose(false);
-		}
-
 		/// <summary>
 		/// Invoked when disposing or finalizing this instance.
 		/// </summary>
 		/// <param name="disposing">True if the object is being disposed, false otherwise.</param>
 		protected virtual void OnDispose(bool disposing)
 		{
-			if (_Transformers != null) _Transformers.Clear(); _Transformers = null;
-			Core.DataEngine.RemoveEngine(this);
-
+			if (disposing)
+			{
+				try
+				{
+					if (_Transformers != null) _Transformers.Clear(); _Transformers = null;
+					Core.DataEngine.RemoveEngine(this);
+				}
+				catch { }
+			}
 			_IsDisposed = true;
 		}
 

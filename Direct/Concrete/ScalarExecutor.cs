@@ -41,8 +41,22 @@ namespace Kerosene.ORM.Direct.Concrete
 			if (Command.IsDisposed) throw new ObjectDisposedException(Command.ToString());
 			if (Command.Link.IsDisposed) throw new ObjectDisposedException(Command.Link.ToString());
 
-			var surrogate = new SurrogateDirect(Command);
-			int result = surrogate.OnExecuteScalar();
+			SurrogateDirect surrogate = null;
+			int result = 0;
+
+			try
+			{
+				surrogate = new SurrogateDirect(Command);
+				result = surrogate.OnExecuteScalar();
+			}
+			finally
+			{
+				if (surrogate != null)
+				{
+					try { surrogate.Dispose(); }
+					catch { }
+				}
+			}
 
 			return result;
 		}

@@ -1,4 +1,6 @@
-﻿using Kerosene.ORM.Core;
+﻿#undef DEBUG
+
+using Kerosene.ORM.Core;
 using Kerosene.Tools;
 using System;
 using System.Collections;
@@ -30,7 +32,10 @@ namespace Kerosene.ORM.Maps.Concrete
 		/// <param name="disposing">True if the object is being disposed, false otherwise.</param>
 		protected override void OnDispose(bool disposing)
 		{
-			if (_Command != null) _Command.Dispose(); _Command = null;
+			try { if (_Command != null) _Command.Dispose(); }
+			catch { }
+			
+			_Command = null;
 
 			base.OnDispose(disposing);
 		}
@@ -71,7 +76,7 @@ namespace Kerosene.ORM.Maps.Concrete
 				{
 					if (changeType == ChangeType.Update)
 					{
-						list = MetaEntity.GetRemovedChilds();
+						list = MetaEntity.GetRemovedChilds(forgetRemoved: true);
 						foreach (var obj in list)
 						{
 							if (obj == null) continue;
@@ -129,11 +134,13 @@ namespace Kerosene.ORM.Maps.Concrete
 						MetaEntity.Record = rec;
 						Map.LoadEntity(rec, Entity);
 						MetaEntity.UberMap = Map; if (Map.TrackEntities) Map.MetaEntities.Add(MetaEntity);
+						MetaEntity.Completed = false;
 
 						change = new ChangeEntry(ChangeType.Insert, Map, Entity);
 						Repository.ChangeEntries.Add(change);
 					}
-					if (changeType == ChangeType.Update)
+
+					else if (changeType == ChangeType.Update)
 					{
 						cmd = Map.GenerateUpdateCommand(Entity); if (cmd != null)
 						{
@@ -148,6 +155,7 @@ namespace Kerosene.ORM.Maps.Concrete
 
 							MetaEntity.Record = rec;
 							Map.LoadEntity(rec, Entity);
+							MetaEntity.Completed = false;
 
 							change = new ChangeEntry(ChangeType.Update, Map, Entity);
 							Repository.ChangeEntries.Add(change);
@@ -209,7 +217,7 @@ namespace Kerosene.ORM.Maps.Concrete
 			if (child.Map == null) return true;
 			if (child.HasRecordChanges()) return true;
 
-			var list = child.GetRemovedChilds();
+			var list = child.GetRemovedChilds(forgetRemoved: false);
 			var need = list.Count != 0;
 			list.Clear(); list = null;
 			if (need) return true;

@@ -65,20 +65,19 @@ namespace Kerosene.ORM.Maps.Concrete
 		/// </summary>
 		internal protected virtual void OnDispose()
 		{
-			if (_List != null)
+			try
 			{
-				var list = _List.ToArray(); foreach (var item in list) item.OnDispose();
-				Array.Clear(list, 0, list.Length);
-				_List.Clear();
+				if (_List != null)
+				{
+					var list = _List.ToArray(); foreach (var item in list) item.OnDispose();
+					Array.Clear(list, 0, list.Length);
+					_List.Clear();
+				}
 			}
+			catch { };
+
 			_List = null;
 			_Map = null;
-		}
-
-		/// <summary></summary>
-		~MapMemberCollection()
-		{
-			if (!IsDisposed) OnDispose();
 		}
 
 		/// <summary>

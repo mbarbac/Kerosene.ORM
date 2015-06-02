@@ -59,6 +59,9 @@ namespace Kerosene.ORM.Maps.Concrete
 			list.Add(source + "es"); // english: dish / spanish: standard
 			list.Add(source + "ES");
 
+			list.Add(source + "ses"); // spanish: south american forms in some countries
+			list.Add(source + "SES");
+
 			if (source.EndsWith("y")) list.Add(source.Substring(0, source.Length - 1) + "ies"); // country
 			if (source.EndsWith("Y")) list.Add(source.Substring(0, source.Length - 1) + "IES");
 

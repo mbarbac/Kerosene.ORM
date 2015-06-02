@@ -43,12 +43,6 @@ namespace Kerosene.ORM.Core.Concrete
 			if (!IsDisposed) { OnDispose(true); GC.SuppressFinalize(this); }
 		}
 
-		/// <summary></summary>
-		~ScalarExecutor()
-		{
-			if (!IsDisposed) OnDispose(false);
-		}
-
 		/// <summary>
 		/// Invoked when disposing or finalizing this instance.
 		/// </summary>
@@ -101,7 +95,12 @@ namespace Kerosene.ORM.Core.Concrete
 			if (!Command.CanBeExecuted) throw new CannotExecuteException(
 				"Command '{0}' cannot be executed.".FormatWith(Command));
 
-			return OnExecute();
+			try { return OnExecute(); }
+			catch
+			{
+				OnDispose(disposing: true);
+				throw;
+			}
 		}
 
 		/// <summary>

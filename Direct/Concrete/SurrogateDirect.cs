@@ -65,21 +65,28 @@ namespace Kerosene.ORM.Direct.Concrete
 		/// <param name="disposing">True if the object is being disposed, false otherwise.</param>
 		protected virtual void OnDispose(bool disposing)
 		{
-			if (_DbCommand != null)
+			if (disposing)
 			{
-				_DbCommand.Cancel(); if (disposing) _DbCommand.Dispose();
-				_DbCommand = null;
+				if (_DbCommand != null)
+				{
+					try { _DbCommand.Cancel(); if (disposing) _DbCommand.Dispose(); }
+					catch { }
+				}
+				if (_DataReader != null)
+				{
+					try { if (!_DataReader.IsClosed) _DataReader.Close(); if (disposing) _DataReader.Dispose(); }
+					catch { }
+				}
+				if (Link != null)
+				{
+					try { if (Link.IsOpen && _LinkOpenedBySurrogate) Link.Close(); }
+					catch { }
+				}
 			}
-			if (_DataReader != null)
-			{
-				if (!_DataReader.IsClosed) _DataReader.Close(); if (disposing) _DataReader.Dispose();
-				_DataReader = null;
-			}
-			if (Link != null)
-			{
-				if (Link.IsOpen && _LinkOpenedBySurrogate) Link.Close();
-				_LinkOpenedBySurrogate = false;
-			}
+
+			_DbCommand = null;
+			_DataReader = null;
+			_LinkOpenedBySurrogate = false;
 
 			_Command = null;
 			_Schema = null;
@@ -252,7 +259,10 @@ namespace Kerosene.ORM.Direct.Concrete
 		/// </summary>
 		internal int OnExecuteScalar()
 		{
-			int r = 0; Invoke(iterable: false, action: () => { r = _DbCommand.ExecuteNonQuery(); });
+			int r = 0; Invoke(iterable: false, action: () =>
+			{
+				r = _DbCommand.ExecuteNonQuery();
+			});
 			Dispose();
 			return r;
 		}

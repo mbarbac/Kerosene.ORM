@@ -141,20 +141,35 @@ namespace Kerosene.ORM.Direct.Concrete
 			if (IsDisposed) return;
 			if (Link.IsDisposed) return;
 
+			_Level = 0;
+
 			if (_DbTransaction != null)
 			{
-				_DbTransaction.Rollback(); _DbTransaction.Dispose(); _DbTransaction = null;
-				if (_LinkOpenedByTransaction) Link.Close();
+				try { _DbTransaction.Rollback(); _DbTransaction.Dispose(); }
+				catch { }
+				
+				if (_LinkOpenedByTransaction)
+				{
+					try { Link.Close(); }
+					catch { }
+				}
 			}
 
 			if (_TransactionScope != null)
 			{
-				_TransactionScope.Dispose(); _TransactionScope = null;
-				if (_LinkOpenedByTransaction) Link.Close();
+				try { _TransactionScope.Dispose(); }
+				catch { }
+
+				if (_LinkOpenedByTransaction)
+				{
+					try { Link.Close(); }
+					catch { }
+				}
 			}
 
+			_DbTransaction = null;
+			_TransactionScope = null;
 			_LinkOpenedByTransaction = false;
-			_Level = 0;
 		}
 	}
 }

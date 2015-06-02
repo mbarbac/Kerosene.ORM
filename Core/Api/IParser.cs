@@ -57,10 +57,10 @@ namespace Kerosene.ORM.Core
 				{
 					var info = Configuration.ORMConfiguration.GetInfo();
 					if (info == null ||
-						info.DataEngine == null ||
-						info.DataEngine.ComplexTags == null) break;
+						info.Parser == null ||
+						info.Parser.ComplexTags == null) break;
 
-					_ComplexTags = (bool)info.DataEngine.ComplexTags;
+					_ComplexTags = (bool)info.Parser.ComplexTags;
 					break;
 				}
 				_ComplexTagsCaptured = true;

@@ -1,4 +1,6 @@
-﻿using Kerosene.ORM.Core;
+﻿#undef DEBUG
+
+using Kerosene.ORM.Core;
 using Kerosene.Tools;
 using System;
 using System.Collections;
@@ -30,7 +32,10 @@ namespace Kerosene.ORM.Maps.Concrete
 		/// <param name="disposing">True if the object is being disposed, false otherwise.</param>
 		protected override void OnDispose(bool disposing)
 		{
-			if (_Command != null) _Command.Dispose(); _Command = null;
+			try { if (_Command != null) _Command.Dispose(); }
+			catch { }
+			
+			_Command = null;
 
 			base.OnDispose(disposing);
 		}
@@ -77,7 +82,7 @@ namespace Kerosene.ORM.Maps.Concrete
 				DebugEx.IndentWriteLine("\n- Preparing 'Delete({0})'...", MetaEntity);
 				try
 				{
-					list = MetaEntity.GetRemovedChilds();
+					list = MetaEntity.GetRemovedChilds(forgetRemoved: true);
 					foreach (var obj in list)
 					{
 						if (obj == null) continue;

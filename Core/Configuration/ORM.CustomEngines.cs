@@ -1,58 +1,10 @@
 ﻿using Kerosene.Tools;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Configuration;
-using System.Linq;
 
 namespace Kerosene.ORM.Configuration
 {
-	// ==================================================== 
-	/// <summary>
-	/// The entry that defines common options for data engines.
-	/// </summary>
-	public class DataEngineElement : ConfigurationElement
-	{
-		/// <summary></summary>
-		public const string ELEMENT_NAME = "dataEngine";
-		/// <summary></summary>
-		public const string PROPERTY_RELAX_TRANSFORMERS = "relaxTransformers";
-		/// <summary></summary>
-		public const string PROPERTY_COMPLEX_TAGS = "complexTags";
-
-		/// <summary>
-		/// Whether to relax data link transformers.
-		/// </summary>
-		[ConfigurationProperty(PROPERTY_RELAX_TRANSFORMERS, IsRequired = false, DefaultValue = null)]
-		public bool? RelaxTransformers
-		{
-			get { return (bool?)this[PROPERTY_RELAX_TRANSFORMERS]; }
-			set { this[PROPERTY_RELAX_TRANSFORMERS] = value; }
-		}
-
-		/// <summary>
-		/// Whether to keep complex tags or not.
-		/// </summary>
-		[ConfigurationProperty(PROPERTY_COMPLEX_TAGS, IsRequired = false, DefaultValue = null)]
-		public bool? ComplexTags
-		{
-			get { return (bool?)this[PROPERTY_COMPLEX_TAGS]; }
-			set { this[PROPERTY_COMPLEX_TAGS] = value; }
-		}
-	}
-
-	public partial class ORMConfiguration
-	{
-		/// <summary>
-		/// Common options for data engines.
-		/// </summary>
-		[ConfigurationProperty(DataEngineElement.ELEMENT_NAME, IsRequired = false, DefaultValue = null)]
-		public DataEngineElement DataEngine
-		{
-			get { return (DataEngineElement)base[DataEngineElement.ELEMENT_NAME]; }
-		}
-	}
-
 	// ==================================================== 
 	/// <summary>
 	/// The collection of custom engines defined.
@@ -88,25 +40,34 @@ namespace Kerosene.ORM.Configuration
 		}
 	}
 
+	// =====================================================
 	/// <summary></summary>
 	public class CustomEngineElement : ConfigurationElement
 	{
 		/// <summary></summary>
 		public const string PROPERTY_ID = "id";
+
 		/// <summary></summary>
 		public const string PROPERTY_TYPENAME = "type";
+		
 		/// <summary></summary>
 		public const string PROPERTY_ASSEMBLYNAME = "assembly";
+		
 		/// <summary></summary>
 		public const string PROPERTY_INVARIANTNAME = "invariantName";
+		
 		/// <summary></summary>
 		public const string PROPERTY_SERVERVERSION = "serverVersion";
+		
 		/// <summary></summary>
 		public const string PROPERTY_CASESENSITIVENAMES = "caseSensitiveNames";
+		
 		/// <summary></summary>
 		public const string PROPERTY_PARAMETERPREFIX = "parameterPrefix";
+		
 		/// <summary></summary>
 		public const string PROPERTY_POSITIONALPARAMETERS = "positionalParameters";
+		
 		/// <summary></summary>
 		public const string PROPERTY_SUPPORTSNATIVESKIPTAKE = "supportsNativeSkipTake";
 
@@ -209,6 +170,7 @@ namespace Kerosene.ORM.Configuration
 		}
 	}
 
+	// =====================================================
 	public partial class ORMConfiguration
 	{
 		/// <summary>

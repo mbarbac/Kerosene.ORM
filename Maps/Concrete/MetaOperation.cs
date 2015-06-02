@@ -54,10 +54,12 @@ namespace Kerosene.ORM.Maps.Concrete
 		{
 			if (disposing)
 			{
-				if (Repository != null && !Repository.IsDisposed)
+				try
 				{
-					lock (Repository.MasterLock) { Repository.UberOperations.Remove(this); }
+					if (Repository != null && !Repository.IsDisposed)
+						lock (Repository.MasterLock) { Repository.UberOperations.Remove(this); }
 				}
+				catch { }
 			}
 
 			_MetaEntity = null;
@@ -144,7 +146,7 @@ namespace Kerosene.ORM.Maps.Concrete
 		/// Returns a list with the child dependencies that have been removed since the last
 		/// time those were captured.
 		/// </summary>
-		internal static List<object> GetRemovedChilds(this MetaEntity meta)
+		internal static List<object> GetRemovedChilds(this MetaEntity meta, bool forgetRemoved)
 		{
 			var list = new List<object>();
 			var entity = meta.Entity; if (entity != null)
@@ -161,26 +163,13 @@ namespace Kerosene.ORM.Maps.Concrete
 					foreach (var item in kvp.Value) if (!curr.Contains(item)) list.Add(item);
 					curr.Clear(); curr = null;
 
-					// Removed ones might be candidates to be forgotten...
-					foreach (var item in list)
+					if (forgetRemoved) // Foget removed childs if such is requested
 					{
-						var temp = MetaEntity.Locate(item);
-						if (temp.UberMap == null) kvp.Value.Remove(item);
+						foreach (var item in list) kvp.Value.Remove(item);
 					}
 				}
 			}
 			return list;
-		}
-
-		/// <summary>
-		/// Used to release captured and remnoved childs that are used no longer so that they
-		/// can be collected when needed.
-		/// </summary>
-		internal static void ForgetUnusedChilds(this MetaEntity meta)
-		{
-			var list = meta.GetRemovedChilds();
-			list.Clear();
-			list = null;
 		}
 
 		/// <summary>

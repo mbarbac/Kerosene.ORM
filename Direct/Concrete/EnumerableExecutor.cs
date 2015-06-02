@@ -33,9 +33,9 @@ namespace Kerosene.ORM.Direct.Concrete
 		{
 			if (disposing)
 			{
-				if (_Surrogate != null && !_Surrogate.IsDisposed) _Surrogate.Dispose();
+				try { if (_Surrogate != null && !_Surrogate.IsDisposed) _Surrogate.Dispose(); }
+				catch { }
 			}
-
 			base.OnDispose(disposing);
 		}
 

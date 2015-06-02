@@ -1,4 +1,6 @@
-﻿using Kerosene.ORM.Core;
+﻿#undef DEBUG
+
+using Kerosene.ORM.Core;
 using Kerosene.Tools;
 using System;
 using System.Collections;
@@ -19,7 +21,7 @@ namespace Kerosene.ORM.Maps.Concrete
 	{
 		bool _IsDisposed = false;
 		ulong _SerialId = 0;
-		IDataLink _Link = null;
+		IDataLink _Link = null, _TemplateLink = null;
 		object _MasterLock = new object();
 		UberMapCollection _UberMaps = null;
 		bool _WeakMapsEnabled = Uber.EnableWeakMaps;
@@ -41,6 +43,8 @@ namespace Kerosene.ORM.Maps.Concrete
 			if (link.IsDisposed) throw new ObjectDisposedException(link.ToString());
 
 			_Link = link;
+			_TemplateLink = link.Clone();
+
 			_SerialId = ++Uber.RepositoryLastSerial;
 			_UberMaps = new UberMapCollection(this);
 			_UberOperations = new UberOperationList(this);
@@ -65,34 +69,34 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 
 		/// <summary>
-		/// </summary>
-		~DataRepository()
-		{
-			if (!IsDisposed) OnDispose(false);
-		}
-
-		/// <summary>
 		/// Invoked when disposing or finalizing this instance.
 		/// </summary>
 		/// <param name="disposing">True if the object is being disposed, false otherwise.</param>
 		protected virtual void OnDispose(bool disposing)
 		{
-			if (_Timer != null)
+			try
 			{
-				_TimerDisposed = true;
-				_Timer.Stop(); _Timer.Dispose();
+				_TimerDisposed = true; if (_Timer != null) { _Timer.Stop(); _Timer.Dispose(); }
+				_Timer = null;
 			}
+			catch { }
 
 			if (disposing)
 			{
-				if (_UberOperations != null) { DiscardChanges(); _UberOperations.Dispose(); }
-				if (_UberMaps != null) { ClearMaps(); _UberMaps.Dispose(); }
+				try { if (_UberOperations != null) { DiscardChanges(); _UberOperations.Dispose(); } }
+				catch { }
+
+				try { if (_UberMaps != null) { ClearMaps(); _UberMaps.Dispose(); } }
+				catch { }
+
+				try { if (_TemplateLink != null) _TemplateLink.Dispose(); }
+				catch { }
 			}
 
 			_UberOperations = null;
 			_UberMaps = null;
 			_Link = null;
-			_Timer = null;
+			_TemplateLink = null;
 
 			_IsDisposed = true;
 		}
@@ -170,7 +174,14 @@ namespace Kerosene.ORM.Maps.Concrete
 		/// </summary>
 		public IDataLink Link
 		{
-			get { return _Link; }
+			get
+			{
+				if (!_IsDisposed)
+				{
+					if (_Link == null || _Link.IsDisposed) _Link = _TemplateLink.Clone();
+				}
+				return _Link;
+			}
 		}
 
 		/// <summary>
@@ -240,7 +251,7 @@ namespace Kerosene.ORM.Maps.Concrete
 					{
 						var name = DynamicInfo.ParseName(table);
 						map = (IUberMap)cons.Invoke(new object[] { this, name });
-						map.IsWeakMap = true;
+						map.IsWeakMap = false;
 					}
 					else if (WeakMapsEnabled)
 					{
@@ -326,7 +337,8 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 
 		/// <summary>
-		/// Whether to track child entities for dependency properties or not.
+		/// Whether the managed entities of the maps in this instance keep track of their own child
+		/// dependencies to facilitate finding the removed ones if needed.
 		/// </summary>
 		public bool TrackChildEntities
 		{
@@ -334,12 +346,11 @@ namespace Kerosene.ORM.Maps.Concrete
 			set
 			{
 				if (IsDisposed) throw new ObjectDisposedException(this.ToString());
-
 				lock (MasterLock)
 				{
 					foreach (var map in UberMaps) map.TrackChildEntities = value;
+					_TrackChildEntities = value;
 				}
-				_TrackChildEntities = value;
 			}
 		}
 
@@ -624,6 +635,19 @@ namespace Kerosene.ORM.Maps.Concrete
 		internal List<ChangeEntry> ChangeEntries { get; private set; }
 
 		/// <summary>
+		/// Used to clear the temporary log of change entries.
+		/// </summary>
+		internal void ClearChangeEntries(bool setToNull)
+		{
+			if (ChangeEntries != null)
+			{
+				foreach (var entry in ChangeEntries) entry.Dispose();
+				ChangeEntries.Clear();
+			}
+			if (setToNull) ChangeEntries = null;
+		}
+
+		/// <summary>
 		/// Executes the change operations annotated into this instance against the underlying
 		/// database as a single logical operation that either succeeds or fails as a whole.
 		/// </summary>
@@ -650,7 +674,9 @@ namespace Kerosene.ORM.Maps.Concrete
 					{
 						if (entry.MetaEntity.Completed) continue;
 						if (entry.ChangeType == ChangeType.Delete) continue;
-						entry.UberMap.RefreshNow(entry.Entity);
+
+						if (entry.MetaEntity.UberMap == null) entry.UberMap.RefreshNow(entry.Entity);
+						else entry.UberMap.CompleteMembers(entry.MetaEntity);
 					}
 				}
 				catch (Exception e)
@@ -659,6 +685,7 @@ namespace Kerosene.ORM.Maps.Concrete
 					DebugEx.IndentWriteLine("\n--- Reverting changes for '{0}' because '{1}'...", this, e.ToDisplayString());
 
 					Link.Transaction.Abort();
+					Link.Dispose();
 
 					ChangeEntries.Reverse();
 					foreach (var entry in ChangeEntries)
@@ -681,7 +708,7 @@ namespace Kerosene.ORM.Maps.Concrete
 				}
 				finally
 				{
-					if (ChangeEntries != null) { foreach (var entry in ChangeEntries) entry.Dispose(); ChangeEntries.Clear(); } ChangeEntries = null;
+					ClearChangeEntries(setToNull: true);					
 					DiscardChanges();
 					DebugEx.Unindent();
 				}
@@ -777,7 +804,7 @@ namespace Kerosene.ORM.Maps.Concrete
 				if (_EnableGC) GC.Collect();
 
 				if (_UberMaps != null)
-					foreach(var map in _UberMaps) map.CollectInvalidEntities();
+					foreach (var map in _UberMaps) map.CollectInvalidEntities();
 
 				if (enabled && _Timer != null) EnableCollector();
 

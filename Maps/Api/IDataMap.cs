@@ -110,6 +110,12 @@ namespace Kerosene.ORM.Maps
 		bool TrackEntities { get; set; }
 
 		/// <summary>
+		/// Whether the managed entities keep track of their own child dependencies to facilitate
+		/// finding the removed ones if needed.
+		/// </summary>
+		bool TrackChildEntities { get; set; }
+
+		/// <summary>
 		/// The collection of tracked entities of this map that are in a valid state.
 		/// </summary>
 		IEnumerable<object> Entities { get; }

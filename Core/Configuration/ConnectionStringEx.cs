@@ -1,18 +1,19 @@
 ﻿using Kerosene.Tools;
 using System;
+using System.Collections.Generic;
 using System.Configuration;
 
 namespace Kerosene.ORM.Configuration
 {
-	// ==================================================== 
+	// ====================================================
 	/// <summary>
 	/// Helpers and extensions for working with connection strings.
 	/// </summary>
 	public static class ConnectionStringEx
 	{
 		/// <summary>
-		/// Returns the connection string settings that correspond to the entry name given,
-		/// or null if such entry cannot be found.
+		/// Returns the connection string settings that correspond to the entry name given, or null
+		/// if such entry cannot be found.
 		/// </summary>
 		/// <param name="entryName">The name of the connection string entry, or null to use
 		/// the one that appears in the default 'connectionString' configuration entry, if any.</param>

@@ -38,7 +38,8 @@ namespace Kerosene.ORM.Maps.Concrete
 		{
 			if (disposing)
 			{
-				if (_Template != null && !_Template.IsDisposed) _Template.Dispose();
+				try { if (_Template != null && !_Template.IsDisposed) _Template.Dispose(); }
+				catch { }
 			}
 			_Template = null;
 

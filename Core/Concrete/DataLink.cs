@@ -66,15 +66,18 @@ namespace Kerosene.ORM.Core.Concrete
 		{
 			if (disposing)
 			{
-				if (_Transaction != null)
+				try
 				{
-					if (!_Transaction.IsDisposed)
+					if (_Transaction != null && !_Transaction.IsDisposed)
 					{
 						_Transaction.Abort();
 						_Transaction.Dispose();
 					}
 				}
-				if (IsOpen) Close();
+				catch { }
+
+				try { if (IsOpen) Close(); }
+				catch { }
 			}
 
 			_Engine = null;

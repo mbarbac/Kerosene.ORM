@@ -31,7 +31,7 @@ namespace Kerosene.ORM.Maps.Concrete
 			if (!type.IsClass) throw new InvalidOperationException(
 				"Entity '{0}' of type '{1}' is not a class.".FormatWith(entity.Sketch(), type.EasyName()));
 
-			lock (entity) // Yes, I know... but I don't want to use a global lock!
+			lock (entity) // Yes, I know... but I want to use at most a local lock on the entity!
 			{
 				AttributeCollection list = TypeDescriptor.GetAttributes(entity);
 				MetaEntity meta = list.OfType<MetaEntity>().FirstOrDefault();
@@ -55,8 +55,9 @@ namespace Kerosene.ORM.Maps.Concrete
 		IUberMap _UberMap = null;
 		Type _EntityType = null;
 		ProxyHolder _ProxyHolder = null; bool _ProxyCaptured = false;
+		IRecord _Record = null;
+		string _CollectionId = null;
 		bool _Completed = false;
-		IRecord _Record = null; string _CollectionId = null;
 		Dictionary<string, HashSet<object>> _ChildDependencies = new Dictionary<string, HashSet<object>>();
 
 		/// <summary>
@@ -109,6 +110,8 @@ namespace Kerosene.ORM.Maps.Concrete
 		}
 		string ToStringState()
 		{
+			var obj = Entity;
+			
 			if (!HasValidEntity) return "Collected";
 			if (UberMap == null) return "Detached";
 
@@ -123,6 +126,17 @@ namespace Kerosene.ORM.Maps.Concrete
 					if (op is IDataSave) return "ToSave";
 					return "Unknown";
 				}
+
+				if (EntityType == ProxyType)
+				{
+					foreach (var member in ((IEnumerable<IUberMember>)UberMap.Members))
+					{
+						if (member.LazyProperty == null) continue;
+						if ((bool)member.LazyProperty.LazyCompletedFlag.GetValue(obj) == false) return "LazyToComplete";
+					}
+				}
+
+				if (!Completed) return "ToComplete";
 			}
 
 			return "Ready";
@@ -141,15 +155,15 @@ namespace Kerosene.ORM.Maps.Concrete
 		{
 			StringBuilder sb = new StringBuilder();
 
-			if (Record != null && !Record.IsDisposed)
+			if (_Record != null && !_Record.IsDisposed)
 			{
-				bool disposed = Record.Schema == null || Record.Schema.IsDisposed;
-				sb.Append("["); for (int i = 0; i < Record.Count; i++)
+				bool disposed = _Record.Schema == null || _Record.Schema.IsDisposed;
+				sb.Append("["); for (int i = 0; i < _Record.Count; i++)
 				{
-					var value = Record[i];
-					var name = disposed || Record.Schema[i].IsDisposed
+					var value = _Record[i];
+					var name = disposed || _Record.Schema[i].IsDisposed
 						? "#{0}".FormatWith(i)
-						: Record.Schema[i].ColumnName.Sketch();
+						: _Record.Schema[i].ColumnName.Sketch();
 
 					if (i != 0) sb.Append(", ");
 					sb.AppendFormat("{0}={1}", name, value.Sketch());
@@ -186,8 +200,6 @@ namespace Kerosene.ORM.Maps.Concrete
 			get
 			{
 				bool invalid = _WeakReference == null || !_WeakReference.IsAlive || _WeakReference.Target == null;
-
-				if (invalid) ChildDependencies.Clear();
 				return !invalid;
 			}
 		}
@@ -208,7 +220,7 @@ namespace Kerosene.ORM.Maps.Concrete
 		/// </summary>
 		internal DataRepository Repository
 		{
-			get { return UberMap == null ? null : UberMap.Repository;}
+			get { return UberMap == null ? null : UberMap.Repository; }
 		}
 
 		/// <summary>
@@ -332,14 +344,14 @@ namespace Kerosene.ORM.Maps.Concrete
 				var type = member.ElementInfo.ElementType.ListAlikeMemberType();
 				if (type != null && (type.IsClass || type.IsInterface))
 				{
-					HashSet<object> childs = null;
-					if (!meta.ChildDependencies.TryGetValue(member.Name, out childs))
-						meta.ChildDependencies.Add(member.Name, (childs = new HashSet<object>()));
+					HashSet<object> portion = null;
+					if (!meta.ChildDependencies.TryGetValue(member.Name, out portion))
+						meta.ChildDependencies.Add(member.Name, (portion = new HashSet<object>()));
 
-					childs.Clear(); if (meta.UberMap.Repository.TrackChildEntities)
+					portion.Clear(); if (meta.UberMap.Repository.TrackChildEntities)
 					{
 						var iter = member.ElementInfo.GetValue(entity) as IEnumerable;
-						foreach (var obj in iter) if (obj != null) childs.Add(obj);
+						foreach (var obj in iter) if (obj != null) portion.Add(obj);
 					}
 				}
 			}

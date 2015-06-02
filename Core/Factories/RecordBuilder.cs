@@ -57,12 +57,6 @@ namespace Kerosene.ORM.Core
 			if (!IsDisposed) { OnDispose(true); GC.SuppressFinalize(this); }
 		}
 
-		/// <summary></summary>
-		~RecordBuilder()
-		{
-			if (!IsDisposed) OnDispose(false);
-		}
-
 		/// <summary>
 		/// Invoked when disposing or finalizing this instance.
 		/// </summary>
@@ -71,11 +65,16 @@ namespace Kerosene.ORM.Core
 		{
 			if (disposing)
 			{
-				if (_Schema != null && !_Schema.IsDisposed) _Schema.Dispose();
-				if (_Values != null) _Values.Clear();
+				try
+				{
+					if (_Schema != null && !_Schema.IsDisposed) _Schema.Dispose();
+					if (_Values != null) _Values.Clear();
+				}
+				catch { }
+
+				_Values = null;
+				_Schema = null;
 			}
-			_Values = null;
-			_Schema = null;
 
 			_IsDisposed = true;
 		}
