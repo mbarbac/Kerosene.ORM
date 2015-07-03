@@ -650,6 +650,8 @@ namespace Kerosene.ORM.Maps.Concrete
 		/// <summary>
 		/// Executes the change operations annotated into this instance against the underlying
 		/// database as a single logical operation that either succeeds or fails as a whole.
+		/// <para>Once this method is executed all the submitted operations are disposed
+		/// automatically.</para>
 		/// </summary>
 		public void ExecuteChanges()
 		{

@@ -48,8 +48,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <None Include=".gitattributes" />
-    <None Include=".gitignore" />
     <Compile Include="Core\Api\ICommand.cs" />
     <Compile Include="Core\Api\ICoreCommandProvider.cs" />
     <Compile Include="Core\Api\IElementAlias.cs" />
@@ -174,11 +172,6 @@
     <None Include="Core\Configuration\App.config" />
     <None Include="Kerosene.ORM.nuspec" />
     <None Include="Maps\Configuration\App.config" />
-    <None Include="README.md" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="License.txt" />
-    <Content Include="ReleaseNotes.txt" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Kerosene.Tools\Kerosene.Tools.csproj">
@@ -186,7 +179,6 @@
       <Name>Kerosene.Tools</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

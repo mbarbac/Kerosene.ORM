@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 
@@ -52,6 +53,13 @@ namespace Kerosene.ORM.Core
 				var info = Configuration.ORMConfiguration.GetInfo();
 				if (info != null && info.CustomEngines != null && info.CustomEngines.Count != 0)
 				{
+					var codeBase = Path.GetDirectoryName(Assembly.GetExecutingAssembly().CodeBase);
+					var head = "file:\\";
+					if (codeBase.StartsWith(head, StringComparison.OrdinalIgnoreCase))
+					{
+						codeBase = codeBase.Substring(head.Length);
+					}
+
 					var currentDLL = Assembly.GetExecutingAssembly().GetName().Name + ".dll";
 					foreach (var entry in info.CustomEngines.Items)
 					{
@@ -69,9 +77,19 @@ namespace Kerosene.ORM.Core
 						}
 						else
 						{
-							if ((asm = Assembly.LoadFrom(str)) == null)
-								throw new NotFoundException(
-									"Assembly '{0}' not found".FormatWith(entry.AssemblyName));
+							try
+							{
+								if ((asm = Assembly.LoadFrom(str)) == null)
+									throw new FileNotFoundException("Cannot load '{0}'.".FormatWith(str));
+							}
+							catch (FileNotFoundException)
+							{
+								str = codeBase + "\\" + str;
+
+								if ((asm = Assembly.LoadFrom(str)) == null)
+									throw new NotFoundException(
+										"Assembly '{0}' not found".FormatWith(entry.AssemblyName));
+							}
 
 							if ((type = asm.GetType(entry.TypeName)) == null)
 								throw new NotFoundException(
